@@ -24,8 +24,8 @@ jobs:
     - name: Set up JDK
       uses: actions/setup-java@v4
       with:
-        java-version: '8'
-        distribution: 'microsoft'
+        java-version: '8.0.422+5'
+        distribution: 'adopt'
         cache: maven
     - name: Build with Maven
       run: mvn -B package --file pom.xml
