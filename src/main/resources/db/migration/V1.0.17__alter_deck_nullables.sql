@@ -1,0 +1,2 @@
+ALTER TABLE deck MODIFY COLUMN `author` varchar(250) NULL;
+ALTER TABLE deck MODIFY COLUMN `year` int NULL;

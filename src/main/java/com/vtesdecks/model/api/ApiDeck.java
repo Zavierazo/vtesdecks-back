@@ -1,0 +1,41 @@
+package com.vtesdecks.model.api;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.vtesdecks.cache.indexable.deck.DeckType;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
+
+@Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ApiDeck {
+    private String id;
+    private DeckType type;
+    private String name;
+    private Long views;
+    private Double rate;
+    private Integer votes;
+    private Long comments;
+    private String tournament;
+    private Integer players;
+    private Integer year;
+    private String author;
+    private String url;
+    private String source;
+    private String description;
+    private Boolean published;
+    private List<ApiCard> crypt;
+    private List<ApiCard> library;
+    private Set<String> clanIcons;
+    private Set<String> disciplineIcons;
+    private ApiDeckStats stats;
+    private Boolean favorite = false;
+    private Boolean rated = false;
+    private Boolean owner = false;
+    private List<ApiErrata> erratas;
+    private List<String> tags;
+    private LocalDateTime creationDate;
+    private LocalDateTime modifyDate;
+}

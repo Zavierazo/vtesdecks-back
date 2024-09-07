@@ -1,0 +1,1 @@
+CREATE INDEX comment_page_identifier_and_deleted_idx ON comment(page_identifier,deleted);
