@@ -76,8 +76,6 @@ public class AppStartUpActions implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        Utils.ignoreSSL(); //Used to ignore SSL when attack to a https url
-
         // Start async tasks thread
         ExecutorService executor = null;
         try {
