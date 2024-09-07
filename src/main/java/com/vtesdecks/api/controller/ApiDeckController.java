@@ -139,7 +139,7 @@ public class ApiDeckController {
     @RequestMapping(value = "/{id}/export", method = RequestMethod.GET)
     public void getDownload(HttpServletResponse response, @PathVariable("id") String id, @RequestParam(name = "type") DeckExportType type, HttpServletRequest httpServletRequest) {
         log.info("Deck export of {} with type {}, userAgent: '{}', ip: '{}'", id, type, httpServletRequest.getHeader("User-Agent"), Utils.getIp(httpServletRequest));
-        Utils.returnFile(response, StringUtils.lowerCase(id + "_" + type + ".txt"), MediaType.TEXT_PLAIN,
+        Utils.returnFile(response, StringUtils.lowerCase(Utils.removeSpecial(id) + "_" + Utils.removeSpecial(type.name()) + ".txt"), MediaType.TEXT_PLAIN,
                 deckExportService.export(type, id));
     }
 
