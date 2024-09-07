@@ -306,24 +306,6 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>com.google.cloud.tools</groupId>
-                <artifactId>jib-maven-plugin</artifactId>
-                <configuration>
-                    <from>
-                        <image>openjdk:8-jre-alpine</image>
-                    </from>
-                    <to>
-                        <image>ghcr.io/zavierazo/vtesdecks-back</image>
-                    </to>
-                    <container>
-                        <mainClass>com.vtesdecks.Application</mainClass>
-                        <ports>
-                            <port>8080</port>
-                        </ports>
-                    </container>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
 </project>
