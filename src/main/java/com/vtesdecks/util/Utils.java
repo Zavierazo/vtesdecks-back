@@ -9,7 +9,6 @@ import org.springframework.http.MediaType;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Scanner;
@@ -17,14 +16,12 @@ import java.util.Scanner;
 @Slf4j
 public class Utils {
     public static String readFile(ClassLoader classLoader, String filePath) {
-        File file = new File(classLoader.getResource(filePath).getFile());
+        InputStream inputStream = classLoader.getResourceAsStream(filePath);
         StringBuilder defaultData = new StringBuilder();
-        try (Scanner scanner = new Scanner(file)) {
+        try (Scanner scanner = new Scanner(inputStream)) {
             while (scanner.hasNextLine()) {
                 defaultData.append(scanner.nextLine());
             }
-        } catch (IOException e) {
-            log.error("Error reading file", e);
         }
         return defaultData.toString();
     }
