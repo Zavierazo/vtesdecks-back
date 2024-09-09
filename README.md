@@ -1,4 +1,4 @@
-# vtesdecks-back
+# vtesdecks-back springboot
 
 This project is an Springboot application serving as the back-end for [VTES Decks](vtesdecks.com), a online card search,
 TWD browser and deck builder for Vampire the Eternal Struggle (VTES)
