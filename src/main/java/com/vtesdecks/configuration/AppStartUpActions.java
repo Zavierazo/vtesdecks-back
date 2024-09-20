@@ -111,24 +111,19 @@ public class AppStartUpActions implements InitializingBean {
             if (!isLoaded(SETS_FILE)) {
                 sets();
                 changed = true;
-                setCache.refreshIndex();
             }
             if (!isLoaded(CRYPT_FILE)) {
                 crypt();
                 changed = true;
-                cryptCache.refreshIndex();
             }
             if (!isLoaded(LIBRARY_FILE)) {
                 library();
                 changed = true;
-                libraryCache.refreshIndex();
             }
             if (changed) {
                 deckIndex.refreshIndex();
             }
-
             proxyCardOptionCache.refreshIndex();
-
             log.info("Finish background tasks...");
         }
 
@@ -184,7 +179,7 @@ public class AppStartUpActions implements InitializingBean {
                         //cropImage(crypt.getId());
                         keys.remove(crypt.getId());
                     } catch (Exception e) {
-                        log.error("Unable to load library {}", crypt, e);
+                        log.error("Unable to load crypt {}", crypt, e);
                     }
                 }
                 log.info("Crypt to be deleted {}", keys);
@@ -302,6 +297,7 @@ public class AppStartUpActions implements InitializingBean {
                         log.error("Unable to load library {}", sets, e);
                     }
                 }
+                setCache.refreshIndex();
                 loaded = true;
             } catch (IOException e) {
                 log.error("Unable to parse", e);
