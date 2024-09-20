@@ -3,8 +3,10 @@ package com.vtesdecks.cache.factory;
 
 import com.google.common.collect.ImmutableList;
 import com.vtesdecks.cache.indexable.Crypt;
+import com.vtesdecks.cache.indexable.I18n;
 import com.vtesdecks.db.model.DbCardShop;
 import com.vtesdecks.db.model.DbCrypt;
+import com.vtesdecks.db.model.DbCryptI18n;
 import com.vtesdecks.model.CryptTaint;
 import com.vtesdecks.util.VtesUtils;
 import org.apache.commons.collections.CollectionUtils;
@@ -15,17 +17,19 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring")
 public abstract class CryptFactory {
 
     @Mapping(target = "disciplines", ignore = true)
-    public abstract Crypt getCrypt(DbCrypt dbCrypt, @Context List<DbCardShop> cardShopList);
+    public abstract Crypt getCrypt(DbCrypt dbCrypt, @Context List<DbCryptI18n> cryptI18nList, @Context List<DbCardShop> cardShopList);
 
     @AfterMapping
-    protected void afterMapping(@MappingTarget Crypt crypt, DbCrypt dbCrypt, @Context List<DbCardShop> cardShopList) {
+    protected void afterMapping(@MappingTarget Crypt crypt, DbCrypt dbCrypt, @Context List<DbCryptI18n> cryptI18nList, @Context List<DbCardShop> cardShopList) {
         crypt.setImage("/img/cards/" + +dbCrypt.getId() + ".jpg");
         crypt.setCropImage("/img/cards/crop/" + +dbCrypt.getId() + ".jpg");
         crypt.setClanIcon(VtesUtils.getClanIcon(dbCrypt.getClan()));
@@ -53,6 +57,18 @@ public abstract class CryptFactory {
                     crypt.setLastUpdate(cardShopCreationDate);
                 }
             }
+        }
+        //Crypt i18n
+        if (!CollectionUtils.isEmpty(cryptI18nList)) {
+            Map<String, I18n> i18nMap = new HashMap<>();
+            for (DbCryptI18n cryptI18n : cryptI18nList) {
+                I18n i18n = new I18n();
+                i18n.setName(cryptI18n.getName());
+                i18n.setText(cryptI18n.getText());
+                i18n.setImage(cryptI18n.getImage());
+                i18nMap.put(cryptI18n.getLocale(), i18n);
+            }
+            crypt.setI18n(i18nMap);
         }
     }
 }

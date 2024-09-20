@@ -1,5 +1,6 @@
 package com.vtesdecks.integration;
 
+import com.vtesdecks.model.krcg.Card;
 import com.vtesdecks.model.krcg.Deck;
 import feign.Logger;
 import feign.codec.Encoder;
@@ -9,6 +10,8 @@ import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.cloud.openfeign.support.SpringEncoder;
 import org.springframework.context.annotation.Bean;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -25,6 +28,10 @@ public interface KRCGClient {
 
     @PostMapping(value = "/vdb", consumes = APPLICATION_FORM_URLENCODED, produces = APPLICATION_JSON_VALUE)
     Deck getVDBDeck(@RequestBody Map<String, ?> form);
+
+
+    @GetMapping(value = "/card/{id}", produces = APPLICATION_JSON_VALUE)
+    Card getCard(@PathVariable("id") Integer id);
 
     class Configuration {
         @Bean

@@ -3,9 +3,11 @@ package com.vtesdecks.cache.factory;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.vtesdecks.cache.indexable.I18n;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.db.model.DbCardShop;
 import com.vtesdecks.db.model.DbLibrary;
+import com.vtesdecks.db.model.DbLibraryI18n;
 import com.vtesdecks.model.LibraryTaint;
 import com.vtesdecks.model.LibraryTitle;
 import com.vtesdecks.util.VtesUtils;
@@ -17,18 +19,20 @@ import org.mapstruct.MappingTarget;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring")
 public abstract class LibraryFactory {
 
-    public abstract Library getLibrary(DbLibrary dbLibrary, @Context List<DbCardShop> cardShopList);
+    public abstract Library getLibrary(DbLibrary dbLibrary, @Context List<DbLibraryI18n> libraryI18nList, @Context List<DbCardShop> cardShopList);
 
     @AfterMapping
-    protected void afterMapping(@MappingTarget Library library, DbLibrary dbLibrary, @Context List<DbCardShop> cardShopList) {
+    protected void afterMapping(@MappingTarget Library library, DbLibrary dbLibrary, @Context List<DbLibraryI18n> libraryI18nList, @Context List<DbCardShop> cardShopList) {
         library.setImage("/img/cards/" + +dbLibrary.getId() + ".jpg");
         library.setCropImage("/img/cards/crop/" + +dbLibrary.getId() + ".jpg");
         library.setTypeIcons(getTypeIcons(dbLibrary));
@@ -59,6 +63,18 @@ public abstract class LibraryFactory {
                     library.setLastUpdate(cardShopCreationDate);
                 }
             }
+        }
+        //Library i18n
+        if (!CollectionUtils.isEmpty(libraryI18nList)) {
+            Map<String, I18n> i18nMap = new HashMap<>();
+            for (DbLibraryI18n libraryI18n : libraryI18nList) {
+                I18n i18n = new I18n();
+                i18n.setName(libraryI18n.getName());
+                i18n.setText(libraryI18n.getText());
+                i18n.setImage(libraryI18n.getImage());
+                i18nMap.put(libraryI18n.getLocale(), i18n);
+            }
+            library.setI18n(i18nMap);
         }
     }
 

@@ -7,6 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Data
@@ -36,6 +37,7 @@ public class Library {
     private String artist;
     private String capacity;
     //Extra
+    private Map<String, I18n> i18n;
     private String image;
     private String cropImage;
     private boolean trifle;

@@ -13,11 +13,13 @@ import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.factory.CryptFactory;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.db.CardShopMapper;
+import com.vtesdecks.db.CryptI18nMapper;
 import com.vtesdecks.db.CryptMapper;
 import com.vtesdecks.db.DeckCardMapper;
 import com.vtesdecks.db.model.DbCardCount;
 import com.vtesdecks.db.model.DbCardShop;
 import com.vtesdecks.db.model.DbCrypt;
+import com.vtesdecks.db.model.DbCryptI18n;
 import com.vtesdecks.model.CryptTaint;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -53,6 +55,8 @@ public class CryptCache {
     @Autowired
     private CryptMapper cryptMapper;
     @Autowired
+    private CryptI18nMapper cryptI18nMapper;
+    @Autowired
     private DeckCardMapper deckCardMapper;
     @Autowired
     private CardShopMapper cardShopMapper;
@@ -78,8 +82,10 @@ public class CryptCache {
             List<DbCardCount> countByCard = deckCardMapper.selectCountByCard();
             List<DbCardCount> deckCountByCard = deckCardMapper.selectDeckCountByCard();
             List<DbCardShop> cardShopList = cardShopMapper.selectAll();
+            List<DbCryptI18n> cryptI18nList = cryptI18nMapper.selectAll();
             for (DbCrypt crypt : cryptMapper.selectAll()) {
                 refreshIndex(crypt,
+                        cryptI18nList.stream().filter(cryptI18n -> cryptI18n.getId().equals(crypt.getId())).collect(Collectors.toList()),
                         cardShopList.stream().filter(cardShop -> cardShop.getCardId().equals(crypt.getId())).collect(Collectors.toList()),
                         deckCountByCard.stream().filter(count -> count.getId().equals(crypt.getId())).mapToLong(DbCardCount::getNumber).sum(),
                         countByCard.stream().filter(count -> count.getId().equals(crypt.getId())).mapToLong(DbCardCount::getNumber).sum());
@@ -97,13 +103,13 @@ public class CryptCache {
         }
     }
 
-    private void refreshIndex(DbCrypt crypt, List<DbCardShop> cardShopList, long deckCount, long count) {
+    private void refreshIndex(DbCrypt crypt, List<DbCryptI18n> cryptI18nList, List<DbCardShop> cardShopList, long deckCount, long count) {
         try {
             Crypt oldDeck = get(crypt.getId());
-            Crypt newDeck = cryptFactory.getCrypt(crypt, cardShopList);
+            Crypt newDeck = cryptFactory.getCrypt(crypt, cryptI18nList, cardShopList);
             newDeck.setDeckPopularity(deckCount);
             newDeck.setCardPopularity(count);
-            if(deckCount > 0){
+            if (deckCount > 0) {
                 newDeck.getTaints().add(CryptTaint.TWD.getName());
             }
             if (oldDeck != null && !oldDeck.equals(newDeck)) {

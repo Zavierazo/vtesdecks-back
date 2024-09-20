@@ -14,10 +14,12 @@ import com.vtesdecks.cache.factory.LibraryFactory;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.db.CardShopMapper;
 import com.vtesdecks.db.DeckCardMapper;
+import com.vtesdecks.db.LibraryI18nMapper;
 import com.vtesdecks.db.LibraryMapper;
 import com.vtesdecks.db.model.DbCardCount;
 import com.vtesdecks.db.model.DbCardShop;
 import com.vtesdecks.db.model.DbLibrary;
+import com.vtesdecks.db.model.DbLibraryI18n;
 import com.vtesdecks.model.LibraryTaint;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -53,6 +55,8 @@ public class LibraryCache {
     @Autowired
     private LibraryMapper libraryMapper;
     @Autowired
+    private LibraryI18nMapper libraryI18nMapper;
+    @Autowired
     private DeckCardMapper deckCardMapper;
     @Autowired
     private CardShopMapper cardShopMapper;
@@ -79,8 +83,10 @@ public class LibraryCache {
             List<DbCardCount> countByCard = deckCardMapper.selectCountByCard();
             List<DbCardCount> deckCountByCard = deckCardMapper.selectDeckCountByCard();
             List<DbCardShop> cardShopList = cardShopMapper.selectAll();
+            List<DbLibraryI18n> libraryI18nList = libraryI18nMapper.selectAll();
             for (DbLibrary library : libraryMapper.selectAll()) {
                 refreshIndex(library,
+                        libraryI18nList.stream().filter(libraryI18n -> libraryI18n.getId().equals(library.getId())).collect(Collectors.toList()),
                         cardShopList.stream().filter(cardShop -> cardShop.getCardId().equals(library.getId())).collect(Collectors.toList()),
                         deckCountByCard.stream().filter(count -> count.getId().equals(library.getId())).mapToLong(DbCardCount::getNumber).sum(),
                         countByCard.stream().filter(count -> count.getId().equals(library.getId())).mapToLong(DbCardCount::getNumber).sum());
@@ -98,13 +104,13 @@ public class LibraryCache {
         }
     }
 
-    private void refreshIndex(DbLibrary library, List<DbCardShop> cardShopList, Long deckCount, Long count) {
+    private void refreshIndex(DbLibrary library, List<DbLibraryI18n> libraryI18nList, List<DbCardShop> cardShopList, Long deckCount, Long count) {
         try {
             Library oldLibrary = get(library.getId());
-            Library newLibrary = libraryFactory.getLibrary(library, cardShopList);
+            Library newLibrary = libraryFactory.getLibrary(library, libraryI18nList, cardShopList);
             newLibrary.setDeckPopularity(deckCount);
             newLibrary.setCardPopularity(count);
-            if(deckCount > 0){
+            if (deckCount > 0) {
                 newLibrary.getTaints().add(LibraryTaint.TWD.getName());
             }
             if (oldLibrary != null && !oldLibrary.equals(newLibrary)) {
