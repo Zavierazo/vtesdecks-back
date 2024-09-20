@@ -29,50 +29,50 @@ public class ApiCardService {
     @Autowired
     private ApiCardMapper apiCardMapper;
 
-    public ApiCrypt getCrypt(Integer id) {
+    public ApiCrypt getCrypt(Integer id, String locale) {
         Crypt crypt = cryptCache.get(id);
         if (crypt == null) {
             return null;
         }
-        return apiCardMapper.mapCrypt(crypt);
+        return apiCardMapper.mapCrypt(crypt, locale);
     }
 
-    public List<ApiCrypt> getAllCrypt() {
+    public List<ApiCrypt> getAllCrypt(String locale) {
         ResultSet<Crypt> result = cryptCache.selectAll(null, null);
         if (result == null) {
             return Collections.emptyList();
         }
         return result.stream()
-                .map(apiCardMapper::mapCrypt)
+                .map(card -> apiCardMapper.mapCrypt(card, locale))
                 .collect(Collectors.toList());
     }
 
     public ApiCrypt getCryptLastUpdate() {
         Crypt crypt = cryptCache.selectLastUpdated();
-        return apiCardMapper.mapCrypt(crypt);
+        return apiCardMapper.mapCrypt(crypt, null);
     }
 
-    public ApiLibrary getLibrary(Integer id) {
+    public ApiLibrary getLibrary(Integer id, String locale) {
         Library library = libraryCache.get(id);
         if (library == null) {
             return null;
         }
-        return apiCardMapper.mapLibrary(library);
+        return apiCardMapper.mapLibrary(library, locale);
     }
 
-    public List<ApiLibrary> getAllLibrary() {
+    public List<ApiLibrary> getAllLibrary(String locale) {
         ResultSet<Library> result = libraryCache.selectAll(null, null);
         if (result == null) {
             return Collections.emptyList();
         }
         return result.stream()
-                .map(apiCardMapper::mapLibrary)
+                .map(card -> apiCardMapper.mapLibrary(card, locale))
                 .collect(Collectors.toList());
     }
 
     public ApiLibrary getLibraryLastUpdate() {
         Library library = libraryCache.selectLastUpdated();
-        return apiCardMapper.mapLibrary(library);
+        return apiCardMapper.mapLibrary(library, null);
     }
 
     public List<ApiShop> getCardShops(Integer cardId) {

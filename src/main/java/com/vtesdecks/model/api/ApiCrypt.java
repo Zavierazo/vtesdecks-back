@@ -32,6 +32,7 @@ public class ApiCrypt {
     private Set<String> taints;
     private Long deckPopularity;
     private Long cardPopularity;
+    private ApiI18n i18n;
     private boolean printOnDemand;
     private LocalDateTime lastUpdate;
 }

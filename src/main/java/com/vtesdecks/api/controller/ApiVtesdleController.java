@@ -1,7 +1,11 @@
 package com.vtesdecks.api.controller;
 
-import java.time.LocalDate;
-
+import com.vtesdecks.api.service.ApiCardService;
+import com.vtesdecks.db.VtesdleDayMapper;
+import com.vtesdecks.db.model.DbVtesdleDay;
+import com.vtesdecks.model.api.ApiCrypt;
+import com.vtesdecks.model.api.ApiTodayCard;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -11,12 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import com.vtesdecks.api.service.ApiCardService;
-import com.vtesdecks.db.VtesdleDayMapper;
-import com.vtesdecks.db.model.DbVtesdleDay;
-import com.vtesdecks.model.api.ApiCrypt;
-import com.vtesdecks.model.api.ApiTodayCard;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDate;
 
 @Controller
 @RequestMapping("/api/1.0/vtesdle")
@@ -36,7 +35,7 @@ public class ApiVtesdleController {
             day = day.minusDays(1);
             vtesdleDay = vtesdleDayMapper.selectByDay(day);
         }
-        ApiCrypt apiCrypt = apiCardService.getCrypt(vtesdleDay.getCardId());
+        ApiCrypt apiCrypt = apiCardService.getCrypt(vtesdleDay.getCardId(), null);
         apiCrypt.setName("Nice try ;)");
         apiCrypt.setAka(null);
         apiCrypt.setImage(null);

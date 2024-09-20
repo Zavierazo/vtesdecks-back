@@ -13,6 +13,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.List;
@@ -28,8 +29,8 @@ public class ApiCardController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<ApiCrypt> crypt(@PathVariable Integer id) {
-        ApiCrypt crypt = apiCardService.getCrypt(id);
+    public ResponseEntity<ApiCrypt> crypt(@PathVariable Integer id, @RequestParam(required = false) String locale) {
+        ApiCrypt crypt = apiCardService.getCrypt(id, locale);
         if (crypt == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {
@@ -41,8 +42,8 @@ public class ApiCardController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<List<ApiCrypt>> getAllCrypt() {
-        return new ResponseEntity<>(apiCardService.getAllCrypt(), HttpStatus.OK);
+    public ResponseEntity<List<ApiCrypt>> getAllCrypt(@RequestParam(required = false) String locale) {
+        return new ResponseEntity<>(apiCardService.getAllCrypt(locale), HttpStatus.OK);
     }
 
     @GetMapping(value = "/crypt/lastUpdate", produces = {
@@ -57,8 +58,8 @@ public class ApiCardController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<ApiLibrary> library(@PathVariable Integer id) {
-        ApiLibrary library = apiCardService.getLibrary(id);
+    public ResponseEntity<ApiLibrary> library(@PathVariable Integer id, @RequestParam(required = false) String locale) {
+        ApiLibrary library = apiCardService.getLibrary(id, locale);
         if (library == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {
@@ -70,8 +71,8 @@ public class ApiCardController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<List<ApiLibrary>> getAllLibrary() {
-        return new ResponseEntity<>(apiCardService.getAllLibrary(), HttpStatus.OK);
+    public ResponseEntity<List<ApiLibrary>> getAllLibrary(@RequestParam(required = false) String locale) {
+        return new ResponseEntity<>(apiCardService.getAllLibrary(locale), HttpStatus.OK);
     }
 
     @GetMapping(value = "/library/lastUpdate", produces = {
