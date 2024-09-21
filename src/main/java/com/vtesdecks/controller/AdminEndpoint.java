@@ -3,7 +3,6 @@ package com.vtesdecks.controller;
 import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DriveThruCardsScheduler;
 import com.vtesdecks.scheduler.GamePodScheduler;
-import com.vtesdecks.scheduler.I18nScheduler;
 import com.vtesdecks.scheduler.TournamentDeckScheduler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,8 +24,6 @@ public class AdminEndpoint {
     private DriveThruCardsScheduler driveThruCardsScheduler;
     @Autowired
     private GamePodScheduler gamePodScheduler;
-    @Autowired
-    private I18nScheduler i18nScheduler;
 
     @RequestMapping(method = RequestMethod.GET, value = "/scheduler/deck_views_clean", produces = {
             MediaType.TEXT_PLAIN_VALUE
@@ -73,13 +70,4 @@ public class AdminEndpoint {
         return "OK";
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/scheduler/i18n", produces = {
-            MediaType.TEXT_PLAIN_VALUE
-    })
-    @ResponseBody
-    public String i18nScheduler() {
-        i18nScheduler.updateI18nCrypt();
-        i18nScheduler.updateI18nLibrary();
-        return "OK";
-    }
 }

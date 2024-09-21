@@ -8,13 +8,17 @@ import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.ProxyCardOptionCache;
 import com.vtesdecks.cache.SetCache;
+import com.vtesdecks.db.CryptI18nMapper;
 import com.vtesdecks.db.CryptMapper;
+import com.vtesdecks.db.LibraryI18nMapper;
 import com.vtesdecks.db.LibraryMapper;
 import com.vtesdecks.db.LoadHistoryMapper;
 import com.vtesdecks.db.SetMapper;
 import com.vtesdecks.db.model.DbBase;
 import com.vtesdecks.db.model.DbCrypt;
+import com.vtesdecks.db.model.DbCryptI18n;
 import com.vtesdecks.db.model.DbLibrary;
+import com.vtesdecks.db.model.DbLibraryI18n;
 import com.vtesdecks.db.model.DbLoadHistory;
 import com.vtesdecks.db.model.DbSet;
 import com.vtesdecks.util.Utils;
@@ -54,11 +58,17 @@ public class AppStartUpActions implements InitializingBean {
     private static final String SETS_FILE = "data/vtessets.csv";
     private static final String CRYPT_FILE = "data/vtescrypt.csv";
     private static final String LIBRARY_FILE = "data/vteslib.csv";
+    private static final String CRYPT_I18N_FILE = "data/vtescrypt.i18n.csv";
+    private static final String LIBRARY_I18N_FILE = "data/vteslib.i18n.csv";
 
     @Autowired
     private CryptMapper cryptMapper;
     @Autowired
     private LibraryMapper libraryMapper;
+    @Autowired
+    private CryptI18nMapper cryptI18nMapper;
+    @Autowired
+    private LibraryI18nMapper libraryI18nMapper;
     @Autowired
     private SetMapper setMapper;
     @Autowired
@@ -120,12 +130,24 @@ public class AppStartUpActions implements InitializingBean {
                 library();
                 changed = true;
             }
+            if (!isLoaded(CRYPT_I18N_FILE)) {
+                cryptI18n();
+                changed = true;
+            }
+            if (!isLoaded(LIBRARY_I18N_FILE)) {
+                libraryI18n();
+                changed = true;
+            }
             if (changed) {
+                setCache.refreshIndex();
+                cryptCache.refreshIndex();
+                libraryCache.refreshIndex();
                 deckIndex.refreshIndex();
             }
             proxyCardOptionCache.refreshIndex();
             log.info("Finish background tasks...");
         }
+
 
         private boolean isLoaded(String filePath) {
             DbLoadHistory loadHistory = loadHistoryMapper.selectById(filePath);
@@ -184,7 +206,6 @@ public class AppStartUpActions implements InitializingBean {
                 }
                 log.info("Crypt to be deleted {}", keys);
                 keys.forEach(key -> cryptMapper.delete(key));
-                cryptCache.refreshIndex();
                 loaded = true;
             } catch (IOException e) {
                 log.error("Unable to parse", e);
@@ -260,7 +281,6 @@ public class AppStartUpActions implements InitializingBean {
                 }
                 log.info("Library to be deleted {}", keys);
                 keys.forEach(key -> libraryMapper.delete(key));
-                libraryCache.refreshIndex();
                 loaded = true;
             } catch (IOException e) {
                 log.error("Unable to parse", e);
@@ -297,7 +317,6 @@ public class AppStartUpActions implements InitializingBean {
                         log.error("Unable to load library {}", sets, e);
                     }
                 }
-                setCache.refreshIndex();
                 loaded = true;
             } catch (IOException e) {
                 log.error("Unable to parse", e);
@@ -310,7 +329,93 @@ public class AppStartUpActions implements InitializingBean {
                 log.info("Library load finished in {} ms", stopWatch.getLastTaskTimeMillis());
             }
         }
+
+        private void libraryI18n() {
+            log.info("Starting Library i18n load...");
+            StopWatch stopWatch = new StopWatch();
+            stopWatch.start();
+            InputStream inputStream = getClass().getClassLoader().getResourceAsStream(LIBRARY_I18N_FILE);
+            boolean loaded = false;
+            try (Reader targetReader = new InputStreamReader(inputStream)) {
+                List<DbLibraryI18n> libraryI18ns = parse(targetReader, DbLibraryI18n.class);
+                List<DbLibraryI18n> currentEntities = libraryI18nMapper.selectAll();
+                for (DbLibraryI18n libraryI18n : libraryI18ns) {
+                    try {
+                        DbLibraryI18n actual = currentEntities.stream().
+                                filter(e -> e.getId().equals(libraryI18n.getId()) && e.getLocale().equals(libraryI18n.getLocale()))
+                                .findFirst().orElse(null);
+                        if (libraryI18n.getImage().isEmpty()) {
+                            libraryI18n.setImage(null);
+                        }
+                        if (actual == null) {
+                            log.debug("Insert library i18n {}", libraryI18n.getId());
+                            libraryI18nMapper.insert(libraryI18n);
+                        } else if (!actual.equals(libraryI18n)) {
+                            libraryI18nMapper.update(libraryI18n);
+                            log.debug("Update library i18n {}", libraryI18n.getId());
+                        }
+                        currentEntities.remove(actual);
+                    } catch (Exception e) {
+                        log.error("Unable to load library i18n {}", libraryI18n, e);
+                    }
+                    currentEntities.forEach(e -> libraryI18nMapper.deleteByIdAndLocale(e.getId(), e.getLocale()));
+                }
+                loaded = true;
+            } catch (IOException e) {
+                log.error("Unable to parse", e);
+            } finally {
+                stopWatch.stop();
+                if (loaded) {
+                    updateLoadedHistory(stopWatch, LIBRARY_I18N_FILE);
+                }
+                log.info("Library i18n load finished in {} ms", stopWatch.getLastTaskTimeMillis());
+            }
+        }
+
+        private void cryptI18n() {
+            log.info("Starting Crypt i18n load...");
+            StopWatch stopWatch = new StopWatch();
+            stopWatch.start();
+            InputStream inputStream = getClass().getClassLoader().getResourceAsStream(CRYPT_I18N_FILE);
+            boolean loaded = false;
+            try (Reader targetReader = new InputStreamReader(inputStream)) {
+                List<DbCryptI18n> cryptI18ns = parse(targetReader, DbCryptI18n.class);
+                List<DbCryptI18n> currentEntities = cryptI18nMapper.selectAll();
+                for (DbCryptI18n cryptI18n : cryptI18ns) {
+                    try {
+                        DbCryptI18n actual = currentEntities.stream().
+                                filter(e -> e.getId().equals(cryptI18n.getId()) && e.getLocale().equals(cryptI18n.getLocale()))
+                                .findFirst().orElse(null);
+                        if (cryptI18n.getImage().isEmpty()) {
+                            cryptI18n.setImage(null);
+                        }
+                        if (actual == null) {
+                            log.debug("Insert crypt i18n {}", cryptI18n.getId());
+                            cryptI18nMapper.insert(cryptI18n);
+                        } else if (!actual.equals(cryptI18n)) {
+                            cryptI18nMapper.update(cryptI18n);
+                            log.debug("Update crypt i18n {}", cryptI18n.getId());
+                        }
+                        currentEntities.remove(actual);
+                    } catch (Exception e) {
+                        log.error("Unable to load crypt i18n {}", cryptI18n, e);
+                    }
+                }
+                currentEntities.forEach(e -> cryptI18nMapper.deleteByIdAndLocale(e.getId(), e.getLocale()));
+                loaded = true;
+            } catch (IOException e) {
+                log.error("Unable to parse", e);
+            } finally {
+                stopWatch.stop();
+                if (loaded) {
+                    updateLoadedHistory(stopWatch, CRYPT_I18N_FILE);
+                }
+                log.info("Crypt i18n load finished in {} ms", stopWatch.getLastTaskTimeMillis());
+            }
+
+        }
     }
+
 
     private void downloadImage(Integer id, String rawSet) throws IOException {
         String set = rawSet;
@@ -351,6 +456,7 @@ public class AppStartUpActions implements InitializingBean {
             log.error("Unable to crop {}", id, e);
         }
     }
+
 
     private <T extends DbBase> List<T> parse(Reader targetReader, Class<T> type) {
         CsvToBean<T> build = new CsvToBeanBuilder<T>(targetReader)
