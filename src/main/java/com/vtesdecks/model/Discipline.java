@@ -23,6 +23,7 @@ public enum Discipline {
     NECROMANCY("Necromancy", "necromancy", "nec"),
     OBEAH("Obeah", "obeah", "obe"),
     OBFUSCATE("Obfuscate", "obfuscate", "obf"),
+    OBLIVION("Oblivion", "oblivion", "obl"),
     OBTENEBRATION("Obtenebration", "obtenebration", "obt"),
     POTENCE("Potence", "potence", "pot"),
     PRESENCE("Presence", "presence", "pre"),
