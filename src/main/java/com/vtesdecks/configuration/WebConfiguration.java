@@ -28,14 +28,7 @@ public class WebConfiguration implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         CorsRegistration cors = registry.addMapping("/**");
-        cors.allowedOrigins(
-                "http://localhost",
-                "http://localhost:8080",
-                "http://localhost:4200",
-                "https://vtesdecks.com",
-                "https://vtesdecks-front.pages.dev",
-                "https://*.vtesdecks-front.pages.dev"//TODO: find way to allow any domain
-        );
+        cors.allowedOrigins("*");
         cors.allowedMethods("*");
     }
 }
