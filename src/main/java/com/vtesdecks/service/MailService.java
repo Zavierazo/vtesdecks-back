@@ -2,7 +2,6 @@ package com.vtesdecks.service;
 
 import com.vtesdecks.model.Mail;
 import com.vtesdecks.service.email.AwsSimpleEmailSenderService;
-import com.vtesdecks.service.email.LocalSmtpSenderService;
 import com.vtesdecks.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,8 +10,6 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 public class MailService {
-    @Autowired
-    private LocalSmtpSenderService localSmtpSenderService;
     @Autowired(required = false)
     private AwsSimpleEmailSenderService awsSimpleEmailSenderService;
 
@@ -57,7 +54,7 @@ public class MailService {
         if (awsSimpleEmailSenderService != null) {
             awsSimpleEmailSenderService.sendMail(mail);
         } else {
-            localSmtpSenderService.sendMail(mail);
+            log.warn("Local email {}", mail);
         }
     }
 }
