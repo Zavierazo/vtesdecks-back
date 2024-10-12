@@ -119,7 +119,7 @@ public class DeckFactory {
         value.setComments(commentMapper.countByPageIdentifier("deck_" + deck.getId()));
         value.setTournament(deck.getTournament());
         value.setPlayers(deck.getPlayers());
-        value.setYear(deck.getYear());
+        value.setYear(deck.getYear() != null ? deck.getYear() : deck.getCreationDate().getYear());
         value.setAuthor(deck.getAuthor());
         value.setUrl(deck.getUrl());
         value.setSource(deck.getSource());

@@ -13,14 +13,14 @@ import java.util.stream.Stream;
 
 @AllArgsConstructor
 public enum DeckTag {
-    RAMP("ramp", 10, crypt -> hasTaint(crypt, CryptTaint.ADD_BLOOD), library -> hasTaint(library, LibraryTaint.ADD_BLOOD), deck -> true),
-    ALLY("ally", 8, crypt -> false, DeckTag::isAllyLibrary, deck -> true),
     BLEED("bleed", 15, crypt -> hasTaint(crypt, CryptTaint.BLEED), library -> hasTaint(library, LibraryTaint.BLEED), deck -> true),
-    BLOCK("block", 12, crypt -> hasTaint(crypt, CryptTaint.INTERCEPT), DeckTag::isBlockLibrary, deck -> true),
-    COMBAT("combat", 20, crypt -> hasTaint(crypt, CryptTaint.STRENGTH, CryptTaint.PRESS, CryptTaint.ADDITIONAL_STRIKE, CryptTaint.PREVENT), DeckTag::isCombatLibrary, deck -> true),
-    MMPA("mmpa", 10, DeckTag::isMmpaCrypt, DeckTag::isMmpaLibrary, deck -> deck.getStats().getMaster() > 15),
-    RUSH("rush", 8, crypt -> hasTaint(crypt, CryptTaint.COMBAT), library -> hasTaint(library, LibraryTaint.COMBAT), deck -> true),
     STEALTH("stealth", 15, crypt -> hasTaint(crypt, CryptTaint.STEALTH), library -> hasTaint(library, LibraryTaint.NEGATIVE_INTERCEPT), deck -> true),
+    BLOCK("block", 12, crypt -> hasTaint(crypt, CryptTaint.INTERCEPT), DeckTag::isBlockLibrary, deck -> true),
+    RUSH("rush", 8, crypt -> hasTaint(crypt, CryptTaint.COMBAT), library -> hasTaint(library, LibraryTaint.COMBAT), deck -> true),
+    COMBAT("combat", 20, crypt -> hasTaint(crypt, CryptTaint.STRENGTH, CryptTaint.PRESS, CryptTaint.ADDITIONAL_STRIKE, CryptTaint.PREVENT), DeckTag::isCombatLibrary, deck -> true),
+    ALLY("ally", 8, crypt -> false, DeckTag::isAllyLibrary, deck -> true),
+    RAMP("ramp", 10, crypt -> hasTaint(crypt, CryptTaint.ADD_BLOOD), library -> hasTaint(library, LibraryTaint.ADD_BLOOD), deck -> true),
+    MMPA("mmpa", 10, DeckTag::isMmpaCrypt, DeckTag::isMmpaLibrary, deck -> deck.getStats().getMaster() > 15),
     SWARM("swarm", 8, crypt -> false, library -> hasTaint(library, LibraryTaint.CREATE_VAMPIRE), deck -> true),
     VOTE("vote", 8, crypt -> false, DeckTag::isVoteLibrary, deck -> deck.getStats().getPoliticalAction() > 5);
 
