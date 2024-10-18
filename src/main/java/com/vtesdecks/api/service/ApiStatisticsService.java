@@ -15,6 +15,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -69,14 +72,17 @@ public class ApiStatisticsService {
         }
         List<ApiStatistic> apiTagStatistics = Lists.newArrayList(tags.values());
         apiTagStatistics.sort(Comparator.comparingInt(o -> TAGS_ORDER.indexOf(o.getLabel())));
+        apiTagStatistics.forEach(apiStatistic -> apiStatistic.setPercentage(getPercentage(apiStatistic.getCount(), decks.size())));
         apiYearStatistic.setTags(apiTagStatistics);
 
         List<ApiStatistic> apiClanStatistics = Lists.newArrayList(clans.values());
         apiClanStatistics.sort((o1, o2) -> o2.getCount().compareTo(o1.getCount()));
+        apiClanStatistics.forEach(apiStatistic -> apiStatistic.setPercentage(getPercentage(apiStatistic.getCount(), decks.size())));
         apiYearStatistic.setClans(apiClanStatistics);
 
         List<ApiStatistic> apiDisciplineStatistics = Lists.newArrayList(disciplines.values());
         apiDisciplineStatistics.sort((o1, o2) -> o2.getCount().compareTo(o1.getCount()));
+        apiDisciplineStatistics.forEach(apiStatistic -> apiStatistic.setPercentage(getPercentage(apiStatistic.getCount(), decks.size())));
         apiYearStatistic.setDisciplines(apiDisciplineStatistics);
 
         return apiYearStatistic;
@@ -87,6 +93,7 @@ public class ApiStatisticsService {
         List<ApiHistoricStatistic> apiHistoricStatistic = new ArrayList<>();
         ResultSet<Deck> decks = getDecks(type, null);
         Map<String, Map<Integer, ApiStatistic>> years = new HashMap<>();
+        Map<Integer, Integer> deckCount = new HashMap<>();
         for (Deck deck : decks) {
             for (String tag : deck.getTags()) {
                 Map<Integer, ApiStatistic> yearStatistics = years.getOrDefault(tag, new HashMap<>());
@@ -99,10 +106,12 @@ public class ApiStatisticsService {
                 apiStatistic.setCount(apiStatistic.getCount() + 1);
                 years.put(tag, yearStatistics);
             }
+            deckCount.put(deck.getYear(), deckCount.getOrDefault(deck.getYear(), 0) + 1);
         }
         years.forEach((tag, yearStatistics) -> {
             List<ApiStatistic> apiStatisticList = new ArrayList<>(yearStatistics.values());
             apiStatisticList.sort(Comparator.comparingInt(o -> Integer.parseInt(o.getLabel())));
+            apiStatisticList.forEach(apiStatistic -> apiStatistic.setPercentage(getPercentage(apiStatistic.getCount(), deckCount.getOrDefault(Integer.parseInt(apiStatistic.getLabel()), 0))));
             apiHistoricStatistic.add(new ApiHistoricStatistic(tag, apiStatisticList));
         });
         return apiHistoricStatistic;
@@ -112,6 +121,7 @@ public class ApiStatisticsService {
         List<ApiHistoricStatistic> apiHistoricStatistic = new ArrayList<>();
         ResultSet<Deck> decks = getDecks(type, null);
         Map<String, Map<Integer, ApiStatistic>> years = new HashMap<>();
+        Map<Integer, Integer> deckCount = new HashMap<>();
         for (Deck deck : decks) {
             for (String clan : deck.getClans()) {
                 Map<Integer, ApiStatistic> yearStatistics = years.getOrDefault(clan, new HashMap<>());
@@ -124,10 +134,12 @@ public class ApiStatisticsService {
                 apiStatistic.setCount(apiStatistic.getCount() + 1);
                 years.put(clan, yearStatistics);
             }
+            deckCount.put(deck.getYear(), deckCount.getOrDefault(deck.getYear(), 0) + 1);
         }
         years.forEach((clan, yearStatistics) -> {
             List<ApiStatistic> apiStatisticList = new ArrayList<>(yearStatistics.values());
             apiStatisticList.sort(Comparator.comparingInt(o -> Integer.parseInt(o.getLabel())));
+            apiStatisticList.forEach(apiStatistic -> apiStatistic.setPercentage(getPercentage(apiStatistic.getCount(), deckCount.getOrDefault(Integer.parseInt(apiStatistic.getLabel()), 0))));
             apiHistoricStatistic.add(new ApiHistoricStatistic(clan, apiStatisticList));
         });
         return apiHistoricStatistic;
@@ -137,6 +149,7 @@ public class ApiStatisticsService {
         List<ApiHistoricStatistic> apiHistoricStatistic = new ArrayList<>();
         ResultSet<Deck> decks = getDecks(type, null);
         Map<String, Map<Integer, ApiStatistic>> years = new HashMap<>();
+        Map<Integer, Integer> deckCount = new HashMap<>();
         for (Deck deck : decks) {
             for (String discipline : deck.getDisciplines()) {
                 Map<Integer, ApiStatistic> yearStatistics = years.getOrDefault(discipline, new HashMap<>());
@@ -149,10 +162,12 @@ public class ApiStatisticsService {
                 apiStatistic.setCount(apiStatistic.getCount() + 1);
                 years.put(discipline, yearStatistics);
             }
+            deckCount.put(deck.getYear(), deckCount.getOrDefault(deck.getYear(), 0) + 1);
         }
         years.forEach((discipline, yearStatistics) -> {
             List<ApiStatistic> apiStatisticList = new ArrayList<>(yearStatistics.values());
             apiStatisticList.sort(Comparator.comparingInt(o -> Integer.parseInt(o.getLabel())));
+            apiStatisticList.forEach(apiStatistic -> apiStatistic.setPercentage(getPercentage(apiStatistic.getCount(), deckCount.getOrDefault(Integer.parseInt(apiStatistic.getLabel()), 0))));
             apiHistoricStatistic.add(new ApiHistoricStatistic(discipline, apiStatisticList));
         });
         return apiHistoricStatistic;
@@ -164,6 +179,18 @@ public class ApiStatisticsService {
                 null, null, year != null ? Lists.newArrayList(year, year) : null, null, null, null, null,
                 null, null, null, null, null, null, null,
                 null, null, null);
+    }
+
+    private static BigDecimal getPercentage(Integer count, int size) {
+        if (size == 0 || count == 0) {
+            return BigDecimal.ZERO;
+        }
+        MathContext mathContext = new MathContext(10, RoundingMode.HALF_UP);
+        BigDecimal countBigDecimal = BigDecimal.valueOf(count);
+        BigDecimal sizeBigDecimal = BigDecimal.valueOf(size);
+        return countBigDecimal.divide(sizeBigDecimal, mathContext)
+                .multiply(new BigDecimal("100.0"), mathContext)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
 }
