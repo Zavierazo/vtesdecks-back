@@ -250,6 +250,21 @@ public class AppStartUpActions implements InitializingBean {
                 case 201696:
                     crypt.setName("François Villon (G6)");
                     break;
+                case 201693:
+                    crypt.setName("Annabelle Triabell (G6)");
+                    break;
+                case 201647:
+                    crypt.setName("Queen Anne (G6)");
+                    break;
+                case 201705:
+                    crypt.setName("Nikolaus Vermeulen (G6)");
+                    break;
+                case 201700:
+                    crypt.setName("Lucinde, Alastor (G7)");
+                    break;
+                case 201695:
+                    crypt.setName("Dónal O'Connor (G6)");
+                    break;
             }
         }
 
