@@ -28,7 +28,7 @@ public class DatabaseConfiguration {
     @Primary
     @Bean
     @FlywayDataSource
-    public DataSource dataSource() throws UnknownHostException {
+    public DataSource dataSource() {
         HikariDataSource hikariDataSource = new HikariDataSource();
         hikariDataSource.setMaxLifetime(1200000);
         hikariDataSource.setMaximumPoolSize(100);

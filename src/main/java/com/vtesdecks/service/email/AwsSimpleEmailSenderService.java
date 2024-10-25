@@ -3,13 +3,13 @@ package com.vtesdecks.service.email;
 import com.vtesdecks.model.Mail;
 import com.vtesdecks.model.mail.MailNotificationData;
 import com.vtesdecks.service.MailSenderService;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.util.Arrays;
 import java.util.Properties;
 

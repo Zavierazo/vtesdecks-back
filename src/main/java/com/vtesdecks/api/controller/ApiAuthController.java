@@ -8,6 +8,8 @@ import com.vtesdecks.model.api.ApiUser;
 import com.vtesdecks.service.MailService;
 import com.vtesdecks.service.RecaptchaService;
 import com.vtesdecks.util.Utils;
+import jakarta.mail.internet.AddressException;
+import jakarta.mail.internet.InternetAddress;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -20,8 +22,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
 import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.Map;

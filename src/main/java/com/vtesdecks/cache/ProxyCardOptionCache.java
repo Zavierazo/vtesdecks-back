@@ -1,13 +1,10 @@
 package com.vtesdecks.cache;
 
-import com.google.common.collect.Lists;
 import com.googlecode.cqengine.ConcurrentIndexedCollection;
 import com.googlecode.cqengine.IndexedCollection;
 import com.googlecode.cqengine.index.hash.HashIndex;
-import com.googlecode.cqengine.index.unique.UniqueIndex;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.resultset.ResultSet;
-import com.vtesdecks.cache.indexable.Set;
 import com.vtesdecks.cache.indexable.proxy.ProxyCardOption;
 import com.vtesdecks.db.CryptMapper;
 import com.vtesdecks.db.LibraryMapper;
@@ -15,14 +12,13 @@ import com.vtesdecks.db.model.DbCrypt;
 import com.vtesdecks.db.model.DbLibrary;
 import com.vtesdecks.service.ProxyService;
 import com.vtesdecks.util.VtesUtils;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
-import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -72,9 +68,9 @@ public class ProxyCardOptionCache {
         cache.clear();
         List<ProxyCardOption> proxyOptions = getAllPossibleOptions()
                 .parallel()
-                .map( o -> new Object[] { o, proxyService.existsImage(o)})
-                .filter( pair -> (boolean)pair[1])
-                .map( pair -> (ProxyCardOption) pair[0])
+                .map(o -> new Object[]{o, proxyService.existsImage(o)})
+                .filter(pair -> (boolean) pair[1])
+                .map(pair -> (ProxyCardOption) pair[0])
                 .collect(Collectors.toList());
 
         cache.addAll(proxyOptions);
@@ -89,18 +85,18 @@ public class ProxyCardOptionCache {
 
     private Stream<ProxyCardOption> libraryToProxyOptions(DbLibrary dbLibrary) {
         return getSetsAbbrev(dbLibrary.getSet())
-                .map( abbrev -> new ProxyCardOption(dbLibrary.getId(), abbrev));
+                .map(abbrev -> new ProxyCardOption(dbLibrary.getId(), abbrev));
     }
 
     private Stream<ProxyCardOption> cryptToProxyOptions(DbCrypt dbCrypt) {
         return getSetsAbbrev(dbCrypt.getSet())
-                .map( abbrev -> new ProxyCardOption(dbCrypt.getId(), abbrev));
+                .map(abbrev -> new ProxyCardOption(dbCrypt.getId(), abbrev));
     }
 
-    private Stream<String> getSetsAbbrev(String rawSet){
+    private Stream<String> getSetsAbbrev(String rawSet) {
         return VtesUtils.getSets(rawSet).stream()
-                .map( s -> s.split(":")[0])
-                .map( s -> s.startsWith("Promo-") ? "Promo" : s);
+                .map(s -> s.split(":")[0])
+                .map(s -> s.startsWith("Promo-") ? "Promo" : s);
     }
 
 }

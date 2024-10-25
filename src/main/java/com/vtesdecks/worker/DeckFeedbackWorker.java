@@ -7,6 +7,7 @@ import com.vtesdecks.db.DeckViewMapper;
 import com.vtesdecks.db.model.DbDeckView;
 import com.vtesdecks.db.model.DbUser;
 import com.vtesdecks.util.Utils;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
