@@ -38,7 +38,7 @@ public class ApiSecurityConfiguration {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .addFilterAfter(new JWTAuthorizationFilter(jwtSecret), UsernamePasswordAuthenticationFilter.class)
-                .authorizeHttpRequests((authorizeHttpRequests) ->
+                .authorizeHttpRequests(authorizeHttpRequests ->
                         authorizeHttpRequests
                                 .requestMatchers("/api/1.0/user/**").authenticated()
                                 .requestMatchers("/**").permitAll()
