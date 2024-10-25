@@ -8,6 +8,7 @@ import com.vtesdecks.model.api.ApiUser;
 import com.vtesdecks.service.MailService;
 import com.vtesdecks.service.RecaptchaService;
 import com.vtesdecks.util.Utils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +22,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
-import javax.servlet.http.HttpServletRequest;
 import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.Map;
