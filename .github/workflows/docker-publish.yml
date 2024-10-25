@@ -39,7 +39,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: '8.0.422+5'
+          java-version: '21'
           distribution: 'adopt'
           cache: maven
 
@@ -106,7 +106,7 @@ jobs:
         # This step uses the identity token to provision an ephemeral certificate
         # against the sigstore community Fulcio instance.
         run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
-        
+
       # Call webhook to force redeploy
       - name: Deploy docker container webhook
         if: ${{ github.event_name != 'pull_request' }}
