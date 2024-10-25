@@ -12,12 +12,12 @@ import java.util.Set;
 
 @Data
 public class Crypt {
-    public static final Attribute<Crypt, Integer> ID_ATTRIBUTE = QueryFactory.attribute("id", Crypt::getId);
+    public static final Attribute<Crypt, Integer> ID_ATTRIBUTE = QueryFactory.attribute(Crypt.class, Integer.class, "id", Crypt::getId);
     public static final Attribute<Crypt, String> NAME_ATTRIBUTE =
-            QueryFactory.attribute("name", crypt -> StringUtils.stripAccents(StringUtils.lowerCase(crypt.getName())));
+            QueryFactory.attribute(Crypt.class, String.class, "name", (Crypt crypt) -> StringUtils.stripAccents(StringUtils.lowerCase(crypt.getName())));
     public static final Attribute<Crypt, String> TEXT_ATTRIBUTE =
-            QueryFactory.attribute("text", crypt -> StringUtils.stripAccents(StringUtils.lowerCase(crypt.getText())));
-    public static final Attribute<Crypt, LocalDateTime> LAST_UPDATE_ATTRIBUTE = QueryFactory.attribute("last_update", Crypt::getLastUpdate);
+            QueryFactory.attribute(Crypt.class, String.class, "text", (Crypt crypt) -> StringUtils.stripAccents(StringUtils.lowerCase(crypt.getText())));
+    public static final Attribute<Crypt, LocalDateTime> LAST_UPDATE_ATTRIBUTE = QueryFactory.attribute(Crypt.class, LocalDateTime.class, "last_update", Crypt::getLastUpdate);
 
     private Integer id;
     private String name;

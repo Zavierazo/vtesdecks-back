@@ -1,16 +1,14 @@
 package com.vtesdecks.model.mail;
 
-import java.util.List;
-
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
-
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.MimeMessagePreparator;
 
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
 
 /**
  * The Class MailNotificationData.
