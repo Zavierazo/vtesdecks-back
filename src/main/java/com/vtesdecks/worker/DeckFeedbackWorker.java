@@ -1,15 +1,14 @@
 package com.vtesdecks.worker;
 
-import com.google.common.base.Optional;
 import com.google.common.hash.Hashing;
-import com.optimaize.webcrawlerverifier.KnownCrawlerDetector;
-import com.optimaize.webcrawlerverifier.KnownCrawlerResult;
 import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.db.DeckMapper;
 import com.vtesdecks.db.DeckViewMapper;
 import com.vtesdecks.db.model.DbDeckView;
 import com.vtesdecks.db.model.DbUser;
 import com.vtesdecks.util.Utils;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
@@ -17,8 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
-import javax.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -35,8 +32,6 @@ public class DeckFeedbackWorker implements Runnable {
     private DeckIndex deckIndex;
     @Autowired
     private DeckViewMapper deckViewMapper;
-    @Autowired
-    private KnownCrawlerDetector knownCrawlerDetector;
 
     @Data
     @Builder
@@ -67,9 +62,6 @@ public class DeckFeedbackWorker implements Runnable {
             try {
                 DeckFeedback deckFeedback = operationLogQueue.take();
                 if (deckFeedback.getType() == DeckFeedback.FeedbackType.VIEW) {
-                    if (isCrawler(deckFeedback.getUserAgent(), deckFeedback.getIp())) {
-                        continue;
-                    }
                     String voteId = deckFeedback.getIp() + (deckFeedback.getUserAgent() != null ? deckFeedback.getUserAgent() : "");
                     DbDeckView deckView = new DbDeckView();
                     deckView.setId(Hashing.sha256()
@@ -94,16 +86,6 @@ public class DeckFeedbackWorker implements Runnable {
                 log.error("Unhandled exception: {} ", e);
             }
         }
-    }
-
-    private boolean isCrawler(String userAgent, String clientIp) {
-        Optional<KnownCrawlerResult> result = knownCrawlerDetector.detect(userAgent, clientIp);
-        if (result.isPresent()) {
-            KnownCrawlerResult crawlerResult = result.get();
-            log.info("Crawler detected {}({}), userAgent: '{}', ip: '{}'", crawlerResult.getIdentifier(), crawlerResult.getStatus(), userAgent,
-                    clientIp);
-        }
-        return result.isPresent();
     }
 
     public void enqueueView(String deck, DbUser user, String source, HttpServletRequest httpServletRequest) {

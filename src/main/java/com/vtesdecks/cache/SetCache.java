@@ -7,15 +7,11 @@ import com.googlecode.cqengine.index.unique.UniqueIndex;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.resultset.ResultSet;
-import com.vtesdecks.cache.factory.LibraryFactory;
 import com.vtesdecks.cache.factory.SetFactory;
-import com.vtesdecks.cache.indexable.Library;
-import com.vtesdecks.db.LibraryMapper;
-import com.vtesdecks.db.SetMapper;
-import com.vtesdecks.db.model.DbLibrary;
-import com.vtesdecks.db.model.DbSet;
 import com.vtesdecks.cache.indexable.Set;
-
+import com.vtesdecks.db.SetMapper;
+import com.vtesdecks.db.model.DbSet;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
@@ -24,8 +20,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
-import javax.annotation.PostConstruct;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -104,7 +98,7 @@ public class SetCache {
         return null;
     }
 
-    public ResultSet<Set> selectAll(){
+    public ResultSet<Set> selectAll() {
         Query<Set> query = all(Set.class);
         QueryOptions queryOptions = queryOptions(orderBy(ascending(Set.RELEASE_ATTRIBUTE)));
 

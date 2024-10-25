@@ -29,7 +29,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.util.StopWatch;
 
 import javax.imageio.ImageIO;
@@ -51,7 +50,6 @@ import java.util.stream.Collectors;
 
 @Configuration
 @Slf4j
-@DependsOn("flywayInitializer")
 public class AppStartUpActions implements InitializingBean {
     private static final String BASE_PATH = "D://Trabajo//Git//vtesdecks-front//src//assets//img//cards//";
     private static final char CSV_SEPARATOR = ',';

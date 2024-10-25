@@ -17,16 +17,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.Map;
 
-import static javax.ws.rs.core.MediaType.APPLICATION_FORM_URLENCODED;
+import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @FeignClient(name = "KRCGClient", url = "https://api.krcg.org", configuration = KRCGClient.Configuration.class)
 public interface KRCGClient {
 
-    @PostMapping(value = "/amaranth", consumes = APPLICATION_FORM_URLENCODED, produces = APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/amaranth", consumes = APPLICATION_FORM_URLENCODED_VALUE, produces = APPLICATION_JSON_VALUE)
     Deck getAmaranthDeck(@RequestBody Map<String, ?> form);
 
-    @PostMapping(value = "/vdb", consumes = APPLICATION_FORM_URLENCODED, produces = APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/vdb", consumes = APPLICATION_FORM_URLENCODED_VALUE, produces = APPLICATION_JSON_VALUE)
     Deck getVDBDeck(@RequestBody Map<String, ?> form);
 
 

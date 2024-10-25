@@ -28,13 +28,13 @@ public class DatabaseConfiguration {
     @Primary
     @Bean
     @FlywayDataSource
-    public DataSource dataSource() throws UnknownHostException {
+    public DataSource dataSource() {
         HikariDataSource hikariDataSource = new HikariDataSource();
         hikariDataSource.setMaxLifetime(1200000);
         hikariDataSource.setMaximumPoolSize(100);
         hikariDataSource.setMinimumIdle(10);
         hikariDataSource.setPoolName("MySQL Pool");
-        hikariDataSource.setDriverClassName("com.mysql.jdbc.Driver");
+        hikariDataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
         hikariDataSource.setJdbcUrl(databaseHost);
         hikariDataSource.setUsername(databaseUsername);
         hikariDataSource.setPassword(databasePassword);

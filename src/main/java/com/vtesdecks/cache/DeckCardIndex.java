@@ -1,20 +1,5 @@
 package com.vtesdecks.cache;
 
-import static com.googlecode.cqengine.query.QueryFactory.equal;
-import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import javax.annotation.PostConstruct;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
-
 import com.googlecode.cqengine.ConcurrentIndexedCollection;
 import com.googlecode.cqengine.IndexedCollection;
 import com.googlecode.cqengine.index.hash.HashIndex;
@@ -24,7 +9,20 @@ import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.indexable.DeckCard;
 import com.vtesdecks.db.DeckCardMapper;
 import com.vtesdecks.db.model.DbDeckCard;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static com.googlecode.cqengine.query.QueryFactory.equal;
+import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 
 @Slf4j
 @Component
@@ -54,10 +52,10 @@ public class DeckCardIndex {
             List<DbDeckCard> dbDeckCards = deckCardMapper.selectByDeck(deckId);
             for (DbDeckCard dbDeckCard : dbDeckCards) {
                 deckCards.add(DeckCard.builder()
-                    .deckId(dbDeckCard.getDeckId())
-                    .id(dbDeckCard.getId())
-                    .number(dbDeckCard.getNumber())
-                    .build());
+                        .deckId(dbDeckCard.getDeckId())
+                        .id(dbDeckCard.getId())
+                        .number(dbDeckCard.getNumber())
+                        .build());
             }
             refreshIndex(deckId, deckCards);
         } catch (Exception e) {
@@ -105,7 +103,6 @@ public class DeckCardIndex {
         ResultSet<DeckCard> result = cache.retrieve(findByKeyQuery);
         return (result.size() >= 1) ? result.stream().collect(Collectors.toList()) : Collections.emptyList();
     }
-
 
 
     public void removeDeck(String deckId) {

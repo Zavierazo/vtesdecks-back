@@ -21,6 +21,7 @@ import com.vtesdecks.db.model.DbCardShop;
 import com.vtesdecks.db.model.DbLibrary;
 import com.vtesdecks.db.model.DbLibraryI18n;
 import com.vtesdecks.model.LibraryTaint;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
-import javax.annotation.PostConstruct;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;

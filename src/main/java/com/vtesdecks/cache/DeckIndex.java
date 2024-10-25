@@ -24,6 +24,7 @@ import com.vtesdecks.db.DeckMapper;
 import com.vtesdecks.db.model.DbDeck;
 import com.vtesdecks.enums.CacheEnum;
 import com.vtesdecks.model.DeckQuery;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -36,7 +37,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
-import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

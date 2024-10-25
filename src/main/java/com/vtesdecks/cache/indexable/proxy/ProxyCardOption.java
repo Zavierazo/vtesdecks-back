@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class ProxyCardOption {
-    public static final Attribute<ProxyCardOption, Integer> CARD_ID_ATTRIBUTE = QueryFactory.attribute("cardId", ProxyCardOption::getCardId);
+    public static final Attribute<ProxyCardOption, Integer> CARD_ID_ATTRIBUTE = QueryFactory.attribute(ProxyCardOption.class, Integer.class, "cardId", ProxyCardOption::getCardId);
 
     private Integer cardId;
     private String setAbbrev;
