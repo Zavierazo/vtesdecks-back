@@ -1,15 +1,6 @@
 package com.vtesdecks.service.impl;
 
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.SPACE;
-
-import java.util.List;
-import java.util.Map;
-
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
+import com.anyascii.AnyAscii;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
@@ -21,6 +12,15 @@ import com.vtesdecks.db.model.DbCrypt;
 import com.vtesdecks.model.DeckExportType;
 import com.vtesdecks.service.DeckExportService;
 import com.vtesdecks.service.DeckService;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.SPACE;
 
 @Service
 public class DeckExportServiceImpl implements DeckExportService {
@@ -58,7 +58,11 @@ public class DeckExportServiceImpl implements DeckExportService {
             for (Card card : entry.getValue()) {
                 Library library = libraryCache.get(card.getId());
                 if (library != null) {
-                    result.append(card.getNumber()).append(TAB).append(StringUtils.trim(library.getName())).append(NEW_LINE);
+                    result
+                            .append(card.getNumber())
+                            .append(TAB)
+                            .append(normalizeLackeyName(library.getName()))
+                            .append(NEW_LINE);
                 }
             }
         }
@@ -66,10 +70,18 @@ public class DeckExportServiceImpl implements DeckExportService {
         for (Card card : deck.getCrypt()) {
             Crypt crypt = cryptCache.get(card.getId());
             if (crypt != null) {
-                result.append(card.getNumber()).append(TAB).append(StringUtils.trim(crypt.getName())).append(crypt.isAdv() ? " (ADV)" : "")
-                    .append(NEW_LINE);
+                result
+                        .append(card.getNumber())
+                        .append(TAB)
+                        .append(normalizeLackeyName(crypt.getName()))
+                        .append(crypt.isAdv() ? " (ADV)" : "")
+                        .append(NEW_LINE);
             }
         }
+    }
+
+    private String normalizeLackeyName(String name) {
+        return AnyAscii.transliterate(StringUtils.trim(name)).replaceAll("[/\\\\]", "");
     }
 
     private void exportJOL(StringBuilder result, Deck deck) {
@@ -77,7 +89,7 @@ public class DeckExportServiceImpl implements DeckExportService {
             Crypt crypt = cryptCache.get(card.getId());
             if (crypt != null) {
                 result.append(card.getNumber()).append(X).append(StringUtils.trim(crypt.getName())).append(crypt.isAdv() ? " (ADV)" : "")
-                    .append(NEW_LINE);
+                        .append(NEW_LINE);
             }
         }
         result.append(NEW_LINE);
@@ -96,32 +108,32 @@ public class DeckExportServiceImpl implements DeckExportService {
         result.append("Author: ").append(deck.getAuthor()).append(NEW_LINE);
         result.append("Description: ").append(deck.getDescription() != null ? deck.getDescription() : EMPTY).append(NEW_LINE).append(NEW_LINE);
         result.append("Crypt(")
-            .append(deck.getStats().getCrypt())
-            .append(" cards; Capacity min=")
-            .append(deck.getCrypt().stream().map(Card::getId).map(cryptCache::get).mapToInt(Crypt::getCapacity).min().orElse(0))
-            .append(" max=")
-            .append(deck.getCrypt().stream().map(Card::getId).map(cryptCache::get).mapToInt(Crypt::getCapacity).max().orElse(0))
-            .append(" avg=")
-            .append(deck.getCrypt().stream().map(Card::getId).map(cryptCache::get).mapToInt(Crypt::getCapacity).average().orElse(0))
-            .append(")").append(NEW_LINE);
+                .append(deck.getStats().getCrypt())
+                .append(" cards; Capacity min=")
+                .append(deck.getCrypt().stream().map(Card::getId).map(cryptCache::get).mapToInt(Crypt::getCapacity).min().orElse(0))
+                .append(" max=")
+                .append(deck.getCrypt().stream().map(Card::getId).map(cryptCache::get).mapToInt(Crypt::getCapacity).max().orElse(0))
+                .append(" avg=")
+                .append(deck.getCrypt().stream().map(Card::getId).map(cryptCache::get).mapToInt(Crypt::getCapacity).average().orElse(0))
+                .append(")").append(NEW_LINE);
         result.append("==================").append(NEW_LINE);
         for (Card card : deck.getCrypt()) {
             Crypt crypt = cryptCache.get(card.getId());
             if (crypt != null) {
                 DbCrypt dbCrypt = cryptMapper.selectById(crypt.getId());
                 result.append(card.getNumber()).append("x").append(SPACE)
-                    .append(StringUtils.trim(crypt.getName())).append(SPACE)
-                    .append(crypt.getCapacity()).append(SPACE)
-                    .append(dbCrypt.getDisciplines()).append(SPACE)
-                    .append(crypt.getClan()).append(":").append(crypt.getGroup() < 0 ? "ANY" : crypt.getGroup()).append(SPACE)
-                    .append(NEW_LINE);
+                        .append(StringUtils.trim(crypt.getName())).append(SPACE)
+                        .append(crypt.getCapacity()).append(SPACE)
+                        .append(dbCrypt.getDisciplines()).append(SPACE)
+                        .append(crypt.getClan()).append(":").append(crypt.getGroup() < 0 ? "ANY" : crypt.getGroup()).append(SPACE)
+                        .append(NEW_LINE);
             }
         }
         result.append(NEW_LINE);
         result.append("Library: ").append(deck.getStats().getLibrary()).append(" cards").append(NEW_LINE).append(NEW_LINE);
         for (Map.Entry<String, List<Card>> entry : deck.getLibraryByType().entrySet()) {
             result.append(entry.getKey()).append(" (").append(entry.getValue().stream().map(Card::getNumber).reduce(0, Integer::sum))
-                .append(" cards)").append(NEW_LINE);
+                    .append(" cards)").append(NEW_LINE);
             result.append("==================").append(NEW_LINE);
             for (Card card : entry.getValue()) {
                 Library library = libraryCache.get(card.getId());

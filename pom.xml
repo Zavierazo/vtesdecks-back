@@ -258,6 +258,11 @@
             <artifactId>spring-cloud-starter-openfeign</artifactId>
             <version>4.1.3</version>
         </dependency>
+        <dependency>
+            <groupId>com.anyascii</groupId>
+            <artifactId>anyascii</artifactId>
+            <version>0.3.2</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
