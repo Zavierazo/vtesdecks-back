@@ -48,7 +48,8 @@ public enum Clan {
     TZIMISCE("Tzimisce", "tzimisce"),
     VENTRUE("Ventrue", "ventrue"),
     VENTRUE_ANTITRIBU("Ventrue antitribu", "ventrueanti", "ventrueantitribu"),
-    VISIONARY("Visionary", "visionary");
+    VISIONARY("Visionary", "visionary"),
+    HECATA("Hecata", "hecata");
 
     @Getter
     private String name;
