@@ -32,6 +32,9 @@ public interface DeckMapper {
     @Select("SELECT * FROM deck WHERE type ='COMMUNITY' AND deleted = true AND modification_date < (NOW() - INTERVAL 60 DAY)")
     List<DbDeck> selectOldDeleted();
 
+    @Select("SELECT * FROM deck WHERE type ='COMMUNITY' AND deleted = true AND user=#{userId}")
+    List<DbDeck> selectUserDeleted(@Param("userId") Integer userId);
+
     @Delete("DELETE FROM deck WHERE id=#{id}")
     void delete(@Param("id") String id);
 

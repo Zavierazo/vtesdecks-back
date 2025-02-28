@@ -1,17 +1,5 @@
 package com.vtesdecks.api.service;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.function.Function;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.vtesdecks.api.util.ApiUtils;
@@ -33,6 +21,17 @@ import com.vtesdecks.model.krcg.Card;
 import com.vtesdecks.model.krcg.Deck;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.function.Function;
 
 @Slf4j
 @Service
@@ -132,9 +131,7 @@ public class ApiDeckBuilderService {
         List<DbDeckCard> dbCards = deckCardMapper.selectByDeck(deck.getId());
         for (ApiCard card : deckCards) {
             if (card.getNumber() != null && card.getNumber() > 0) {
-                DbDeckCard dbCard = dbCards.stream()
-                    .filter(db -> db.getId().equals(card.getId()))
-                    .findFirst().orElse(null);
+                DbDeckCard dbCard = dbCards.stream().filter(db -> db.getId().equals(card.getId())).findFirst().orElse(null);
                 if (dbCard == null) {
                     dbCard = new DbDeckCard();
                     dbCard.setId(card.getId());
@@ -150,10 +147,7 @@ public class ApiDeckBuilderService {
         //Delete removed cards
         for (DbDeckCard card : dbCards) {
             try {
-                Integer deckCard = deckCards.stream()
-                    .filter(c -> c.getId().equals(card.getId()))
-                    .map(ApiCard::getId)
-                    .findFirst().orElse(null);
+                Integer deckCard = deckCards.stream().filter(c -> c.getId().equals(card.getId())).map(ApiCard::getId).findFirst().orElse(null);
                 if (deckCard == null) {
                     deckCardMapper.delete(card.getDeckId(), card.getId());
                 }
@@ -180,6 +174,20 @@ public class ApiDeckBuilderService {
         return true;
     }
 
+    public boolean restoreDeck(String deckId) {
+        DbDeck deck = deckMapper.selectById(deckId);
+        if (deck == null) {
+            return false;
+        } else if (!deck.getUser().equals(ApiUtils.extractUserId())) {
+            log.warn("Deck restore invalid request for user {}, tying to delete {}", ApiUtils.extractUserId(), deckId);
+            return false;
+        }
+        deck.setDeleted(false);
+        deckMapper.update(deck);
+        //Enqueue indexation of new deck
+        deckIndex.enqueueRefreshIndex(deck.getId());
+        return true;
+    }
 
     private ApiDeckBuilder importDeck(String url, Function<Map<String, ?>, Deck> api) {
         try {

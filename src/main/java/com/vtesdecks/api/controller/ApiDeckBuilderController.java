@@ -25,9 +25,7 @@ public class ApiDeckBuilderController {
     @Autowired
     private ApiDeckBuilderService deckBuilderService;
 
-    @RequestMapping(method = RequestMethod.GET, value = "/{id}", produces = {
-            MediaType.APPLICATION_JSON_VALUE
-    })
+    @RequestMapping(method = RequestMethod.GET, value = "/{id}", produces = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
     public ResponseEntity<ApiDeckBuilder> deck(@PathVariable String id) throws Exception {
         log.debug("Deck builder user {} imports deck {}", ApiUtils.extractUserId(), id);
@@ -39,9 +37,7 @@ public class ApiDeckBuilderController {
         }
     }
 
-    @RequestMapping(method = RequestMethod.POST, value = "/{type}/import", consumes = TEXT_PLAIN_VALUE, produces = {
-            MediaType.APPLICATION_JSON_VALUE
-    })
+    @RequestMapping(method = RequestMethod.POST, value = "/{type}/import", consumes = TEXT_PLAIN_VALUE, produces = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
     public ResponseEntity<ApiDeckBuilder> deck(@PathVariable ImportType type, @RequestBody String url) throws Exception {
         log.debug("Deck builder user {} imports {} {}", ApiUtils.extractUserId(), type, url);
@@ -54,13 +50,7 @@ public class ApiDeckBuilderController {
     }
 
 
-    @RequestMapping(method = RequestMethod.POST,
-            consumes = {
-                    MediaType.APPLICATION_JSON_VALUE
-            },
-            produces = {
-                    MediaType.APPLICATION_JSON_VALUE
-            })
+    @RequestMapping(method = RequestMethod.POST, consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
     public ResponseEntity<ApiDeckBuilder> storeDeck(@RequestBody ApiDeckBuilder deckBuilder) {
         log.info("Deck builder user {} stores {} with id {}", ApiUtils.extractUserId(), deckBuilder.getName(), deckBuilder.getId());
@@ -69,9 +59,7 @@ public class ApiDeckBuilderController {
     }
 
 
-    @RequestMapping(method = RequestMethod.DELETE, value = "/{id}", produces = {
-            MediaType.APPLICATION_JSON_VALUE
-    })
+    @RequestMapping(method = RequestMethod.DELETE, value = "/{id}", produces = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
     public ResponseEntity<Boolean> deleteDeck(@PathVariable String id) {
         log.info("Deck builder user {} deletes {}", ApiUtils.extractUserId(), id);
@@ -81,6 +69,13 @@ public class ApiDeckBuilderController {
         } else {
             return new ResponseEntity<>(deckBuilderService.deleteDeck(id), HttpStatus.OK);
         }
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/{id}/restore", produces = {MediaType.APPLICATION_JSON_VALUE})
+    @ResponseBody
+    public ResponseEntity<Boolean> restoreDeck(@PathVariable String id) {
+        log.info("Deck builder user {} restores {}", ApiUtils.extractUserId(), id);
+        return new ResponseEntity<>(deckBuilderService.restoreDeck(id), HttpStatus.OK);
     }
 
 
