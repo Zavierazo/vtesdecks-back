@@ -1,27 +1,5 @@
 package com.vtesdecks.scheduler;
 
-import java.text.ParsePosition;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAccessor;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.CacheManager;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
-
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.DomAttr;
@@ -44,6 +22,27 @@ import com.vtesdecks.db.model.DbLibrary;
 import com.vtesdecks.db.model.DbTextSearch;
 import com.vtesdecks.util.VtesUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.text.ParsePosition;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Component
@@ -51,128 +50,15 @@ public class TournamentDeckScheduler {
 
     private static final DateTimeFormatter FORMATTER_TOURNAMENT = DateTimeFormatter.ofPattern("MMMM d yyyy", Locale.ENGLISH);
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", Locale.ENGLISH);
-    private static final Pattern DECK_NAME_REGEX =
-        Pattern.compile("(Deck Name|Name|Deckname|deck|Deck_Name|Title)\\s*:\\s*('|\"|)\\s*(?<name>.*[^'\"]).*", Pattern.CASE_INSENSITIVE);
-    private static final Pattern YEAR_REGEX =
-        Pattern.compile(".*(?<year>(199|200|201|202|203|204|205|206|207|208|209)\\d).*", Pattern.CASE_INSENSITIVE);
+    private static final Pattern DECK_NAME_REGEX = Pattern.compile("(Deck Name|Name|Deckname|deck|Deck_Name|Title)\\s*:\\s*('|\"|)\\s*(?<name>.*[^'\"]).*", Pattern.CASE_INSENSITIVE);
+    private static final Pattern YEAR_REGEX = Pattern.compile(".*(?<year>(199|200|201|202|203|204|205|206|207|208|209)\\d).*", Pattern.CASE_INSENSITIVE);
     private static final Pattern PLAYERS_REGEX = Pattern.compile("(?<number>\\d*)\\splayers", Pattern.CASE_INSENSITIVE);
     private static final Pattern URL = Pattern.compile(".*(?<url>(https|http)\\:\\/\\/(www.|).*)", Pattern.CASE_INSENSITIVE);
     private static final Pattern CRYPT = Pattern.compile("Crypt\\s\\((?<cards>\\d\\d)\\scards.*", Pattern.CASE_INSENSITIVE);
     private static final Pattern CARD = Pattern.compile("[xX]?(?<number>\\d+)\\s*[xX]?\\s+(?<name>[^\\d]+).*", Pattern.CASE_INSENSITIVE);
     private static final Pattern CARD_ALT = Pattern.compile("(?<name>.*)\\s+[xX](?<number>\\d+)", Pattern.CASE_INSENSITIVE);
-    private static final Set<String> DISCARDED_NAMES = Sets.newHashSet("Equipment:", "Reactions:", "Masters", "Actions", "Reactions", "REActions:",
-        "MODIFIERS:", "Other:", "Masters:", "actions", "Disciplineless cards:", "Events:", "Actions:", "Modifiers:", "Combo:", "Mods", "Cards",
-        "Fortitude Cards:", "REActions", "Fortitude Cards:", "Allies:", "Equipment", "Combo", "Modifiers", "Event");
-    private static final Map<String, String> TYPO_FIXES = ImmutableMap.<String, String>builder()
-        .put("Denys", "Deny")
-        .put("Powerbase: Tshuane", "Powerbase: Tshwane")
-        .put("Mr Wintrop", "Mr. Winthrop")
-        .put("Mr. Wintrop", "Mr. Winthrop")
-        .put("AK-", "AK-47")
-        .put("Skin of Stell", "Skin of Steel")
-        .put("Rejuvenation", "Rejuvenate")
-        .put("Bonespour", "Bone Spur")
-        .put("Papillion", "Papillon")
-        .put("Diversiom", "Diversion")
-        .put("WWEF", "Wake with Evening's Freshness")
-        .put("WwEF", "Wake with Evening's Freshness")
-        .put("Precogntion", "Precognition")
-        .put("Sidestrike", "Side Strike")
-        .put("Thaumatugy", "Thaumaturgy")
-        .put("Perfectionnist", "Perfectionist")
-        .put("Acad. HG", "Academic Hunting Ground")
-        .put("Univ. HG", "University Hunting Ground")
-        .put("The Phartenon", "Parthenon, The")
-        .put("Antelios", "Anthelios, The Red Star")
-        .put("Deflections", "Deflection")
-        .put("Perfeccionist", "Perfectionist")
-        .put("Path of Paradoxx", "Path of Paradox, The")
-        .put("Nightmoves", "Night Moves")
-        .put("Info Superhighway", "Information Highway")
-        .put("deflections", "Deflection")
-        .put("Laptops", "Laptop Computer")
-        .put("Revalations", "Revelations")
-        .put("Ecoterrorist", "Ecoterrorists")
-        .put("Institutional Hunting Grounds", "Institution Hunting Ground")
-        .put("Personnal Involvment", "Personal Involvement")
-        .put("Obediance", "Obedience")
-        .put("Jack \"Hannibal", "Jack \"Hannibal137\" Harmon")
-        .put("Confusion Dementation", "Confusion")
-        .put("Restructure Dementation", "Restructure")
-        .put("Deny Dementation", "Deny")
-        .put("Reality Chimerstry", "Reality")
-        .put("Brujah Justcar", "Brujah Justicar")
-        .put("Kine Dominance", "Dominate Kine")
-        .put("Improvised Flame Thrower", "Improvised Flamethrower")
-        .put("Dogde", "Dodge")
-        .put("The Labyrinth", "Labyrinth, The")
-        .put("Recuitment", "Recruitment")
-        .put("Votercaptivation", "Voter Captivation")
-        .put("Golgonda", "Golconda: Inner Peace")
-        .put("Infohighway", "Information Highway")
-        .put("J.S. Simons", "J. S. Simmons, Esq.")
-        .put("Misderection", "Misdirection")
-        .put("Sportbike", "Sport Bike")
-        .put("Domiante", "Dominate")
-        .put("The barren", "Barrens, The")
-        .put("rats warning", "Rat's Warning")
-        .put("Rats' Warning", "Rat's Warning")
-        .put("Homonculus", "Homunculus")
-        .put("Decapitiate", "Decapitate")
-        .put("Humunculus", "Homunculus")
-        .put("sidestrike", "Side Strike")
-        .put("Univ HG", "University Hunting Ground")
-        .put("mindnumb", "Mind Numb")
-        .put("arsons", "Arson")
-        .put("Info Hwy", "Information Highway")
-        .put("Obliette", "Oubliette")
-        .put("GtU", "Govern the Unaligned")
-        .put("Indominability", "Indomitability")
-        .put("Wakeys", "Wake with Evening's Freshness")
-        .put("PTO", "Protect Thine Own")
-        .put("Anathelios", "Anthelios, The Red Star")
-        .put("Ravenspy", "Raven Spy")
-        .put("WWStick", "Weighted Walking Stick")
-        .put("Ecstacy", "Ecstasy")
-        .put("Earthmeld", "Earth Meld")
-        .put("Freakdrive", "Freak Drive")
-        .put("Roling with the Punshes", "Rolling with the Punches")
-        .put("Indomnability", "Indomitability")
-        .put("Revenent", "Revenant")
-        .put("Revealations", "Revelations")
-        .put("Misdirections", "Misdirection")
-        .put("ANARCHTROUBLEMAKER", "Anarch Troublemaker")
-        .put("KRC", "Kine Resources Contested")
-        .put("Mashochism", "Masochism")
-        .put("Vissitude", "Vicissitude")
-        .put("Villain", "Villein")
-        .put("Soul Gems", "Soul Gem of Etrius")
-        .put("mr wintrop", "Mr. Winthrop")
-        .put("Entice", "Enticement")
-        .put("Mirrorwalk", "Mirror Walk")
-        .put("GOLGONDA", "Golconda: Inner Peace")
-        .put("wwef", "Wake with Evening's Freshness")
-        .put("Perfeccionista", "Perfectionist")
-        .put("2nd Tradition", "Second Tradition: Domain")
-        .put("5th Tradition", "Fifth Tradition: Hospitality")
-        .put("ZipGun", "Zip Gun")
-        .put("Anna \"Dictatrix", "Anna \"Dictatrix11\" Suljic")
-        .put("Béatrice \"Oracle", "Béatrice \"Oracle171\" Tremblay")
-        .put("Earl \"Shaka", "Earl \"Shaka74\" Deams")
-        .put("Erick \"Shophet", "Erick \"Shophet125\" Franco")
-        .put("Inez \"Nurse", "Inez \"Nurse216\" Villagrande")
-        .put("Jennie \"Cassie", "Jennie \"Cassie247\" Orne")
-        .put("Jennifer \"Flame", "Jennifer \"Flame61\" Vidisania")
-        .put("John \"Cop", "John \"Cop90\" O'Malley")
-        .put("Leaf \"Potter", "Leaf \"Potter116\" Pankowski")
-        .put("Liz \"Ticket", "Liz \"Ticket312\" Thornton")
-        .put("Lupe \"Cabbie", "Lupe \"Cabbie22\" Droin")
-        .put("Marion \"Teacher", "Marion \"Teacher193\" Perks")
-        .put("Paul \"Sixofswords", "Paul \"Sixofswords29\" Moreton")
-        .put("Peter \"Outback", "Peter \"Outback295\" Rophail")
-        .put("Travis \"Traveler", "Travis \"Traveler72\" Miller")
-        .put("Xian \"DziDzat", "Xian \"DziDzat155\" Quan")
-        .build();
+    private static final Set<String> DISCARDED_NAMES = Sets.newHashSet("Equipment:", "Reactions:", "Masters", "Actions", "Reactions", "REActions:", "MODIFIERS:", "Other:", "Masters:", "actions", "Disciplineless cards:", "Events:", "Actions:", "Modifiers:", "Combo:", "Mods", "Cards", "Fortitude Cards:", "REActions", "Fortitude Cards:", "Allies:", "Equipment", "Combo", "Modifiers", "Event");
+    private static final Map<String, String> TYPO_FIXES = ImmutableMap.<String, String>builder().put("Denys", "Deny").put("Powerbase: Tshuane", "Powerbase: Tshwane").put("Mr Wintrop", "Mr. Winthrop").put("Mr. Wintrop", "Mr. Winthrop").put("AK-", "AK-47").put("Skin of Stell", "Skin of Steel").put("Rejuvenation", "Rejuvenate").put("Bonespour", "Bone Spur").put("Papillion", "Papillon").put("Diversiom", "Diversion").put("WWEF", "Wake with Evening's Freshness").put("WwEF", "Wake with Evening's Freshness").put("Precogntion", "Precognition").put("Sidestrike", "Side Strike").put("Thaumatugy", "Thaumaturgy").put("Perfectionnist", "Perfectionist").put("Acad. HG", "Academic Hunting Ground").put("Univ. HG", "University Hunting Ground").put("The Phartenon", "Parthenon, The").put("Antelios", "Anthelios, The Red Star").put("Deflections", "Deflection").put("Perfeccionist", "Perfectionist").put("Path of Paradoxx", "Path of Paradox, The").put("Nightmoves", "Night Moves").put("Info Superhighway", "Information Highway").put("deflections", "Deflection").put("Laptops", "Laptop Computer").put("Revalations", "Revelations").put("Ecoterrorist", "Ecoterrorists").put("Institutional Hunting Grounds", "Institution Hunting Ground").put("Personnal Involvment", "Personal Involvement").put("Obediance", "Obedience").put("Jack \"Hannibal", "Jack \"Hannibal137\" Harmon").put("Confusion Dementation", "Confusion").put("Restructure Dementation", "Restructure").put("Deny Dementation", "Deny").put("Reality Chimerstry", "Reality").put("Brujah Justcar", "Brujah Justicar").put("Kine Dominance", "Dominate Kine").put("Improvised Flame Thrower", "Improvised Flamethrower").put("Dogde", "Dodge").put("The Labyrinth", "Labyrinth, The").put("Recuitment", "Recruitment").put("Votercaptivation", "Voter Captivation").put("Golgonda", "Golconda: Inner Peace").put("Infohighway", "Information Highway").put("J.S. Simons", "J. S. Simmons, Esq.").put("Misderection", "Misdirection").put("Sportbike", "Sport Bike").put("Domiante", "Dominate").put("The barren", "Barrens, The").put("rats warning", "Rat's Warning").put("Rats' Warning", "Rat's Warning").put("Homonculus", "Homunculus").put("Decapitiate", "Decapitate").put("Humunculus", "Homunculus").put("sidestrike", "Side Strike").put("Univ HG", "University Hunting Ground").put("mindnumb", "Mind Numb").put("arsons", "Arson").put("Info Hwy", "Information Highway").put("Obliette", "Oubliette").put("GtU", "Govern the Unaligned").put("Indominability", "Indomitability").put("Wakeys", "Wake with Evening's Freshness").put("PTO", "Protect Thine Own").put("Anathelios", "Anthelios, The Red Star").put("Ravenspy", "Raven Spy").put("WWStick", "Weighted Walking Stick").put("Ecstacy", "Ecstasy").put("Earthmeld", "Earth Meld").put("Freakdrive", "Freak Drive").put("Roling with the Punshes", "Rolling with the Punches").put("Indomnability", "Indomitability").put("Revenent", "Revenant").put("Revealations", "Revelations").put("Misdirections", "Misdirection").put("ANARCHTROUBLEMAKER", "Anarch Troublemaker").put("KRC", "Kine Resources Contested").put("Mashochism", "Masochism").put("Vissitude", "Vicissitude").put("Villain", "Villein").put("Soul Gems", "Soul Gem of Etrius").put("mr wintrop", "Mr. Winthrop").put("Entice", "Enticement").put("Mirrorwalk", "Mirror Walk").put("GOLGONDA", "Golconda: Inner Peace").put("wwef", "Wake with Evening's Freshness").put("Perfeccionista", "Perfectionist").put("2nd Tradition", "Second Tradition: Domain").put("5th Tradition", "Fifth Tradition: Hospitality").put("ZipGun", "Zip Gun").put("Anna \"Dictatrix", "Anna \"Dictatrix11\" Suljic").put("Béatrice \"Oracle", "Béatrice \"Oracle171\" Tremblay").put("Earl \"Shaka", "Earl \"Shaka74\" Deams").put("Erick \"Shophet", "Erick \"Shophet125\" Franco").put("Inez \"Nurse", "Inez \"Nurse216\" Villagrande").put("Jennie \"Cassie", "Jennie \"Cassie247\" Orne").put("Jennifer \"Flame", "Jennifer \"Flame61\" Vidisania").put("John \"Cop", "John \"Cop90\" O'Malley").put("Leaf \"Potter", "Leaf \"Potter116\" Pankowski").put("Liz \"Ticket", "Liz \"Ticket312\" Thornton").put("Lupe \"Cabbie", "Lupe \"Cabbie22\" Droin").put("Marion \"Teacher", "Marion \"Teacher193\" Perks").put("Paul \"Sixofswords", "Paul \"Sixofswords29\" Moreton").put("Peter \"Outback", "Peter \"Outback295\" Rophail").put("Travis \"Traveler", "Travis \"Traveler72\" Miller").put("Xian \"DziDzat", "Xian \"DziDzat155\" Quan").build();
 
 
     @Autowired
@@ -213,25 +99,19 @@ public class TournamentDeckScheduler {
                 DomAttr domAttrId = item.getAttributeNode("id");
                 if (domAttrId != null) {
                     String deckId = domAttrId.getNodeValue();
-                    DomElement hr = item.getNextElementSibling();
-                    if ("hr".equals(hr.getLocalName())) {
-                        DomElement pre = hr.getNextElementSibling();
-                        if ("pre".equals(pre.getLocalName())) {
-                            try {
-                                parseDeck(deckId, pre.getTextContent());
-                            } catch (Exception e) {
-                                log.error("Unable to parse deck {}", pre.getTextContent());
-                                throw e;
-                            }
-                        } else {
-                            log.warn("Pre not found for deckId {}", deckId);
+                    DomElement paragraph = item.getNextElementSibling();
+                    if ("p".equals(paragraph.getLocalName())) {
+                        try {
+                            parseDeck(deckId, paragraph.getTextContent());
+                        } catch (Exception e) {
+                            log.error("Unable to parse deck {}", paragraph.getTextContent());
+                            throw e;
                         }
                     } else {
-                        log.warn("Hr not found for deckId {}", deckId);
+                        log.warn("Paragraph not found for deckId {}", deckId);
                     }
                 }
             }
-
         } catch (Exception e) {
             log.error("Unable to scan decks", e);
         }
@@ -289,11 +169,7 @@ public class TournamentDeckScheduler {
                 if (deck.getName() == null) {
                     for (int i = 0; i < nameDescriptionPart.size() && deck.getName() == null; i++) {
                         String possibleName = nameDescriptionPart.get(i);
-                        if (!StringUtils.isBlank(possibleName)
-                            && possibleName.length() < 30
-                            && !possibleName.startsWith("--")
-                            && possibleName.startsWith("\"")
-                            && possibleName.endsWith("\"")) {
+                        if (!StringUtils.isBlank(possibleName) && possibleName.length() < 30 && !possibleName.startsWith("--") && possibleName.startsWith("\"") && possibleName.endsWith("\"")) {
                             deck.setName(possibleName.substring(1, possibleName.length() - 1));
                         }
                     }
@@ -396,37 +272,41 @@ public class TournamentDeckScheduler {
             }
             if (isValidDeck(deck, deckCards)) {
                 boolean updated = false;
+                boolean insert = false;
                 if (actual == null) {
                     deckMapper.insert(deck);
                     updated = true;
+                    insert = true;
                     log.debug("Insert deck {}", deck.getId());
                 } else if (!actual.equals(deck)) {
-                    deckMapper.update(deck);
-                    updated = true;
-                    log.debug("Update deck {}", deck.getId());
+                    log.warn("Deck {} updated metadata", deck.getId());
+//                    deckMapper.update(deck);
+//                    updated = true;
                 }
                 List<DbDeckCard> dbCards = deckCardMapper.selectByDeck(deck.getId());
                 for (Map.Entry<Integer, DbDeckCard> card : deckCards.entrySet()) {
-                    DbDeckCard dbCard = dbCards.stream()
-                        .filter(db -> db.getId().equals(card.getKey()) && db.getDeckId().equals(deck.getId()))
-                        .findFirst().orElse(null);
+                    DbDeckCard dbCard = dbCards.stream().filter(db -> db.getId().equals(card.getKey()) && db.getDeckId().equals(deck.getId())).findFirst().orElse(null);
                     if (dbCard == null) {
-                        deckCardMapper.insert(card.getValue());
-                        updated = true;
-                        log.debug("Insert deck card {}", card.getValue());
+                        if (insert) {
+                            deckCardMapper.insert(card.getValue());
+                            updated = true;
+                            log.debug("Insert deck card {}", card.getValue());
+                        } else {
+                            log.warn("New card detected for card {} of deck {}", card.getValue(), id);
+                        }
                     } else if (!dbCard.equals(card.getValue())) {
-                        deckCardMapper.update(card.getValue());
-                        updated = true;
-                        log.debug("Update deck card {}", card.getValue());
+                        log.warn("Found new card count for card {} of deck {}", card.getValue(), id);
+//                        deckCardMapper.update(card.getValue());
+//                        updated = true;
                     }
                 }
                 //Delete removed cards
                 for (DbDeckCard card : dbCards) {
                     DbDeckCard deckCard = deckCards.get(card.getId());
                     if (deckCard == null) {
-                        deckCardMapper.delete(card.getDeckId(), card.getId());
-                        updated = true;
-                        log.debug("Delete deck card {}", card);
+                        log.warn("Missing card {} of deck {}", card, id);
+//                        deckCardMapper.delete(card.getDeckId(), card.getId());
+//                        updated = true;
                     }
                 }
                 if (updated) {
@@ -459,12 +339,7 @@ public class TournamentDeckScheduler {
     }
 
 
-    private void storeDeckCard(DbDeck deck,
-                               Map<Integer, DbDeckCard> deckCards,
-                               Map<Integer, String> debugLines,
-                               String line,
-                               Integer cardId,
-                               Integer number) {
+    private void storeDeckCard(DbDeck deck, Map<Integer, DbDeckCard> deckCards, Map<Integer, String> debugLines, String line, Integer cardId, Integer number) {
         DbDeckCard dbDeckCard = new DbDeckCard();
         dbDeckCard.setDeckId(deck.getId());
         dbDeckCard.setId(cardId);
@@ -475,12 +350,10 @@ public class TournamentDeckScheduler {
             String debugLine = debugLines.get(cardId);
             if (debugLine.equalsIgnoreCase(line)) {
                 previousCard.setNumber(previousCard.getNumber() + dbDeckCard.getNumber());
-            } else if ((debugLine.contains("Dominate Kine") || debugLine.contains("Kine Dominance"))
-                && (line.contains("Dominate Kine") || line.contains("Kine Dominance"))) {
+            } else if ((debugLine.contains("Dominate Kine") || debugLine.contains("Kine Dominance")) && (line.contains("Dominate Kine") || line.contains("Kine Dominance"))) {
                 previousCard.setNumber(previousCard.getNumber() + dbDeckCard.getNumber());
             } else {
-                log.warn("Duplicated card on deck {} - {}!! \"{}\": {} Debug: {}", deck.getId(), deck.getName(), line, deckCards.get(cardId),
-                    debugLines.get(cardId));
+                log.warn("Duplicated card on deck {} - {}!! \"{}\": {} Debug: {}", deck.getId(), deck.getName(), line, deckCards.get(cardId), debugLines.get(cardId));
             }
         } else {
             deckCards.put(cardId, dbDeckCard);
@@ -520,7 +393,7 @@ public class TournamentDeckScheduler {
         client.getOptions().setJavaScriptEnabled(false);
         try {
             HtmlPage page = client.getPage(url);
-            List<HtmlElement> items = (List<HtmlElement>) page.getByXPath("//b");
+            List<HtmlElement> items = (List<HtmlElement>) page.getByXPath("//div[contains(@class, 'eventdate')]");
             for (HtmlElement item : items) {
                 String value = item.getTextContent();
                 try {
