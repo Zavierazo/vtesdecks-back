@@ -3,7 +3,9 @@ package com.vtesdecks.api.service;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.ApiDeckMapper;
 import com.vtesdecks.api.util.ApiUtils;
+import com.vtesdecks.cache.factory.DeckFactory;
 import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.db.DeckMapper;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckType;
 import com.vtesdecks.model.api.ApiDeck;
@@ -12,8 +14,8 @@ import com.vtesdecks.service.DeckService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class ApiDeckService {
@@ -21,6 +23,10 @@ public class ApiDeckService {
     private DeckService deckService;
     @Autowired
     private ApiDeckMapper mapper;
+    @Autowired
+    private DeckMapper deckMapper;
+    @Autowired
+    private DeckFactory deckFactory;
 
     public ApiDeck getDeck(String deckId, boolean detailed) {
         Deck deck = deckService.getDeck(deckId);
@@ -77,7 +83,13 @@ public class ApiDeckService {
                 .skip(offset)
                 .limit(limit)
                 .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId()))
-                .collect(Collectors.toList()));
+                .toList());
+        if (offset == 0 && userId != null && type == DeckType.USER) {
+            apiDecks.setRestorableDecks(deckMapper.selectUserDeleted(userId).stream()
+                    .map(dbDeck -> deckFactory.getDeck(dbDeck, new ArrayList<>()))
+                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId()))
+                    .toList());
+        }
         return apiDecks;
     }
 }

@@ -136,6 +136,7 @@ public class ApiDeckController {
         return new ResponseEntity<>(decks, HttpStatus.OK);
     }
 
+
     @RequestMapping(value = "/{id}/export", method = RequestMethod.GET)
     public void getDownload(HttpServletResponse response, @PathVariable("id") String id, @RequestParam(name = "type") DeckExportType type, HttpServletRequest httpServletRequest) {
         log.info("Deck export of {} with type {}, userAgent: '{}', ip: '{}'", id, type, httpServletRequest.getHeader("User-Agent"), Utils.getIp(httpServletRequest));
