@@ -26,7 +26,7 @@ import java.util.List;
 @RequestMapping("/api/1.0/ai")
 @Slf4j
 @RequiredArgsConstructor
-public class ApiUserAiController {
+public class ApiAiController {
 
     private final UserMapper userMapper;
     private final UserAiAskMapper userAiAskMapper;
@@ -39,9 +39,9 @@ public class ApiUserAiController {
     public ApiAiAskResponse ask(@RequestBody ApiAiAskRequest request) {
         ApiAiAskResponse response = new ApiAiAskResponse();
         DbUser user = userMapper.selectById(ApiUtils.extractUserId());
-        if (user != null && user.isValidated() && user.isAdmin()) {
-            Integer lastUserAiAsk = userAiAskMapper.selectLastByUser(String.valueOf(user.getId()));
-            if (lastUserAiAsk != null && lastUserAiAsk > 10) {
+        final String userId = user != null ? String.valueOf(user.getId()) : null;
+        if (userId != null && user.isValidated()) {
+            if (!user.isAdmin() && userAiAskMapper.selectLastByUser(userId) > 10) {
                 response.setMessage("Quota exceeded. Please wait before asking another question.");
             } else {
                 AskRequest askRequest = new AskRequest();
@@ -50,9 +50,9 @@ public class ApiUserAiController {
                 AskResponse askResponse = vtesJudgeAiClient.getAmaranthDeck(askRequest);
                 response.setMessage(askResponse.getAnswer());
                 try {
-                    saveUserAiAsk(user, request.getQuestion(), askResponse.getAnswer());
+                    saveUserAiAsk(userId, request.getQuestion(), askResponse.getAnswer());
                 } catch (Exception e) {
-                    log.error("Unable to save user ai ask with user {} for question '{}' and answer '{}'", user.getId(), request.getQuestion(), askResponse.getAnswer(), e);
+                    log.error("Unable to save user ai ask with user {} for question '{}' and answer '{}'", userId, request.getQuestion(), askResponse.getAnswer(), e);
                 }
             }
         } else {
@@ -61,11 +61,11 @@ public class ApiUserAiController {
         return response;
     }
 
-    private void saveUserAiAsk(DbUser user, String question, String answer) {
+    private void saveUserAiAsk(String userId, String question, String answer) {
         DbUserAiAsk userAiAsk = new DbUserAiAsk();
-        userAiAsk.setUser(String.valueOf(user.getId()));
-        userAiAsk.setQuestion(question.substring(0, Math.min(question.length(), 2000)));
-        userAiAsk.setAnswer(answer.substring(0, Math.min(answer.length(), 2000)));
+        userAiAsk.setUser(userId);
+        userAiAsk.setQuestion(question.substring(0, Math.min(question.length(), 999)));
+        userAiAsk.setAnswer(answer.substring(0, Math.min(answer.length(), 999)));
         userAiAskMapper.insert(userAiAsk);
         userAiAskMapper.deleteOld();
     }
