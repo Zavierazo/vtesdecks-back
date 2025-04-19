@@ -64,10 +64,10 @@ public class ApiAiController {
     private void saveUserAiAsk(String userId, String question, String answer) {
         DbUserAiAsk userAiAsk = new DbUserAiAsk();
         userAiAsk.setUser(userId);
-        userAiAsk.setQuestion(question.substring(0, Math.min(question.length(), 999)));
-        userAiAsk.setAnswer(answer.substring(0, Math.min(answer.length(), 999)));
+        userAiAsk.setQuestion(question.substring(0, Math.min(question.length(), 2000)));
+        userAiAsk.setAnswer(answer);
         userAiAskMapper.insert(userAiAsk);
-        userAiAskMapper.deleteOld();
+        //userAiAskMapper.deleteOld();
     }
 
     private List<ChatMessage> mapChatHistory(List<ApiAiMessage> chatHistory) {
