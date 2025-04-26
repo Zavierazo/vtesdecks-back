@@ -43,6 +43,14 @@ public class ApiProxyService {
         return proxyService.generatePDF(cards, cardOptions);
     }
 
+    public ApiProxyCardOption getProxyOption(Integer cardId, String set) {
+        return cardOptionCache.get(cardId).stream()
+                .filter(o -> o.getSetAbbrev().equalsIgnoreCase(set))
+                .findFirst()
+                .map(this::map)
+                .orElse(null);
+    }
+
     public List<ApiProxyCardOption> getProxyOptions(Integer cardId) {
         return cardOptionCache.get(cardId).stream()
                 .map(this::map)

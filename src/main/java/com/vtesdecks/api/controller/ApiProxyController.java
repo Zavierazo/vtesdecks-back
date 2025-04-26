@@ -60,4 +60,14 @@ public class ApiProxyController {
     public ResponseEntity<List<ApiProxyCardOption>> getProxyOptions(@PathVariable Integer id) {
         return new ResponseEntity<>(proxyService.getProxyOptions(id), HttpStatus.OK);
     }
+
+    @RequestMapping(
+            value = "/options/{id}/{set}",
+            method = RequestMethod.GET, produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public ResponseEntity<ApiProxyCardOption> getProxyOption(@PathVariable Integer id, @PathVariable String set) {
+        return new ResponseEntity<>(proxyService.getProxyOption(id, set), HttpStatus.OK);
+    }
 }
