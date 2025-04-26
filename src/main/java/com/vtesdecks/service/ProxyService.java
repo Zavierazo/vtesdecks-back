@@ -1,5 +1,6 @@
 package com.vtesdecks.service;
 
+import com.itextpdf.text.BadElementException;
 import com.itextpdf.text.BaseColor;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
@@ -8,6 +9,7 @@ import com.itextpdf.text.pdf.PdfContentByte;
 import com.itextpdf.text.pdf.PdfWriter;
 import com.vtesdecks.cache.indexable.proxy.ProxyCardOption;
 import com.vtesdecks.model.api.ApiProxyCard;
+import com.vtesdecks.model.api.ApiProxyCardOption;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,9 @@ import org.springframework.web.client.RestTemplate;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+
+import static org.springframework.util.CollectionUtils.isEmpty;
 
 @Slf4j
 @Service
@@ -28,6 +33,8 @@ public class ProxyService {
     private final static float MARGIN_LEFT = 10 * MILLIMETERS;
     private final static float MARGIN_BOT = 15 * MILLIMETERS;
     private final static String CARD_IMAGES_URL = "https://statics.bloodlibrary.info/img/sets/%s/%d.jpg";
+    private final static String CARD_IMAGE_FAILOVER_URL = "https://vtesdecks.com/assets/img/cards/%d.jpg";
+
 
     private final static float[][] CARD_POSITIONS = new float[][]{
             new float[]{MARGIN_LEFT, MARGIN_BOT + CARD_HEIGHT * 2},
@@ -46,12 +53,17 @@ public class ProxyService {
     @Autowired
     private RestTemplate restTemplate;
 
-    public static String getImageUrl(String setAbbrev, Integer cardId) {
-        return String.format(CARD_IMAGES_URL, setAbbrev.toLowerCase(),cardId);
+    public boolean checkProxyCardOptionExists(ProxyCardOption proxyCardOption) {
+        String imgUrl = getProxyImageUrl(proxyCardOption.getSetAbbrev(), proxyCardOption.getCardId());
+        return existImage(imgUrl);
     }
 
-    public boolean existsImage(ProxyCardOption proxyCardOption){
-        String imgUrl = getImageUrl(proxyCardOption.getSetAbbrev(), proxyCardOption.getCardId());
+
+    public String getProxyImageUrl(String setAbbrev, Integer cardId) {
+        return String.format(CARD_IMAGES_URL, setAbbrev, cardId);
+    }
+
+    private boolean existImage(String imgUrl) {
         try {
             restTemplate.headForHeaders(imgUrl);
         } catch (HttpClientErrorException.NotFound ex) {
@@ -60,7 +72,7 @@ public class ProxyService {
         return true;
     }
 
-    public byte[] generatePDF(List<ApiProxyCard> cards) throws DocumentException, IOException {
+    public byte[] generatePDF(List<ApiProxyCard> cards, Map<Integer, List<ApiProxyCardOption>> cardOptions) throws DocumentException, IOException {
         final Document document = new Document();
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PdfWriter pdfWriter = PdfWriter.getInstance(document, outputStream);
@@ -68,7 +80,7 @@ public class ProxyService {
 
         int n = 0;
         for (ApiProxyCard card : cards) {
-            Image img = Image.getInstance(getImageUrl(card.getSetAbbrev(), card.getCardId()));
+            Image img = getPDFImage(card.getSetAbbrev(), card.getCardId(), cardOptions.get(card.getCardId()));
             img.scaleAbsolute(CARD_WIDTH, CARD_HEIGHT);
             for (int i = 0; i < card.getAmount(); i++) {
                 if (n == 9) {
@@ -84,6 +96,22 @@ public class ProxyService {
         drawLines(pdfWriter);
         document.close();
         return outputStream.toByteArray();
+    }
+
+    private Image getPDFImage(String setAbbrev, Integer cardId, List<ApiProxyCardOption> cardOptions) throws BadElementException, IOException {
+        if (setAbbrev != null) {
+            String imgUrl = getProxyImageUrl(setAbbrev.toLowerCase(), cardId);
+            if (existImage(imgUrl)) {
+                return Image.getInstance(imgUrl);
+            }
+        }
+        if (!isEmpty(cardOptions)) {
+            String imgUrl = getProxyImageUrl(cardOptions.get(0).getSetAbbrev().toLowerCase(), cardId);
+            if (existImage(imgUrl)) {
+                return Image.getInstance(imgUrl);
+            }
+        }
+        return Image.getInstance(String.format(CARD_IMAGE_FAILOVER_URL, cardId));
     }
 
     private void drawLines(PdfWriter writer) {

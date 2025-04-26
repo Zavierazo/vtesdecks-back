@@ -5,7 +5,6 @@ import com.itextpdf.text.DocumentException;
 import com.vtesdecks.model.api.ApiProxyCard;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
@@ -13,6 +12,7 @@ import org.springframework.web.client.RestTemplate;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 
 @Disabled
@@ -28,7 +28,7 @@ class ProxyServiceTest {
                 ApiProxyCard.builder().cardId(200002).setAbbrev("third").amount(3).build()
         );
 
-        byte[] documentBytes = proxyService.generatePDF(cards);
+        byte[] documentBytes = proxyService.generatePDF(cards, new HashMap<>());
 
         File outputFile = new File("D:/tmp/vtes-proxy-singlePage.pdf");
         try (FileOutputStream outputStream = new FileOutputStream(outputFile)) {
@@ -47,7 +47,7 @@ class ProxyServiceTest {
                 ApiProxyCard.builder().cardId(200005).setAbbrev("lotn").amount(5).build()
         );
 
-        byte[] documentBytes = proxyService.generatePDF(cards);
+        byte[] documentBytes = proxyService.generatePDF(cards, new HashMap<>());
 
         File outputFile = new File("D:/tmp/vtes-proxy-multiPage.pdf");
         try (FileOutputStream outputStream = new FileOutputStream(outputFile)) {
