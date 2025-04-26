@@ -8,8 +8,8 @@ import com.vtesdecks.cache.indexable.proxy.ProxyCardOption;
 import com.vtesdecks.model.api.ApiProxyCard;
 import com.vtesdecks.model.api.ApiProxyCardOption;
 import com.vtesdecks.service.ProxyService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -22,19 +22,15 @@ import java.util.Objects;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ApiProxyService {
 
     private static final Set PROMO_SET = Set.builder().abbrev("Promo").fullName("Promo").releaseDate(LocalDate.MIN).build();
     private static final Set POD_SET = Set.builder().abbrev("POD").fullName("Print On Demand").releaseDate(LocalDate.MIN).build();
 
-    @Autowired
-    private ProxyService proxyService;
-
-    @Autowired
-    private ProxyCardOptionCache cardOptionCache;
-
-    @Autowired
-    private SetCache setCache;
+    private final ProxyService proxyService;
+    private final ProxyCardOptionCache cardOptionCache;
+    private final SetCache setCache;
 
     public byte[] generatePDF(List<ApiProxyCard> cards) throws IOException, DocumentException {
         Map<Integer, List<ApiProxyCardOption>> cardOptions = new HashMap<>();
@@ -73,7 +69,7 @@ public class ApiProxyService {
                 .setAbbrev(set.getAbbrev())
                 .setReleaseDate(set.getReleaseDate())
                 .setName(set.getFullName())
-                .imageUrl(ProxyService.getImageUrl(set.getAbbrev(), proxyCardOption.getCardId(), null))
+                .imageUrl(proxyService.getProxyImageUrl(set.getAbbrev(), proxyCardOption.getCardId()))
                 .build();
     }
 

@@ -4,9 +4,9 @@ import com.itextpdf.text.DocumentException;
 import com.vtesdecks.api.service.ApiProxyService;
 import com.vtesdecks.model.api.ApiProxy;
 import com.vtesdecks.model.api.ApiProxyCardOption;
-import com.vtesdecks.service.ProxyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -43,7 +43,12 @@ public class ApiProxyController {
             status = HttpStatus.INTERNAL_SERVER_ERROR;
         }
 
-        return new ResponseEntity<>(documentData, status);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        String filename = "output.pdf";
+        headers.setContentDispositionFormData(filename, filename);
+        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+        return new ResponseEntity<>(documentData, headers, status);
     }
 
     @RequestMapping(
@@ -52,7 +57,7 @@ public class ApiProxyController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<List<ApiProxyCardOption>> getProxyOptions(@PathVariable Integer id){
+    public ResponseEntity<List<ApiProxyCardOption>> getProxyOptions(@PathVariable Integer id) {
         return new ResponseEntity<>(proxyService.getProxyOptions(id), HttpStatus.OK);
     }
 }

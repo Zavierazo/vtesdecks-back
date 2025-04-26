@@ -68,7 +68,7 @@ public class ProxyCardOptionCache {
         cache.clear();
         List<ProxyCardOption> proxyOptions = getAllPossibleOptions()
                 .parallel()
-                .map(o -> new Object[]{o, proxyService.existsImage(o)})
+                .map(o -> new Object[]{o, proxyService.checkProxyCardOptionExists(o)})
                 .filter(pair -> (boolean) pair[1])
                 .map(pair -> (ProxyCardOption) pair[0])
                 .collect(Collectors.toList());

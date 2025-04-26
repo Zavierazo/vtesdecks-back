@@ -1,5 +1,6 @@
 package com.vtesdecks.service;
 
+import com.itextpdf.text.BadElementException;
 import com.itextpdf.text.BaseColor;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
@@ -52,24 +53,23 @@ public class ProxyService {
     @Autowired
     private RestTemplate restTemplate;
 
-    public boolean existsImage(ProxyCardOption proxyCardOption) {
-        String imgUrl = getImageUrl(proxyCardOption.getSetAbbrev(), proxyCardOption.getCardId(), null);
+    public boolean checkProxyCardOptionExists(ProxyCardOption proxyCardOption) {
+        String imgUrl = getProxyImageUrl(proxyCardOption.getSetAbbrev(), proxyCardOption.getCardId());
+        return existImage(imgUrl);
+    }
+
+
+    public String getProxyImageUrl(String setAbbrev, Integer cardId) {
+        return String.format(CARD_IMAGES_URL, setAbbrev, cardId);
+    }
+
+    private boolean existImage(String imgUrl) {
         try {
             restTemplate.headForHeaders(imgUrl);
         } catch (HttpClientErrorException.NotFound ex) {
             return false;
         }
         return true;
-    }
-
-    public static String getImageUrl(String setAbbrev, Integer cardId, List<ApiProxyCardOption> cardOptions) {
-        if (setAbbrev != null) {
-            return String.format(CARD_IMAGES_URL, setAbbrev.toLowerCase(), cardId);
-        } else if (!isEmpty(cardOptions)) {
-            return String.format(CARD_IMAGES_URL, cardOptions.get(0).getSetAbbrev().toLowerCase(), cardId);
-        } else {
-            return String.format(CARD_IMAGE_FAILOVER_URL, cardId);
-        }
     }
 
     public byte[] generatePDF(List<ApiProxyCard> cards, Map<Integer, List<ApiProxyCardOption>> cardOptions) throws DocumentException, IOException {
@@ -80,7 +80,7 @@ public class ProxyService {
 
         int n = 0;
         for (ApiProxyCard card : cards) {
-            Image img = Image.getInstance(getImageUrl(card.getSetAbbrev(), card.getCardId(), cardOptions.get(card.getCardId())));
+            Image img = getPDFImage(card.getSetAbbrev(), card.getCardId(), cardOptions.get(card.getCardId()));
             img.scaleAbsolute(CARD_WIDTH, CARD_HEIGHT);
             for (int i = 0; i < card.getAmount(); i++) {
                 if (n == 9) {
@@ -96,6 +96,22 @@ public class ProxyService {
         drawLines(pdfWriter);
         document.close();
         return outputStream.toByteArray();
+    }
+
+    private Image getPDFImage(String setAbbrev, Integer cardId, List<ApiProxyCardOption> cardOptions) throws BadElementException, IOException {
+        if (setAbbrev != null) {
+            String imgUrl = getProxyImageUrl(setAbbrev.toLowerCase(), cardId);
+            if (existImage(imgUrl)) {
+                return Image.getInstance(imgUrl);
+            }
+        }
+        if (!isEmpty(cardOptions)) {
+            String imgUrl = getProxyImageUrl(cardOptions.get(0).getSetAbbrev().toLowerCase(), cardId);
+            if (existImage(imgUrl)) {
+                return Image.getInstance(imgUrl);
+            }
+        }
+        return Image.getInstance(String.format(CARD_IMAGE_FAILOVER_URL, cardId));
     }
 
     private void drawLines(PdfWriter writer) {
