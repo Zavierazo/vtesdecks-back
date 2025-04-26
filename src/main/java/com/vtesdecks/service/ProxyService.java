@@ -11,6 +11,7 @@ import com.vtesdecks.cache.indexable.proxy.ProxyCardOption;
 import com.vtesdecks.model.api.ApiProxyCard;
 import com.vtesdecks.model.api.ApiProxyCardOption;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -60,7 +61,7 @@ public class ProxyService {
 
 
     public String getProxyImageUrl(String setAbbrev, Integer cardId) {
-        return String.format(CARD_IMAGES_URL, setAbbrev, cardId);
+        return String.format(CARD_IMAGES_URL, StringUtils.lowerCase(setAbbrev), cardId);
     }
 
     private boolean existImage(String imgUrl) {
