@@ -8,8 +8,8 @@ import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.db.CryptMapper;
-import com.vtesdecks.db.model.DbCrypt;
 import com.vtesdecks.model.DeckExportType;
+import com.vtesdecks.model.Discipline;
 import com.vtesdecks.service.DeckExportService;
 import com.vtesdecks.service.DeckService;
 import org.apache.commons.lang3.StringUtils;
@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
@@ -47,8 +48,8 @@ public class DeckExportServiceImpl implements DeckExportService {
             exportLackey(result, deck);
         } else if (type == DeckExportType.JOL) {
             exportJOL(result, deck);
-        } else if (type == DeckExportType.BCN_CRISIS) {
-            exportBCNCrisis(result, deck);
+        } else if (type == DeckExportType.TWD || type == DeckExportType.BCN_CRISIS) {
+            exportTWD(result, deck);
         }
         return result.toString();
     }
@@ -103,38 +104,105 @@ public class DeckExportServiceImpl implements DeckExportService {
         }
     }
 
-    private void exportBCNCrisis(StringBuilder result, Deck deck) {
+    private void exportTWD(StringBuilder result, Deck deck) {
         result.append("Deck Name: ").append(deck.getName()).append(NEW_LINE);
         result.append("Author: ").append(deck.getAuthor()).append(NEW_LINE);
-        result.append("Description: ").append(deck.getDescription() != null ? deck.getDescription() : EMPTY).append(NEW_LINE).append(NEW_LINE);
-        result.append("Crypt(")
-                .append(deck.getStats().getCrypt())
-                .append(" cards; Capacity min=")
-                .append(deck.getCrypt().stream().map(Card::getId).map(cryptCache::get).mapToInt(Crypt::getCapacity).min().orElse(0))
-                .append(" max=")
-                .append(deck.getCrypt().stream().map(Card::getId).map(cryptCache::get).mapToInt(Crypt::getCapacity).max().orElse(0))
-                .append(" avg=")
-                .append(deck.getCrypt().stream().map(Card::getId).map(cryptCache::get).mapToInt(Crypt::getCapacity).average().orElse(0))
-                .append(")").append(NEW_LINE);
-        result.append("==================").append(NEW_LINE);
+        result.append("Description: ").append(deck.getDescription() != null ? deck.getDescription().replaceAll("<[^>]*>", "") : EMPTY).append(NEW_LINE).append(NEW_LINE);
+        String cryptTitle = getCryptTitle(deck);
+        result.append(cryptTitle).append(NEW_LINE);
+        result.append("-".repeat(cryptTitle.length())).append(NEW_LINE);
+        int numberSpaces = 0;
+        int nameSpaces = 0;
+        int capacitySpaces = 0;
+        int disciplinesSpaces = 6;
+        int titleSpaces = 0;
         for (Card card : deck.getCrypt()) {
             Crypt crypt = cryptCache.get(card.getId());
             if (crypt != null) {
-                DbCrypt dbCrypt = cryptMapper.selectById(crypt.getId());
-                result.append(card.getNumber()).append("x").append(SPACE)
-                        .append(StringUtils.trim(crypt.getName())).append(SPACE)
-                        .append(crypt.getCapacity()).append(SPACE)
-                        .append(dbCrypt.getDisciplines()).append(SPACE)
-                        .append(crypt.getClan()).append(":").append(crypt.getGroup() < 0 ? "ANY" : crypt.getGroup()).append(SPACE)
-                        .append(NEW_LINE);
+                numberSpaces = Math.max(numberSpaces, String.valueOf(card.getNumber()).length());
+                nameSpaces = Math.max(nameSpaces, StringUtils.trim(crypt.getName()).length());
+                capacitySpaces = Math.max(capacitySpaces, String.valueOf(crypt.getCapacity()).length());
+                int superiorDisciplineSpaces = crypt.getSuperiorDisciplines() != null ? crypt.getSuperiorDisciplines().stream()
+                        .map(Discipline::getFromName)
+                        .filter(Objects::nonNull)
+                        .map(d -> d.getAlias()[0])
+                        .mapToInt(alias -> alias.length() + 1)
+                        .sum() : 0;
+                int inferiorDisciplineSpaces = crypt.getDisciplines() != null ? crypt.getDisciplines().stream()
+                        .filter(discipline -> crypt.getSuperiorDisciplines() == null || !crypt.getSuperiorDisciplines().contains(discipline))
+                        .map(Discipline::getFromName)
+                        .filter(Objects::nonNull)
+                        .map(d -> d.getAlias()[0])
+                        .mapToInt(alias -> alias.length() + 1)
+                        .sum() : 0;
+                disciplinesSpaces = Math.max(disciplinesSpaces, superiorDisciplineSpaces + inferiorDisciplineSpaces);
+                titleSpaces = Math.max(titleSpaces, crypt.getTitle() != null ? crypt.getTitle().length() + 2 : 0);
+            }
+        }
+        for (Card card : deck.getCrypt()) {
+            Crypt crypt = cryptCache.get(card.getId());
+            if (crypt != null) {
+                String number = String.valueOf(card.getNumber());
+                result.append(number).append("x").append(" ".repeat(Math.max(0, numberSpaces - number.length()))).append(SPACE);
+                String name = StringUtils.trim(crypt.getName());
+                result.append(name).append(" ".repeat(Math.max(0, nameSpaces - name.length()))).append(SPACE).append(SPACE);
+                String capacity = String.valueOf(crypt.getCapacity());
+                result.append(" ".repeat(Math.max(0, capacitySpaces - capacity.length()))).append(capacity).append(SPACE).append(SPACE);
+                StringBuilder disciplines = new StringBuilder();
+                if (crypt.getSuperiorDisciplines() != null) {
+                    for (String superiorDiscipline : crypt.getSuperiorDisciplines()) {
+                        if (!disciplines.isEmpty()) {
+                            disciplines.append(" ");
+                        }
+                        Discipline discipline = Discipline.getFromName(superiorDiscipline);
+                        if (discipline != null) {
+                            disciplines.append(StringUtils.upperCase(discipline.getAlias()[0]));
+                        }
+                    }
+                }
+                if (crypt.getDisciplines() != null) {
+                    for (String inferiorDiscipline : crypt.getDisciplines()) {
+                        if (crypt.getSuperiorDisciplines() != null && crypt.getSuperiorDisciplines().contains(inferiorDiscipline)) {
+                            continue;
+                        }
+                        if (!disciplines.isEmpty()) {
+                            disciplines.append(" ");
+                        }
+                        Discipline discipline = Discipline.getFromName(inferiorDiscipline);
+                        if (discipline != null) {
+                            disciplines.append(StringUtils.lowerCase(discipline.getAlias()[0]));
+                        }
+                    }
+                }
+                if (disciplines.isEmpty()) {
+                    disciplines = new StringBuilder("-none-");
+                }
+                result.append(disciplines).append(" ".repeat(Math.max(0, disciplinesSpaces - disciplines.length()))).append(SPACE);
+                result.append(crypt.getTitle() != null ? StringUtils.lowerCase(crypt.getTitle()) : "");
+                if (titleSpaces > 2) {
+                    result.append(" ".repeat(Math.max(0, titleSpaces - crypt.getTitle().length())));
+                }
+                result.append(crypt.getClan()).append(":").append(crypt.getGroup() < 0 ? "ANY" : crypt.getGroup());
+                result.append(NEW_LINE);
             }
         }
         result.append(NEW_LINE);
-        result.append("Library: ").append(deck.getStats().getLibrary()).append(" cards").append(NEW_LINE).append(NEW_LINE);
+        result.append("Library (").append(deck.getStats().getLibrary()).append(" cards)").append(NEW_LINE);
         for (Map.Entry<String, List<Card>> entry : deck.getLibraryByType().entrySet()) {
-            result.append(entry.getKey()).append(" (").append(entry.getValue().stream().map(Card::getNumber).reduce(0, Integer::sum))
-                    .append(" cards)").append(NEW_LINE);
-            result.append("==================").append(NEW_LINE);
+            result.append(entry.getKey()).append(" (").append(entry.getValue().stream().map(Card::getNumber).reduce(0, Integer::sum));
+            if (entry.getKey().equals("Master")) {
+                int trifle = 0;
+                for (Card card : entry.getValue()) {
+                    Library library = libraryCache.get(card.getId());
+                    if (library != null && library.isTrifle()) {
+                        trifle++;
+                    }
+                }
+                if (trifle > 0) {
+                    result.append("; ").append(trifle).append(" trifle");
+                }
+            }
+            result.append(")").append(NEW_LINE);
             for (Card card : entry.getValue()) {
                 Library library = libraryCache.get(card.getId());
                 if (library != null) {
@@ -143,5 +211,17 @@ public class DeckExportServiceImpl implements DeckExportService {
             }
             result.append(NEW_LINE);
         }
+    }
+
+    private String getCryptTitle(Deck deck) {
+        return "Crypt(" +
+                deck.getStats().getCrypt() +
+                " cards, min=" +
+                deck.getStats().getMinCrypt() +
+                ", max=" +
+                deck.getStats().getMaxCrypt() +
+                ", avg=" +
+                deck.getStats().getAvgCrypt() +
+                ")";
     }
 }
