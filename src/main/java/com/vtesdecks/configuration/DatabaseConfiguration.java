@@ -1,6 +1,7 @@
 package com.vtesdecks.configuration;
 
 import com.vtesdecks.db.CryptMapper;
+import com.vtesdecks.db.handlers.JsonNodeHandler;
 import com.vtesdecks.db.handlers.LocalDateHandler;
 import com.vtesdecks.db.handlers.LocalDateTimeHandler;
 import com.zaxxer.hikari.HikariDataSource;
@@ -54,6 +55,7 @@ public class DatabaseConfiguration {
         sessionFactory.setTypeHandlers(new TypeHandler[]{
                 new LocalDateTimeHandler(),
                 new LocalDateHandler(),
+                new JsonNodeHandler(),
         });
         org.apache.ibatis.session.Configuration configuration = new org.apache.ibatis.session.Configuration();
         configuration.setMapUnderscoreToCamelCase(true);

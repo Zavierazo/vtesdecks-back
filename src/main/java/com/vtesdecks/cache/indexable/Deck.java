@@ -1,5 +1,6 @@
 package com.vtesdecks.cache.indexable;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.googlecode.cqengine.attribute.Attribute;
 import com.googlecode.cqengine.attribute.MultiValueNullableAttribute;
 import com.googlecode.cqengine.query.QueryFactory;
@@ -101,6 +102,8 @@ public class Deck {
     private String url;
     private String source;
     private String description;
+    private String limitedFormat;
+    private JsonNode extra;
     private boolean published;
     private List<Card> crypt = new ArrayList<>();
     private Map<String, List<Card>> libraryByType = new HashMap<>();

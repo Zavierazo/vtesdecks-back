@@ -1,5 +1,6 @@
 package com.vtesdecks.db.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -20,6 +21,7 @@ public class DbDeck extends DbBase {
     private String source;
     private String name;
     private String description;
+    private JsonNode extra;
     private long views = 0;
     private boolean verified = false;
     private boolean published = true;

@@ -1,0 +1,1 @@
+ALTER TABLE `deck` ADD COLUMN `extra` JSON NULL AFTER `description`;

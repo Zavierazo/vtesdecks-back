@@ -124,6 +124,7 @@ public class DeckFactory {
         value.setUrl(deck.getUrl());
         value.setSource(deck.getSource());
         value.setDescription(getDescription(deck.getDescription()));
+        value.setExtra(deck.getExtra());
         value.setPublished(deck.isPublished());
         if (deck.getUser() != null) {
             value.setUser(deck.getUser());
@@ -131,6 +132,9 @@ public class DeckFactory {
             if (user != null) {
                 value.setAuthor(user.getDisplayName());
             }
+        }
+        if (deck.getExtra() != null && deck.getExtra().has("limitedFormat")) {
+            value.setLimitedFormat(deck.getExtra().get("limitedFormat").get("name").asText());
         }
         List<Card> cards = new ArrayList<>();
         for (DeckCard deckCard : deckCards) {

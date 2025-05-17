@@ -49,6 +49,7 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "stats.libraryDisciplines", ignore = true)
     @Mapping(target = "stats.libraryClans", ignore = true)
     @Mapping(target = "erratas", ignore = true)
+    @Mapping(target = "extra", ignore = true)
     public abstract ApiDeck mapSummary(Deck deck, Integer userId);
 
     @Named("map")

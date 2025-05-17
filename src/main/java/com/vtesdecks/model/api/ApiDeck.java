@@ -1,6 +1,7 @@
 package com.vtesdecks.model.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import lombok.Data;
 
@@ -25,6 +26,8 @@ public class ApiDeck {
     private String url;
     private String source;
     private String description;
+    private String limitedFormat;
+    private JsonNode extra;
     private Boolean published;
     private List<ApiCard> crypt;
     private List<ApiCard> library;
