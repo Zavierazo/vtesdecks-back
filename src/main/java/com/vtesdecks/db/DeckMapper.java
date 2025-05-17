@@ -20,12 +20,12 @@ public interface DeckMapper {
     DbDeck selectById(String id);
 
     @Insert("INSERT INTO deck (id,type,user,name,tournament,players,`year`,author,url,source,description,creation_date,verified,published,deleted,views)"
-            + "VALUES(#{id},#{type},#{user},#{name},#{tournament},#{players},#{year},#{author},#{url},#{source},#{description},#{creationDate},#{verified},#{published},#{deleted},#{views})")
+            + "VALUES(#{id},#{type},#{user},#{name},#{tournament},#{players},#{year},#{author},#{url},#{source},#{description},#{creationDate},#{verified},#{published},#{deleted},#{views},#{extra})")
     void insert(DbDeck entity);
 
     @Update("UPDATE deck SET type=#{type},user=#{user},name=#{name},tournament=#{tournament},players=#{players},`year`=#{year}," +
             "author=#{author},url=#{url},source=#{source},description=#{description},creation_date=#{creationDate},verified=#{verified}," +
-            "published=#{published},views=#{views},deleted=#{deleted} WHERE id=#{id}")
+            "published=#{published},views=#{views},deleted=#{deleted},extra=#{extra} WHERE id=#{id}")
     void update(DbDeck entity);
 
 

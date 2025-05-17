@@ -1,8 +1,9 @@
 package com.vtesdecks.model.api;
 
-import java.util.List;
-
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 public class ApiDeckBuilder {
@@ -11,4 +12,5 @@ public class ApiDeckBuilder {
     private String description;
     private boolean published;
     private List<ApiCard> cards;
+    private JsonNode extra;
 }
