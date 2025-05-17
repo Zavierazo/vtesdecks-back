@@ -19,7 +19,7 @@ public interface DeckMapper {
     @Select("SELECT * FROM deck WHERE id=#{id}")
     DbDeck selectById(String id);
 
-    @Insert("INSERT INTO deck (id,type,user,name,tournament,players,`year`,author,url,source,description,creation_date,verified,published,deleted,views)"
+    @Insert("INSERT INTO deck (id,type,user,name,tournament,players,`year`,author,url,source,description,creation_date,verified,published,deleted,views,extra)"
             + "VALUES(#{id},#{type},#{user},#{name},#{tournament},#{players},#{year},#{author},#{url},#{source},#{description},#{creationDate},#{verified},#{published},#{deleted},#{views},#{extra})")
     void insert(DbDeck entity);
 
