@@ -8,7 +8,6 @@ import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.service.DeckService;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -190,7 +189,6 @@ public class DeckServiceImpl implements DeckService {
         return deckIndex.selectAll(builder.build());
     }
 
-    @Nullable
     private DeckQuery.CardProportion getCardProportion(String value) {
         try {
             String[] percentageSplit = value.split(",");

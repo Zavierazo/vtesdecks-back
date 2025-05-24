@@ -1,11 +1,10 @@
 package com.vtesdecks.model;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import com.beust.jcommander.internal.Lists;
-import lombok.Getter;
 
 public enum LibraryTitle {
     TITLED("Titled"),
@@ -19,31 +18,31 @@ public enum LibraryTitle {
     PRISCUS("Priscus"),
     CARDINAL("Cardinal", 100200, 100210, 100206, 100218, 100296, 100413, 100441, 100666, 100733, 101490, 101520, 102094, 102145),
     REGENT(
-        "Regent",
-        100200,
-        100210,
-        100206,
-        100218,
-        100296,
-        100413,
-        100441,
-        100666,
-        100733,
-        101490,
-        101520,
-        102094,
-        102145,
-        100295,
-        100319,
-        100525,
-        101666,
-        101768),
+            "Regent",
+            100200,
+            100210,
+            100206,
+            100218,
+            100296,
+            100413,
+            100441,
+            100666,
+            100733,
+            101490,
+            101520,
+            102094,
+            102145,
+            100295,
+            100319,
+            100525,
+            101666,
+            101768),
     MAGAJI("Magaji");
 
 
     private static final List<String> LIBRARY_STARTS_WITH =
-        Lists.newArrayList("requires an ", "requires a ready ", "requires a ready, ", "requires a ready, non-anarch, ", "requires a non-sterile ",
-            "requires a ready non-sterile ", "requires a ");
+            List.of("requires an ", "requires a ready ", "requires a ready, ", "requires a ready, non-anarch, ", "requires a non-sterile ",
+                    "requires a ready non-sterile ", "requires a ");
     @Getter
     private final String name;
     @Getter
@@ -53,7 +52,6 @@ public enum LibraryTitle {
         this.name = name;
         this.ids = ids;
     }
-
 
 
     public static List<LibraryTitle> getFromLibraryText(Integer id, String text) {

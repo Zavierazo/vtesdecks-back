@@ -1,7 +1,6 @@
 package com.vtesdecks;
 
-import java.util.Arrays;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,11 +14,10 @@ import org.springframework.context.annotation.PropertySources;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import lombok.extern.slf4j.Slf4j;
-import springfox.documentation.swagger2.annotations.EnableSwagger2;
+import java.util.Arrays;
 
 @SpringBootApplication(exclude = {
-    SecurityAutoConfiguration.class
+        SecurityAutoConfiguration.class
 })
 @EnableAutoConfiguration
 @ComponentScan(basePackages = {
@@ -32,7 +30,6 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 @EnableAsync
 @EnableScheduling
 @EnableFeignClients
-@EnableSwagger2
 @Slf4j
 public class Application {
 

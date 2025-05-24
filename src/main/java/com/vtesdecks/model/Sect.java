@@ -1,11 +1,10 @@
 package com.vtesdecks.model;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import com.beust.jcommander.internal.Lists;
-import lombok.Getter;
 
 public enum Sect {
     CAMARILLA("Camarilla"),
@@ -17,8 +16,8 @@ public enum Sect {
 
 
     private static final List<String> LIBRARY_STARTS_WITH =
-        Lists.newArrayList("requires an ", "requires a ready ", "requires a non-sterile ", "requires a titled ", "requires a ready titled ",
-            "requires a ", "requires a {}", "{or ", "requires a{n}{} ");
+            List.of("requires an ", "requires a ready ", "requires a non-sterile ", "requires a titled ", "requires a ready titled ",
+                    "requires a ", "requires a {}", "{or ", "requires a{n}{} ");
     @Getter
     private final String name;
     @Getter
