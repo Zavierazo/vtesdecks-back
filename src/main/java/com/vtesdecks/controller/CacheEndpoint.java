@@ -45,9 +45,9 @@ public class CacheEndpoint {
         ConcurrentMapCache concurrentMapCache = (ConcurrentMapCache) cacheManager.getCache(cacheName);
         if (concurrentMapCache != null) {
             concurrentMapCache.invalidate();
-            return cacheName + " cleared!";
+            return concurrentMapCache.getName() + " cleared!";
         } else {
-            return cacheName + " not found!";
+            return "cache not found!";
         }
     }
 
@@ -81,7 +81,7 @@ public class CacheEndpoint {
     }
 
     @GetMapping(value = "/{cacheName}/delete/{id}", produces = {
-            MediaType.APPLICATION_JSON_VALUE
+            MediaType.TEXT_PLAIN_VALUE
     })
     public String delete(@PathVariable String cacheName, @PathVariable String id) {
         ConcurrentMapCache concurrentMapCache = (ConcurrentMapCache) cacheManager.getCache(cacheName);
@@ -89,12 +89,12 @@ public class CacheEndpoint {
             concurrentMapCache.evict(id);
             return "DONE!";
         } else {
-            return cacheName + " not found!";
+            return "cache not found!";
         }
     }
 
     @GetMapping(value = "/deck/refresh/{id}", produces = {
-            MediaType.APPLICATION_JSON_VALUE
+            MediaType.TEXT_PLAIN_VALUE
     })
     public String refreshDeck(@PathVariable String id) {
         deckIndex.enqueueRefreshIndex(id);
