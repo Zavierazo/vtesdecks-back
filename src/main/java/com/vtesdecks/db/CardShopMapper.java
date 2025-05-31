@@ -12,7 +12,7 @@ import java.util.List;
 @Mapper
 public interface CardShopMapper {
 
-    @Insert("INSERT INTO card_shop (card_id, platform, `set`, link, price) VALUES(#{cardId}, #{platform}, #{set}, #{link}, #{price}, #{currency})")
+    @Insert("INSERT INTO card_shop (card_id, platform, `set`, link, price, currency) VALUES(#{cardId}, #{platform}, #{set}, #{link}, #{price}, #{currency})")
     void insert(DbCardShop entity);
 
     @Insert("UPDATE card_shop  SET card_id=#{cardId}, platform=#{platform},`set`=#{set}, link=#{link}, price=#{price}, currency=#{currency} WHERE id=#{id}")

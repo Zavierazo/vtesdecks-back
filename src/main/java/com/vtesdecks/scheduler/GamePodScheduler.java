@@ -53,26 +53,29 @@ public class GamePodScheduler {
             }
         }
         if (!isEmpty(currentCards.size())) {
-            WebClient client = configureClient();
-            for (DbCardShop cardShop : currentCards) {
-                //Check if card still exists in shop
-                try {
-                    client.getPage(cardShop.getLink());
-                    log.warn("Card {} still exists in shop {}", cardShop.getCardId(), cardShop.getLink());
-                } catch (FailingHttpStatusCodeException e) {
-                    if (e.getStatusCode() == 404) {
-                        log.warn("Card {} no longer exists in shop {}", cardShop.getCardId(), cardShop.getLink());
-                        cardShopMapper.delete(cardShop.getId());
-                    } else {
-                        log.error("Error scrapping GP page {}", cardShop.getLink(), e);
-                    }
-                } catch (IOException e) {
-                    log.error("Error scrapping GP page {}", cardShop.getLink(), e);
-                }
-
-            }
+            cleanOutdatedCards(currentCards);
         }
         log.info("GP scrap finished!");
+    }
+
+    private void cleanOutdatedCards(List<DbCardShop> currentCards) {
+        WebClient client = configureClient();
+        for (DbCardShop cardShop : currentCards) {
+            try {
+                client.getPage(cardShop.getLink());
+                log.warn("Card {} still exists in shop {}", cardShop.getCardId(), cardShop.getLink());
+            } catch (FailingHttpStatusCodeException e) {
+                if (e.getStatusCode() == 404) {
+                    log.warn("Card {} no longer exists in shop {}", cardShop.getCardId(), cardShop.getLink());
+                    cardShopMapper.delete(cardShop.getId());
+                } else {
+                    log.error("Error scrapping GP page {}", cardShop.getLink(), e);
+                }
+            } catch (IOException e) {
+                log.error("Error scrapping GP page {}", cardShop.getLink(), e);
+            }
+
+        }
     }
 
     private WebClient configureClient() {
