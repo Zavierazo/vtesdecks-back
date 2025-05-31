@@ -21,5 +21,6 @@ public class DbCardShop extends DbBase {
     private String set;
     private String link;
     private BigDecimal price;
+    private String currency;
 }
 

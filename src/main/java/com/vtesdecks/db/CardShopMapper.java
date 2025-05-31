@@ -1,6 +1,7 @@
 package com.vtesdecks.db;
 
 import com.vtesdecks.db.model.DbCardShop;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -11,10 +12,10 @@ import java.util.List;
 @Mapper
 public interface CardShopMapper {
 
-    @Insert("INSERT INTO card_shop (card_id, platform, `set`, link, price) VALUES(#{cardId}, #{platform}, #{set}, #{link}, #{price})")
+    @Insert("INSERT INTO card_shop (card_id, platform, `set`, link, price) VALUES(#{cardId}, #{platform}, #{set}, #{link}, #{price}, #{currency})")
     void insert(DbCardShop entity);
 
-    @Insert("UPDATE card_shop  SET card_id=#{cardId}, platform=#{platform},`set`=#{set}, link=#{link}, price=#{price} WHERE id=#{id}")
+    @Insert("UPDATE card_shop  SET card_id=#{cardId}, platform=#{platform},`set`=#{set}, link=#{link}, price=#{price}, currency=#{currency} WHERE id=#{id}")
     void update(DbCardShop entity);
 
     @Select("SELECT * FROM card_shop ORDER BY Id")
@@ -28,4 +29,10 @@ public interface CardShopMapper {
 
     @Select("SELECT * FROM card_shop WHERE card_id=#{cardId} AND platform=#{platform}")
     List<DbCardShop> selectByCardIdAndPlatform(@Param("cardId") Integer cardId, @Param("platform") String platform);
+
+    @Select("SELECT * FROM card_shop WHERE platform=#{platform}")
+    List<DbCardShop> selectByPlatform(String platform);
+
+    @Delete("DELETE FROM card_shop WHERE id=#{id}")
+    void delete(Integer id);
 }
