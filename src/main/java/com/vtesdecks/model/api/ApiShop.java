@@ -13,4 +13,5 @@ public class ApiShop {
     private String set;
     private String link;
     private BigDecimal price;
+    private String currency;
 }
