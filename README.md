@@ -7,7 +7,7 @@ TWD browser and deck builder for Vampire the Eternal Struggle (VTES)
 
 Before you begin, ensure you have met the following requirements:
 
-- Java 17
+- Java 21
 - Maven 3.6.0 or higher
 - MySQL 8.0.21
 - A tool for API testing (e.g., Postman or cURL)

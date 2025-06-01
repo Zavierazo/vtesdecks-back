@@ -6,7 +6,7 @@ import com.vtesdecks.db.UserMapper;
 import com.vtesdecks.db.model.DbUser;
 import com.vtesdecks.model.api.ApiUser;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -47,18 +46,18 @@ public class ApiUserService {
                 .commaSeparatedStringToAuthorityList("USER");
         return Jwts
                 .builder()
-                .setId(user.getUsername())
-                .setSubject(String.valueOf(user.getId()))
+                .id(user.getUsername())
+                .subject(String.valueOf(user.getId()))
                 .claim("authorities",
                         grantedAuthorities.stream()
                                 .map(GrantedAuthority::getAuthority)
-                                .collect(Collectors.toList()))
+                                .toList())
                 .claim("tester", user.isTester())
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + (expireOneDay ? SHORT_EXPIRATION_TIME : EXPIRATION_TIME)))
-                .signWith(SignatureAlgorithm.HS512,
-                        securityConfiguration.getJwtSecret().getBytes())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + (expireOneDay ? SHORT_EXPIRATION_TIME : EXPIRATION_TIME)))
+                .signWith(Keys.hmacShaKeyFor(securityConfiguration.getJwtSecret().getBytes()))
                 .compact();
+
     }
 
 }
