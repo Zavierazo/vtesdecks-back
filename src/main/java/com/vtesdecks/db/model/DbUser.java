@@ -23,7 +23,6 @@ public class DbUser extends DbBase {
     private String profileImage;
     private boolean validated;
     private boolean admin;
-    private boolean tester;
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime forgotPasswordDate;

@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.text.Normalizer;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -64,11 +66,12 @@ public class ApiAuthController {
             if (dbUser != null) {
                 String password = data.get(FORM_DATA_PASSWORD);
                 if (password != null && passwordEncoder.matches(password, dbUser.getPassword())) {
+                    List<String> roles = userMapper.selectRolesByUserId(dbUser.getId());
                     if (!dbUser.isValidated()) {
                         if (recaptchaService.isResponseValid(Utils.getIp(httpServletRequest), data.get(FORM_DATA_RECAPTCHA))
                                 && (dbUser.getModificationDate() == null
                                 || dbUser.getModificationDate().isBefore(LocalDateTime.now().minusMinutes(30)))) {
-                            mailService.sendConfirmationMail(dbUser.getEmail(), userService.getJWTToken(dbUser, true));
+                            mailService.sendConfirmationMail(dbUser.getEmail(), userService.getJWTToken(dbUser, roles, true));
                             user.setMessage("Pending email verification! " +
                                     "We have sent another email for confirmation. " +
                                     "Please check your spam folder.");
@@ -80,7 +83,7 @@ public class ApiAuthController {
                             log.warn("Check email verification for {}", username);
                         }
                     } else {
-                        user = userService.getAuthenticatedUser(dbUser);
+                        user = userService.getAuthenticatedUser(dbUser, roles);
                         log.info("Login request for {} success. Jwt token: {}", username, user.getToken());
                     }
                 }
@@ -134,7 +137,7 @@ public class ApiAuthController {
                     user.setDisplayName(data.get(FORM_DATA_USERNAME));
                     userMapper.insert(user);
                     DbUser dbUser = userMapper.selectByUserName(username);
-                    mailService.sendConfirmationMail(dbUser.getEmail(), userService.getJWTToken(dbUser, true));
+                    mailService.sendConfirmationMail(dbUser.getEmail(), userService.getJWTToken(dbUser, new ArrayList<>(), true));
                     response.setSuccessful(true);
                     response.setMessage("Verification link has been sent to your email address!");
                     log.info("Register request for {} success", username);
@@ -166,7 +169,8 @@ public class ApiAuthController {
                 DbUser user = userMapper.selectByEmail(email);
                 if (user != null) {
                     if (user.getForgotPasswordDate() == null || user.getForgotPasswordDate().isBefore(LocalDateTime.now().minusMinutes(30))) {
-                        mailService.sendForgotPasswordMail(user.getEmail(), userService.getJWTToken(user, true));
+                        List<String> roles = userMapper.selectRolesByUserId(user.getId());
+                        mailService.sendForgotPasswordMail(user.getEmail(), userService.getJWTToken(user, roles, true));
                         user.setForgotPasswordDate(LocalDateTime.now());
                         userMapper.update(user);
                         log.info("Forgot password request for {} success", email);

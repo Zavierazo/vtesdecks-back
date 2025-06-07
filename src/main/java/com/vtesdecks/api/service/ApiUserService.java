@@ -28,20 +28,20 @@ public class ApiUserService {
     @Autowired
     private ApiSecurityConfiguration securityConfiguration;
 
-    public ApiUser getAuthenticatedUser(DbUser dbUser) {
+    public ApiUser getAuthenticatedUser(DbUser dbUser, List<String> roles) {
         ApiUser user = new ApiUser();
         user.setUser(dbUser.getUsername());
-        user.setToken(getJWTToken(dbUser, false));
+        user.setToken(getJWTToken(dbUser, roles, false));
         user.setEmail(dbUser.getEmail());
         user.setAdmin(dbUser.isAdmin());
-        user.setTester(dbUser.isTester());
+        user.setRoles(roles);
         user.setDisplayName(dbUser.getDisplayName() != null ? dbUser.getDisplayName() : dbUser.getUsername());
         user.setProfileImage(ApiUtils.getProfileImage(dbUser));
         user.setNotificationCount(userNotificationService.notificationUnreadCount(dbUser.getId()));
         return user;
     }
 
-    public String getJWTToken(DbUser user, boolean expireOneDay) {
+    public String getJWTToken(DbUser user, List<String> roles, boolean expireOneDay) {
         List<GrantedAuthority> grantedAuthorities = AuthorityUtils
                 .commaSeparatedStringToAuthorityList("USER");
         return Jwts
@@ -52,7 +52,7 @@ public class ApiUserService {
                         grantedAuthorities.stream()
                                 .map(GrantedAuthority::getAuthority)
                                 .toList())
-                .claim("tester", user.isTester())
+                .claim("tester", roles.contains("tester"))
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + (expireOneDay ? SHORT_EXPIRATION_TIME : EXPIRATION_TIME)))
                 .signWith(Keys.hmacShaKeyFor(securityConfiguration.getJwtSecret().getBytes()))

@@ -10,6 +10,8 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 
+import java.util.List;
+
 @Mapper
 public interface UserMapper {
 
@@ -30,8 +32,11 @@ public interface UserMapper {
     @Cacheable(value = CacheEnum.DB_USER_CARD_CACHE, key = "'deck_card_selectById_'+#a0")
     DbUser selectById(Integer id);
 
-    @Insert("INSERT INTO user (username,email,password,login_hash,display_name,profile_image,validated,admin,tester)"
-            + "VALUES(#{username},#{email},#{password},#{loginHash},#{displayName},#{profileImage},#{validated},#{admin},#{tester})")
+    @Select("SELECT r.name FROM user_role ur JOIN role r ON ur.role_id = r.id WHERE ur.user_id = #{id}")
+    List<String> selectRolesByUserId(Integer id);
+
+    @Insert("INSERT INTO user (username,email,password,login_hash,display_name,profile_image,validated,admin)"
+            + "VALUES(#{username},#{email},#{password},#{loginHash},#{displayName},#{profileImage},#{validated},#{admin})")
     @Caching(evict = {
             @CacheEvict(value = CacheEnum.DB_USER_CARD_CACHE, key = "'deck_card_selectByEmail_'+#a0.email"),
             @CacheEvict(value = CacheEnum.DB_USER_CARD_CACHE, key = "'deck_card_selectByUserName_'+#a0.username"),
@@ -39,7 +44,7 @@ public interface UserMapper {
     })
     void insert(DbUser entity);
 
-    @Update("UPDATE user SET password = #{password}, login_hash = #{loginHash}, display_name = #{displayName}, profile_image = #{profileImage}, validated = #{validated}, admin = #{admin}, tester = #{tester}, forgot_password_date = #{forgotPasswordDate} "
+    @Update("UPDATE user SET password = #{password}, login_hash = #{loginHash}, display_name = #{displayName}, profile_image = #{profileImage}, validated = #{validated}, admin = #{admin}, forgot_password_date = #{forgotPasswordDate} "
             + "WHERE id=#{id}")
     @Caching(evict = {
             @CacheEvict(value = CacheEnum.DB_USER_CARD_CACHE, key = "'deck_card_selectByEmail_'+#a0.email"),

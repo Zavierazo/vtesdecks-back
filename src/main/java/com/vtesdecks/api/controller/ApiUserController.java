@@ -62,7 +62,8 @@ public class ApiUserController {
     @ResponseBody
     public ApiUser refreshUser() {
         DbUser user = userMapper.selectById(ApiUtils.extractUserId());
-        return userService.getAuthenticatedUser(user);
+        List<String> roles = userMapper.selectRolesByUserId(user.getId());
+        return userService.getAuthenticatedUser(user, roles);
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/verify", produces = {

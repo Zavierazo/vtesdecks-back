@@ -3,6 +3,8 @@ package com.vtesdecks.model.api;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiUser {
@@ -12,7 +14,7 @@ public class ApiUser {
     private String displayName;
     private String profileImage;
     private Boolean admin;
-    private Boolean tester;
+    private List<String> roles;
     private Integer notificationCount;
     private String message;
 }
