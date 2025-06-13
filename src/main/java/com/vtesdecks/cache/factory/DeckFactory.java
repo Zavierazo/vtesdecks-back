@@ -133,8 +133,12 @@ public class DeckFactory {
                 value.setAuthor(user.getDisplayName());
             }
         }
-        if (deck.getExtra() != null && deck.getExtra().has("limitedFormat")) {
-            value.setLimitedFormat(deck.getExtra().get("limitedFormat").get("name").asText());
+        if (deck.getExtra() != null && deck.getExtra().has("limitedFormat") && deck.getExtra().get("limitedFormat").has("name")) {
+            if (deck.getExtra().get("limitedFormat").has("id")) {
+                value.setLimitedFormat(deck.getExtra().get("limitedFormat").get("name").asText());
+            } else {
+                value.setLimitedFormat(deck.getExtra().get("limitedFormat").get("name").asText() + " (Custom)");
+            }
         }
         List<Card> cards = new ArrayList<>();
         for (DeckCard deckCard : deckCards) {
