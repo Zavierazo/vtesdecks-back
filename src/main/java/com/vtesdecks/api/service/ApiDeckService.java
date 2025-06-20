@@ -15,7 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ApiDeckService {
@@ -36,7 +38,7 @@ public class ApiDeckService {
         if (detailed) {
             return mapper.map(deck, ApiUtils.extractUserId());
         } else {
-            return mapper.mapSummary(deck, ApiUtils.extractUserId());
+            return mapper.mapSummary(deck, ApiUtils.extractUserId(), null);
         }
     }
 
@@ -72,8 +74,23 @@ public class ApiDeckService {
                              Boolean favorite,
                              Integer offset,
                              Integer limit) {
+        final Map<Integer, Integer> cardMap = new HashMap<>();
+        if (cards != null && !cards.isEmpty()) {
+            for (String card : cards) {
+                int indexEqual = card.indexOf('=');
+                int number = 1;
+                int id;
+                if (indexEqual > 0) {
+                    id = Integer.parseInt(card.substring(0, indexEqual));
+                    number = Integer.parseInt(card.substring(indexEqual + 1));
+                } else {
+                    id = Integer.parseInt(card);
+                }
+                cardMap.put(id, number);
+            }
+        }
         ResultSet<Deck> decks = deckService.getDecks(type, order, userId, name, author, cardText, clans, disciplines,
-                cards, cryptSize, librarySize, group, starVampire, singleClan, singleDiscipline, year, players, master, action, political, retainer,
+                cardMap, cryptSize, librarySize, group, starVampire, singleClan, singleDiscipline, year, players, master, action, political, retainer,
                 equipment, ally, modifier, combat, reaction, event, absoluteProportion, tags, favorite);
         ApiDecks apiDecks = new ApiDecks();
         apiDecks.setTotal(decks.size());
@@ -82,12 +99,12 @@ public class ApiDeckService {
                 .stream()
                 .skip(offset)
                 .limit(limit)
-                .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId()))
+                .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap))
                 .toList());
         if (offset == 0 && userId != null && type == DeckType.USER) {
             apiDecks.setRestorableDecks(deckMapper.selectUserDeleted(userId).stream()
                     .map(dbDeck -> deckFactory.getDeck(dbDeck, new ArrayList<>()))
-                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId()))
+                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap))
                     .toList());
         }
         return apiDecks;

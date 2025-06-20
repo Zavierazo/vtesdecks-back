@@ -31,6 +31,7 @@ public class ApiDeck {
     private Boolean published;
     private List<ApiCard> crypt;
     private List<ApiCard> library;
+    private List<ApiCard> filterCards;
     private Set<String> clanIcons;
     private Set<String> disciplineIcons;
     private ApiDeckStats stats;

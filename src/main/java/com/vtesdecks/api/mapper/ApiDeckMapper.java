@@ -15,6 +15,7 @@ import com.vtesdecks.model.api.ApiErrata;
 import com.vtesdecks.util.VtesUtils;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.BeanMapping;
+import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -25,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import static com.vtesdecks.util.VtesUtils.isCrypt;
 
 @Mapper(componentModel = "spring")
 public abstract class ApiDeckMapper {
@@ -38,7 +41,7 @@ public abstract class ApiDeckMapper {
 
 
     @BeanMapping(qualifiedByName = "map")
-    public abstract ApiDeck map(Deck deck, Integer userId);
+    public abstract ApiDeck map(Deck deck, @Context Integer userId);
 
     @BeanMapping(qualifiedByName = "mapSummary")
     @Mapping(target = "url", ignore = true)
@@ -50,11 +53,11 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "stats.libraryClans", ignore = true)
     @Mapping(target = "erratas", ignore = true)
     @Mapping(target = "extra", ignore = true)
-    public abstract ApiDeck mapSummary(Deck deck, Integer userId);
+    public abstract ApiDeck mapSummary(Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter);
 
     @Named("map")
     @AfterMapping
-    protected void afterMapping(@MappingTarget ApiDeck api, Deck deck, Integer userId) {
+    protected void afterMapping(@MappingTarget ApiDeck api, Deck deck, @Context Integer userId) {
         if (deck.getLibraryByType() != null) {
             List<ApiCard> cardList = new ArrayList<>();
             for (Map.Entry<String, List<Card>> deckEntry : deck.getLibraryByType().entrySet()) {
@@ -73,9 +76,32 @@ public abstract class ApiDeckMapper {
 
     @Named("mapSummary")
     @AfterMapping
-    protected void afterMappingSummary(@MappingTarget ApiDeck api, Deck deck, Integer userId) {
+    protected void afterMappingSummary(@MappingTarget ApiDeck api, Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter) {
         if (userId != null) {
             afterMappingUser(api, userId, deck);
+        }
+        if (cardsFilter != null && !cardsFilter.isEmpty()) {
+            // Add number of cards for filtered cards
+            api.setFilterCards(cardsFilter.entrySet().stream()
+                    .filter(entry -> entry.getValue() > 0)
+                    .map(entry -> {
+                        ApiCard apiCard = new ApiCard();
+                        apiCard.setId(entry.getKey());
+                        apiCard.setNumber(0);
+                        if (isCrypt(entry.getKey())) {
+                            deck.getCrypt().stream()
+                                    .filter(card -> entry.getKey().equals(card.getId()))
+                                    .findFirst()
+                                    .ifPresent(card -> apiCard.setNumber(card.getNumber()));
+                        } else {
+                            deck.getLibraryByType().values().stream()
+                                    .flatMap(List::stream)
+                                    .filter(card -> entry.getKey().equals(card.getId()))
+                                    .findFirst()
+                                    .ifPresent(card -> apiCard.setNumber(card.getNumber()));
+                        }
+                        return apiCard;
+                    }).toList());
         }
     }
 

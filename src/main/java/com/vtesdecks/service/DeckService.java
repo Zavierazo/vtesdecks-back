@@ -6,6 +6,7 @@ import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckType;
 
 import java.util.List;
+import java.util.Map;
 
 public interface DeckService {
 
@@ -19,7 +20,7 @@ public interface DeckService {
                              String cardText,
                              List<String> clans,
                              List<String> disciplines,
-                             List<String> cards,
+                             Map<Integer, Integer> cards,
                              List<Integer> cryptSize,
                              List<Integer> librarySize,
                              List<Integer> group,

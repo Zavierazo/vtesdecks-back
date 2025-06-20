@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +31,7 @@ public class DeckServiceImpl implements DeckService {
                                     String cardText,
                                     List<String> clans,
                                     List<String> disciplines,
-                                    List<String> cards,
+                                    Map<Integer, Integer> cards,
                                     List<Integer> cryptSize,
                                     List<Integer> librarySize,
                                     List<Integer> group,
@@ -66,23 +65,8 @@ public class DeckServiceImpl implements DeckService {
                 .singleClan(singleClan)
                 .singleDiscipline(singleDiscipline)
                 .tags(tags)
-                .favorite(favorite);
-        if (cards != null && !cards.isEmpty()) {
-            Map<Integer, Integer> cardMap = new HashMap<>();
-            for (String card : cards) {
-                int indexEqual = card.indexOf('=');
-                int number = 1;
-                int id;
-                if (indexEqual > 0) {
-                    id = Integer.parseInt(card.substring(0, indexEqual));
-                    number = Integer.parseInt(card.substring(indexEqual + 1));
-                } else {
-                    id = Integer.parseInt(card);
-                }
-                cardMap.put(id, number);
-            }
-            builder = builder.cards(cardMap);
-        }
+                .favorite(favorite)
+                .cards(cards);
         if (cryptSize != null && cryptSize.size() == 2) {
             Integer cryptSizeMin = cryptSize.get(0);
             if (cryptSizeMin <= 12) {
