@@ -78,7 +78,7 @@ public class ApiDeckController {
                 null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
-                null, null, favorite, 0, limit);
+                null, null, null, favorite, 0, limit);
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/{id}", produces = {
@@ -128,11 +128,12 @@ public class ApiDeckController {
                                           @RequestParam(name = "absoluteProportion", required = false) Boolean absoluteProportion,
                                           @RequestParam(name = "tags", required = false) List<String> tags,
                                           @RequestParam(name = "favorite", required = false) Boolean favorite,
+                                          @RequestParam(name = "limitedFormat", required = false) String limitedFormat,
                                           @RequestParam(name = "offset", required = false) Integer offset,
                                           @RequestParam(name = "limit", required = false) Integer limit) {
         ApiDecks decks = deckService.getDecks(type, order, ApiUtils.extractUserId(), name, author, cardText, clans, disciplines, cards, cryptSize,
                 librarySize, group, starVampire, singleClan, singleDiscipline, year, players, master, action, political, retainer, equipment, ally,
-                modifier, combat, reaction, event, absoluteProportion, tags, favorite, offset != null ? offset : 0, limit != null ? limit : 20);
+                modifier, combat, reaction, event, absoluteProportion, tags, limitedFormat, favorite, offset != null ? offset : 0, limit != null ? limit : 20);
         return new ResponseEntity<>(decks, HttpStatus.OK);
     }
 

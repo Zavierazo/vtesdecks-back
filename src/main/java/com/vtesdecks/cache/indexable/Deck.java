@@ -10,6 +10,7 @@ import com.vtesdecks.cache.indexable.deck.Stats;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.model.Errata;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -84,6 +85,7 @@ public class Deck {
             return deck.getFavoriteUsers();
         }
     };
+    public static final Attribute<Deck, String> LIMITED_FORMAT_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, String.class, "limited_format", (Deck deck) -> StringUtils.lowerCase(deck.getLimitedFormat()));
 
     private String id;
     private DeckType type;

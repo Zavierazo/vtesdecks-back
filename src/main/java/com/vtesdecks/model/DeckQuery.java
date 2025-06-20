@@ -47,6 +47,7 @@ public class DeckQuery {
     private CardProportion reaction;
     private CardProportion event;
     private List<String> tags;
+    private String limitedFormat;
     private Boolean favorite;
 
     public boolean isStarVampire() {
