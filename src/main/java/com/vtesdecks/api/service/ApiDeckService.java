@@ -11,6 +11,8 @@ import com.vtesdecks.model.DeckType;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDecks;
 import com.vtesdecks.service.DeckService;
+import com.vtesdecks.util.CosineSimilarityUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -72,6 +74,7 @@ public class ApiDeckService {
                              Boolean absoluteProportion,
                              List<String> tags,
                              String limitedFormat,
+                             String bySimilarity,
                              Boolean favorite,
                              Integer offset,
                              Integer limit) {
@@ -96,12 +99,26 @@ public class ApiDeckService {
         ApiDecks apiDecks = new ApiDecks();
         apiDecks.setTotal(decks.size());
         apiDecks.setOffset(offset);
-        apiDecks.setDecks(decks
-                .stream()
-                .skip(offset)
-                .limit(limit)
-                .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap))
-                .toList());
+        if (bySimilarity != null) {
+            Deck queryDeck = deckService.getDeck(bySimilarity);
+            Map<Integer, Integer> queryVector = CosineSimilarityUtils.getVector(queryDeck);
+            apiDecks.setDecks(decks
+                    .stream()
+                    .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(queryVector, CosineSimilarityUtils.getVector(target))))
+                    .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+                    .map(Pair::getKey)
+                    .skip(offset)
+                    .limit(limit)
+                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap))
+                    .toList());
+        } else {
+            apiDecks.setDecks(decks
+                    .stream()
+                    .skip(offset)
+                    .limit(limit)
+                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap))
+                    .toList());
+        }
         if (offset == 0 && userId != null && type == DeckType.USER) {
             apiDecks.setRestorableDecks(deckMapper.selectUserDeleted(userId).stream()
                     .map(dbDeck -> deckFactory.getDeck(dbDeck, new ArrayList<>()))

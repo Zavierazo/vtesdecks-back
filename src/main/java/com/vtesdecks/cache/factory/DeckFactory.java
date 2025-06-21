@@ -23,6 +23,7 @@ import com.vtesdecks.db.model.DbDeckView;
 import com.vtesdecks.db.model.DbUser;
 import com.vtesdecks.model.DeckTag;
 import com.vtesdecks.model.Errata;
+import com.vtesdecks.util.CosineSimilarityUtils;
 import com.vtesdecks.util.VtesUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -218,8 +219,9 @@ public class DeckFactory {
                 .map(id -> Errata.findErrata(id, deckDate))
                 .filter(Objects::nonNull)
                 .distinct()
-                .collect(Collectors.toList()));
+                .toList());
         value.setTags(getDeckTags(value));
+        value.setL2Norm(CosineSimilarityUtils.computeL2Norm(CosineSimilarityUtils.getVector(value)));
         return value;
     }
 

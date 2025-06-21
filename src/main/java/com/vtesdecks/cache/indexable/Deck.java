@@ -117,6 +117,7 @@ public class Deck {
     private Stats stats;
     private List<Errata> erratas;
     private Set<String> tags;
+    private Double l2Norm;
     private LocalDateTime creationDate;
     private LocalDateTime modifyDate;
 

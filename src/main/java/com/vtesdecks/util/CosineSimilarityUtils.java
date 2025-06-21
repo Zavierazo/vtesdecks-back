@@ -1,0 +1,47 @@
+package com.vtesdecks.util;
+
+import com.vtesdecks.cache.indexable.Deck;
+import lombok.experimental.UtilityClass;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@UtilityClass
+public class CosineSimilarityUtils {
+
+
+    public static double cosineSimilarity(Map<Integer, Integer> vecA, Map<Integer, Integer> vecB) {
+        double dot = 0;
+        for (Map.Entry<Integer, Integer> entry : vecA.entrySet()) {
+            int id = entry.getKey();
+            if (vecB.containsKey(id)) {
+                dot += entry.getValue() * vecB.get(id);
+            }
+        }
+
+        // Norms
+        double normA = computeL2Norm(vecA);
+        double normB = computeL2Norm(vecB);
+
+        if (normA == 0 || normB == 0) return 0;
+
+        return dot / (normA * normB);
+    }
+
+    public static Map<Integer, Integer> getVector(Deck deck) {
+        Map<Integer, Integer> vector = new HashMap<>();
+        deck.getCrypt().forEach(card -> vector.put(card.getId(), card.getNumber()));
+        deck.getLibraryByType().values().forEach(cards -> cards.forEach(card -> vector.put(card.getId(), card.getNumber())));
+        return vector;
+    }
+
+    public static double computeL2Norm(Map<Integer, Integer> vector) {
+        return Math.sqrt(
+                vector.values().stream()
+                        .mapToDouble(count -> count * count)
+                        .sum()
+        );
+    }
+
+
+}

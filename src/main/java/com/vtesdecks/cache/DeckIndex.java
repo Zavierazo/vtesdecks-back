@@ -47,7 +47,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.googlecode.cqengine.query.QueryFactory.all;
 import static com.googlecode.cqengine.query.QueryFactory.applyThresholds;
 import static com.googlecode.cqengine.query.QueryFactory.ascending;
 import static com.googlecode.cqengine.query.QueryFactory.contains;
@@ -474,8 +473,9 @@ public class DeckIndex implements Runnable {
         if (log.isDebugEnabled()) {
             log.debug("Query {} with options {}", query, queryOptions);
         }
-        return decks.retrieve(query != null ? query : all(Deck.class), queryOptions);
+        return decks.retrieve(query, queryOptions);
     }
+
 
     private Query<Deck> cardPercentage(DeckQuery.CardProportion percentage, Attribute<Deck, Integer> attributeFilter) {
         return and(greaterThanOrEqualTo(attributeFilter, percentage.getMin()), lessThanOrEqualTo(attributeFilter, percentage.getMax()));
