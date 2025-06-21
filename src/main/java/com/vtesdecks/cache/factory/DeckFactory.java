@@ -1,6 +1,5 @@
 package com.vtesdecks.cache.factory;
 
-import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.vtesdecks.cache.CryptCache;
@@ -26,7 +25,6 @@ import com.vtesdecks.model.DeckTag;
 import com.vtesdecks.model.Errata;
 import com.vtesdecks.util.VtesUtils;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -123,7 +121,7 @@ public class DeckFactory {
         value.setAuthor(deck.getAuthor());
         value.setUrl(deck.getUrl());
         value.setSource(deck.getSource());
-        value.setDescription(getDescription(deck.getDescription()));
+        value.setDescription(deck.getDescription());
         value.setExtra(deck.getExtra());
         value.setPublished(deck.isPublished());
         if (deck.getUser() != null) {
@@ -227,23 +225,6 @@ public class DeckFactory {
 
     private static boolean isDeckRatingExcludingAuthor(DbDeck deck, DbDeckUser deckUser) {
         return deckUser.getRate() != null && (deck.getUser() == null || !deck.getUser().equals(deckUser.getUser()));
-    }
-
-    private String getDescription(String description) {
-        if (description == null) {
-            return null;
-        }
-        List<String> descriptionParts = Splitter.on(NEW_LINE_HTML)
-                .omitEmptyStrings()
-                .trimResults()
-                .splitToList(description.replaceAll(NEW_LINE_REGEX, ""));
-        StringBuilder descriptionFix = new StringBuilder();
-        for (String descriptionPart : descriptionParts) {
-            if (StringUtils.isNotBlank(descriptionPart)) {
-                descriptionFix.append(PARAGRAPH_START).append(descriptionPart).append(PARAGRAPH_END);
-            }
-        }
-        return descriptionFix.length() > 0 ? descriptionFix.toString() : null;
     }
 
     private Long getViewsLastMonth(String deckId, List<DbDeckView> views) {
