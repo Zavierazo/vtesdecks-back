@@ -20,6 +20,7 @@ public class ApiLibrary {
     private Integer bloodCost;
     private Integer convictionCost;
     private Boolean burn;
+    private String text;
     private String flavor;
     private List<String> sets;
     private String requirement;

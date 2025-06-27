@@ -18,6 +18,7 @@ public class ApiCrypt {
     private Boolean adv;
     private Integer group;
     private Integer capacity;
+    private String text;
     private List<String> sets;
     private String title;
     private String banned;
