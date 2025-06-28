@@ -10,7 +10,7 @@ import java.util.Map;
 public class CosineSimilarityUtils {
 
 
-    public static double cosineSimilarity(Map<Integer, Integer> vecA, Map<Integer, Integer> vecB) {
+    public static double cosineSimilarity(Deck deckA, Map<Integer, Integer> vecA, Deck deckB, Map<Integer, Integer> vecB) {
         double dot = 0;
         for (Map.Entry<Integer, Integer> entry : vecA.entrySet()) {
             int id = entry.getKey();
@@ -20,8 +20,8 @@ public class CosineSimilarityUtils {
         }
 
         // Norms
-        double normA = computeL2Norm(vecA);
-        double normB = computeL2Norm(vecB);
+        double normA = deckA.getL2Norm();
+        double normB = deckB.getL2Norm();
 
         if (normA == 0 || normB == 0) return 0;
 

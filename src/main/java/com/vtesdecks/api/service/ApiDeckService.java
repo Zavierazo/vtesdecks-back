@@ -105,7 +105,7 @@ public class ApiDeckService {
             apiDecks.setDecks(decks
                     .stream()
                     .filter(target -> !target.getId().equals(bySimilarity))
-                    .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(queryVector, CosineSimilarityUtils.getVector(target))))
+                    .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(queryDeck, queryVector, target, CosineSimilarityUtils.getVector(target))))
                     .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                     .map(Pair::getKey)
                     .skip(offset)
