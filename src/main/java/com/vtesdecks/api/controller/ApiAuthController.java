@@ -1,5 +1,6 @@
 package com.vtesdecks.api.controller;
 
+import com.vtesdecks.api.service.ApiUserNotificationService;
 import com.vtesdecks.api.service.ApiUserService;
 import com.vtesdecks.db.UserMapper;
 import com.vtesdecks.db.model.DbUser;
@@ -48,6 +49,8 @@ public class ApiAuthController {
     private RecaptchaService recaptchaService;
     @Autowired
     private ApiUserService userService;
+    @Autowired
+    private ApiUserNotificationService userNotificationService;
 
     @RequestMapping(method = RequestMethod.POST, value = "/login", produces = {
             MediaType.APPLICATION_JSON_VALUE
@@ -138,6 +141,11 @@ public class ApiAuthController {
                     userMapper.insert(user);
                     DbUser dbUser = userMapper.selectByUserName(username);
                     mailService.sendConfirmationMail(dbUser.getEmail(), userService.getJWTToken(dbUser, new ArrayList<>(), true));
+                    try {
+                        userNotificationService.welcomeNotifications(dbUser.getId());
+                    } catch (Exception e) {
+                        log.error("Error sending in-app notification for user {}", username, e);
+                    }
                     response.setSuccessful(true);
                     response.setMessage("Verification link has been sent to your email address!");
                     log.info("Register request for {} success", username);

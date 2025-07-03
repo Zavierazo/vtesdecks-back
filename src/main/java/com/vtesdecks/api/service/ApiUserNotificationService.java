@@ -132,4 +132,16 @@ public class ApiUserNotificationService {
         return notification;
     }
 
+    public void welcomeNotifications(Integer userId) {
+        DbUserNotification userNotification = new DbUserNotification();
+        userNotification.setUser(userId);
+        userNotification.setReferenceId(0);
+        userNotification.setRead(false);
+        userNotification.setType(UserNotificationType.LINK);
+        userNotification.setNotification("<strong>Support VTESDecks on Patreon\uD83E\uDD87</strong><br/>Help us cover server costs and keep improving the site.");
+        userNotification.setLink("https://www.patreon.com/bePatron?u=41542528");
+        userNotificationMapper.insert(userNotification);
+
+    }
+
 }
