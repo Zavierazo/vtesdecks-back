@@ -27,6 +27,11 @@ public class ApiSetService {
         return apiSetMapper.map(set);
     }
 
+    public ApiSet getLastUpdate() {
+        Set set = setCache.selectLastUpdated();
+        return apiSetMapper.map(set);
+    }
+
     public List<ApiSet> getSets() {
         return setCache.selectAll().stream()
                 .map(apiSetMapper::map)

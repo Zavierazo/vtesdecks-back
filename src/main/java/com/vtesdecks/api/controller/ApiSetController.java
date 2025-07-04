@@ -1,22 +1,20 @@
 package com.vtesdecks.api.controller;
 
-import java.util.List;
-
-import com.vtesdecks.model.api.ApiDeck;
+import com.vtesdecks.api.service.ApiSetService;
+import com.vtesdecks.model.api.ApiSet;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import com.vtesdecks.api.service.ApiSetService;
-import com.vtesdecks.model.api.ApiSet;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
 
 @Controller
 @RequestMapping("/api/1.0/sets")
@@ -42,9 +40,16 @@ public class ApiSetController {
         }
     }
 
-    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/lastUpdate", produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
     @ResponseBody
-    public ResponseEntity<ApiSet> getSetById(@RequestParam Integer id) {
+    public ResponseEntity<ApiSet> getCryptLastUpdate() {
+        return new ResponseEntity<>(apiSetService.getLastUpdate(), HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiSet> getSetById(@PathVariable Integer id) {
         ApiSet set = apiSetService.getSet(id);
         if (set == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);

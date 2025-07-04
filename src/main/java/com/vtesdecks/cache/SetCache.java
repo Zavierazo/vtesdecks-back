@@ -3,9 +3,12 @@ package com.vtesdecks.cache;
 import com.google.common.collect.Lists;
 import com.googlecode.cqengine.ConcurrentIndexedCollection;
 import com.googlecode.cqengine.IndexedCollection;
+import com.googlecode.cqengine.index.hash.HashIndex;
 import com.googlecode.cqengine.index.unique.UniqueIndex;
 import com.googlecode.cqengine.query.Query;
+import com.googlecode.cqengine.query.QueryFactory;
 import com.googlecode.cqengine.query.option.QueryOptions;
+import com.googlecode.cqengine.query.option.Thresholds;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.factory.SetFactory;
 import com.vtesdecks.cache.indexable.Set;
@@ -25,9 +28,12 @@ import java.util.stream.Collectors;
 
 import static com.googlecode.cqengine.query.QueryFactory.all;
 import static com.googlecode.cqengine.query.QueryFactory.ascending;
+import static com.googlecode.cqengine.query.QueryFactory.descending;
 import static com.googlecode.cqengine.query.QueryFactory.equal;
 import static com.googlecode.cqengine.query.QueryFactory.orderBy;
 import static com.googlecode.cqengine.query.QueryFactory.queryOptions;
+import static com.googlecode.cqengine.query.QueryFactory.threshold;
+import static com.googlecode.cqengine.query.option.EngineThresholds.INDEX_ORDERING_SELECTIVITY;
 
 @Slf4j
 @Component
@@ -44,6 +50,7 @@ public class SetCache {
     public void setUp() {
         cache.addIndex(UniqueIndex.onAttribute(Set.ID_ATTRIBUTE));
         cache.addIndex(UniqueIndex.onAttribute(Set.ABBREV_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Set.LAST_UPDATE_ATTRIBUTE));
     }
 
     @Scheduled(cron = "${jobs.scrappingDecks:0 55 * * * *}")
@@ -103,5 +110,13 @@ public class SetCache {
         QueryOptions queryOptions = queryOptions(orderBy(ascending(Set.RELEASE_ATTRIBUTE)));
 
         return cache.retrieve(query, queryOptions);
+    }
+
+    public Set selectLastUpdated() {
+        Thresholds threshold = QueryFactory.applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
+        QueryOptions queryOptions = queryOptions(orderBy(descending(Set.LAST_UPDATE_ATTRIBUTE)), threshold);
+        Query<Set> query = all(Set.class);
+        ResultSet<Set> result = cache.retrieve(query, queryOptions);
+        return (result.size() >= 1) ? result.stream().findFirst().get() : null;
     }
 }

@@ -29,6 +29,7 @@ public enum LibraryTaint {
     SERAPH("Seraph"),
     INFERNAL("Infernal"),
     RED_LIST("Red List"),
+    FLIGHT("Flight"),
     CREATE_VAMPIRE("Create vampire", "becomes a.*(\\d[ -]|same.*)capacity"),
     BURN_OPTION("Burn Option"),
     BANNED("Banned"),
