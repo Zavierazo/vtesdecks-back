@@ -113,7 +113,7 @@ public class ApiAuthController {
             String confirmPassword = data.get(FORM_DATA_CONFIRM_PASSWORD);
 
             if (!(StringUtils.isNotBlank(username) && StringUtils.isAlphanumeric(username) && Normalizer.isNormalized(username, Normalizer.Form.NFKD)
-                    && username.length() > 5)) {
+                    && username.length() >= 5)) {
                 response.setMessage(
                         "Invalid username. You have one or more illegal characters in your username. Only alphanumeric characters are allowed and the minimum length is 5.");
                 log.warn("Invalid username register {}", username);
