@@ -23,15 +23,24 @@ public class CosineSimilarityUtils {
         double normA = deckA.getL2Norm();
         double normB = deckB.getL2Norm();
 
-        if (normA == 0 || normB == 0) return 0;
+        if (normA == 0 || normB == 0) {
+            return 0;
+        }
 
         return dot / (normA * normB);
     }
 
     public static Map<Integer, Integer> getVector(Deck deck) {
         Map<Integer, Integer> vector = new HashMap<>();
-        deck.getCrypt().forEach(card -> vector.put(card.getId(), card.getNumber()));
-        deck.getLibraryByType().values().forEach(cards -> cards.forEach(card -> vector.put(card.getId(), card.getNumber())));
+        if (deck == null) {
+            return vector;
+        }
+        if (deck.getCrypt() != null) {
+            deck.getCrypt().forEach(card -> vector.put(card.getId(), card.getNumber()));
+        }
+        if (deck.getLibraryByType() == null) {
+            deck.getLibraryByType().values().forEach(cards -> cards.forEach(card -> vector.put(card.getId(), card.getNumber())));
+        }
         return vector;
     }
 
