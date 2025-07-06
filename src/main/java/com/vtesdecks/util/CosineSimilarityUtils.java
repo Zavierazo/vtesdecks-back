@@ -38,7 +38,7 @@ public class CosineSimilarityUtils {
         if (deck.getCrypt() != null) {
             deck.getCrypt().forEach(card -> vector.put(card.getId(), card.getNumber()));
         }
-        if (deck.getLibraryByType() == null) {
+        if (deck.getLibraryByType() != null) {
             deck.getLibraryByType().values().forEach(cards -> cards.forEach(card -> vector.put(card.getId(), card.getNumber())));
         }
         return vector;
