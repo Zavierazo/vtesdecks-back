@@ -50,6 +50,7 @@ public class SetCache {
     public void setUp() {
         cache.addIndex(UniqueIndex.onAttribute(Set.ID_ATTRIBUTE));
         cache.addIndex(UniqueIndex.onAttribute(Set.ABBREV_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Set.RELEASE_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Set.LAST_UPDATE_ATTRIBUTE));
     }
 
@@ -58,15 +59,15 @@ public class SetCache {
         StopWatch stopWatch = new StopWatch();
         try {
             stopWatch.start();
-            java.util.Set<Integer> currentKeys = cache.stream().map(Set::getId).collect(Collectors.toSet());
+            java.util.Set<Set> currentKeys = cache.stream().collect(Collectors.toSet());
             for (DbSet set : setMapper.selectAll()) {
                 refreshIndex(set);
-                currentKeys.remove(set.getId());
+                currentKeys.removeIf(s -> s.getId().equals(set.getId()));
             }
             if (!currentKeys.isEmpty()) {
                 log.warn("Deleting form index {}", currentKeys);
-                for (Integer key : currentKeys) {
-                    cache.remove(key);
+                for (Set set : currentKeys) {
+                    cache.remove(set);
                 }
             }
         } finally {
@@ -77,15 +78,24 @@ public class SetCache {
 
     public void refreshIndex(DbSet set) {
         try {
-            Set oldDeck = get(set.getId());
-            Set newDeck = setFactory.getSet(set);
-            if (oldDeck != null && !oldDeck.equals(newDeck)) {
-                cache.update(Lists.newArrayList(oldDeck), Lists.newArrayList(newDeck));
-            } else {
-                cache.add(newDeck);
+            Set oldSet = get(set.getId());
+            Set newSet = setFactory.getSet(set);
+            if (oldSet != null && newSet == null) {
+                cache.remove(oldSet);
+            } else if (oldSet != null && !oldSet.equals(newSet)) {
+                cache.update(Lists.newArrayList(oldSet), Lists.newArrayList(newSet));
+            } else if (newSet != null) {
+                cache.add(newSet);
             }
         } catch (Exception e) {
             log.error("Error when refresh library {}", set.getId(), e);
+        }
+    }
+
+    public void deleteIndex(Integer key) {
+        Set set = get(key);
+        if (set != null) {
+            cache.remove(set);
         }
     }
 

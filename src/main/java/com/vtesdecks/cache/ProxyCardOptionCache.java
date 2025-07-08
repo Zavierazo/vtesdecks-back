@@ -95,8 +95,7 @@ public class ProxyCardOptionCache {
 
     private Stream<String> getSetsAbbrev(String rawSet) {
         return VtesUtils.getSets(rawSet).stream()
-                .map(s -> s.split(":")[0])
-                .map(s -> s.startsWith("Promo-") ? "Promo" : s);
+                .map(s -> s.split(":")[0]);
     }
 
 }

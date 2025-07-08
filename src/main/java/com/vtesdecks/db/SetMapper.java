@@ -1,6 +1,7 @@
 package com.vtesdecks.db;
 
 import com.vtesdecks.db.model.DbSet;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
@@ -30,4 +31,7 @@ public interface SetMapper {
             + "Abbrev=#{Abbrev}, Aka=#{Aka}, `release_date`=#{ReleaseDate}, full_name=#{FullName}, Company=#{Company} "
             + "WHERE Id=#{id}")
     void update(DbSet entity);
+
+    @Delete("DELETE FROM `set` WHERE Id=#{id}")
+    void deleteById(Integer id);
 }

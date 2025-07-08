@@ -25,7 +25,6 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class ApiProxyService {
 
-    private static final Set PROMO_SET = Set.builder().abbrev("Promo").fullName("Promo").releaseDate(LocalDate.MIN).build();
     private static final Set POD_SET = Set.builder().abbrev("POD").fullName("Print On Demand").releaseDate(LocalDate.MIN).build();
 
     private final ProxyService proxyService;
@@ -63,8 +62,6 @@ public class ApiProxyService {
         Set set;
         if (isPodSet(proxyCardOption)) {
             set = POD_SET;
-        } else if (isPromoSet(proxyCardOption)) {
-            set = PROMO_SET;
         } else {
             set = setCache.get(proxyCardOption.getSetAbbrev());
         }
@@ -83,9 +80,5 @@ public class ApiProxyService {
 
     private boolean isPodSet(ProxyCardOption proxyCardOption) {
         return "POD".equals(proxyCardOption.getSetAbbrev());
-    }
-
-    private boolean isPromoSet(ProxyCardOption proxyCardOption) {
-        return "Promo".equals(proxyCardOption.getSetAbbrev());
     }
 }

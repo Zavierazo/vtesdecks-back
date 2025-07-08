@@ -1,5 +1,6 @@
 package com.vtesdecks.configuration;
 
+import com.google.common.base.Splitter;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import com.opencsv.exceptions.CsvException;
@@ -47,6 +48,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Configuration
 @Slf4j
@@ -111,6 +114,8 @@ public class AppStartUpActions implements InitializingBean {
 
     @AllArgsConstructor
     private class StartUpActionsAsync extends Thread {
+
+        public static final String PROMO = "Promo";
 
         @Override
         public void run() {
@@ -187,6 +192,7 @@ public class AppStartUpActions implements InitializingBean {
                 for (DbCrypt crypt : crypts) {
                     try {
                         fixName(crypt);
+                        crypt.setSet(mapPromoSets(crypt.getSet()));
                         DbCrypt actual = cryptMapper.selectById(crypt.getId());
                         if (actual == null) {
                             cryptMapper.insert(crypt);
@@ -277,6 +283,7 @@ public class AppStartUpActions implements InitializingBean {
                 List<Integer> keys = libraryMapper.selectAll().stream().map(DbLibrary::getId).collect(Collectors.toList());
                 for (DbLibrary library : libraries) {
                     try {
+                        library.setSet(mapPromoSets(library.getSet()));
                         DbLibrary actual = libraryMapper.selectById(library.getId());
                         if (actual == null) {
                             log.debug("Insert library {}", library.getId());
@@ -306,6 +313,28 @@ public class AppStartUpActions implements InitializingBean {
             }
         }
 
+
+        private String mapPromoSets(String rawSet) {
+            if (isBlank(rawSet)) {
+                return rawSet;
+            }
+            return Splitter.on(',')
+                    .trimResults()
+                    .omitEmptyStrings()
+                    .splitToStream(rawSet)
+                    .map((set) -> {
+                        if (set.startsWith(PROMO + "-")) {
+                            if (set.length() < 7) {
+                                return PROMO;
+                            } else {
+                                return PROMO + ":" + set.substring(6);
+                            }
+                        }
+                        return set;
+                    })
+                    .collect(Collectors.joining(","));
+        }
+
         private void sets() {
             log.info("Starting Sets load...");
             boolean loaded = false;
@@ -316,20 +345,25 @@ public class AppStartUpActions implements InitializingBean {
                 List<DbSet> sets = parse(targetReader, DbSet.class);
                 for (DbSet set : sets) {
                     try {
-                        DbSet actual = setMapper.selectById(set.getId());
-                        if (actual == null) {
-                            log.debug("Insert set {}", set.getId());
-                            setMapper.insert(set);
-                            setCache.refreshIndex(set);
-                        } else if (!actual.equals(set)) {
-                            log.debug("Update set {}", set.getId());
-                            setMapper.update(set);
-                            setCache.refreshIndex(set);
+                        if (set.getAbbrev().startsWith("Promo-")) {
+                            log.debug("Insert promo set {}", set.getId());
+                            setMapper.deleteById(set.getId());
+                            setCache.deleteIndex(set.getId());
+                        } else {
+                            upsertSet(set);
                         }
                     } catch (Exception e) {
                         log.error("Unable to load library {}", sets, e);
                     }
                 }
+                // Add custom promo set
+                DbSet promoSet = new DbSet();
+                promoSet.setId(399999);
+                promoSet.setAbbrev("Promo");
+                promoSet.setFullName("Promo");
+                promoSet.setCompany("Paradox Interactive AB");
+                promoSet.setReleaseDate(null);
+                upsertSet(promoSet);
                 loaded = true;
             } catch (IOException e) {
                 log.error("Unable to parse", e);
@@ -340,6 +374,19 @@ public class AppStartUpActions implements InitializingBean {
                     updateLoadedHistory(stopWatch, SETS_FILE);
                 }
                 log.info("Library load finished in {} ms", stopWatch.getLastTaskTimeMillis());
+            }
+        }
+
+        private void upsertSet(DbSet set) {
+            DbSet actual = setMapper.selectById(set.getId());
+            if (actual == null) {
+                log.debug("Insert set {}", set.getId());
+                setMapper.insert(set);
+                setCache.refreshIndex(set);
+            } else if (!actual.equals(set)) {
+                log.debug("Update set {}", set.getId());
+                setMapper.update(set);
+                setCache.refreshIndex(set);
             }
         }
 
