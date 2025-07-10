@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -196,6 +197,11 @@ public class ApiAuthController {
             log.info("Bot detected while register user {}", data.get(FORM_DATA_USERNAME));
         }
         return response;
+    }
+
+    @GetMapping(value = "/user-country", produces = MediaType.TEXT_PLAIN_VALUE)
+    public String getUserCountry(HttpServletRequest request) {
+        return request.getHeader("CF-IPCountry");
     }
 
 
