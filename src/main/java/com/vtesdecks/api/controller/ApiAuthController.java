@@ -6,6 +6,7 @@ import com.vtesdecks.db.UserMapper;
 import com.vtesdecks.db.model.DbUser;
 import com.vtesdecks.model.api.ApiResponse;
 import com.vtesdecks.model.api.ApiUser;
+import com.vtesdecks.model.api.ApiUserCountry;
 import com.vtesdecks.service.MailService;
 import com.vtesdecks.service.RecaptchaService;
 import com.vtesdecks.util.Utils;
@@ -18,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -199,9 +199,12 @@ public class ApiAuthController {
         return response;
     }
 
-    @GetMapping(value = "/user-country", produces = MediaType.TEXT_PLAIN_VALUE)
-    public String getUserCountry(HttpServletRequest request) {
-        return request.getHeader("CF-IPCountry");
+    @RequestMapping(method = RequestMethod.GET, value = "/country", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ApiUserCountry getUserCountry(HttpServletRequest request) {
+        ApiUserCountry userCountry = new ApiUserCountry();
+        userCountry.setCountryCode(request.getHeader("CF-IPCountry"));
+        return userCountry;
     }
 
 
