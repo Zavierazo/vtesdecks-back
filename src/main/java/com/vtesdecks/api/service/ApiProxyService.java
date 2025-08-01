@@ -54,7 +54,7 @@ public class ApiProxyService {
         return cardOptionCache.get(cardId).stream()
                 .map(this::map)
                 .filter(Objects::nonNull)
-                .sorted(Comparator.comparing(ApiProxyCardOption::getSetReleaseDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
+                .sorted(Comparator.comparing(ApiProxyCardOption::getSetReleaseDate, Comparator.nullsFirst(Comparator.naturalOrder())).reversed())
                 .toList();
     }
 
