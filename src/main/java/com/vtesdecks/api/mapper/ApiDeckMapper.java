@@ -5,9 +5,14 @@ import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.Library;
+import com.vtesdecks.cache.indexable.deck.CollectionTracker;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.db.DeckUserMapper;
 import com.vtesdecks.db.model.DbDeckUser;
+import com.vtesdecks.jpa.entities.Collection;
+import com.vtesdecks.jpa.entities.CollectionCard;
+import com.vtesdecks.jpa.repositories.CollectionCardRepository;
+import com.vtesdecks.jpa.repositories.CollectionRepository;
 import com.vtesdecks.model.Errata;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeck;
@@ -26,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static com.vtesdecks.util.VtesUtils.isCrypt;
 
@@ -38,10 +44,14 @@ public abstract class ApiDeckMapper {
     private LibraryCache libraryCache;
     @Autowired
     private CryptCache cryptCache;
+    @Autowired
+    private CollectionRepository collectionRepository;
+    @Autowired
+    private CollectionCardRepository collectionCardRepository;
 
 
     @BeanMapping(qualifiedByName = "map")
-    public abstract ApiDeck map(Deck deck, @Context Integer userId);
+    public abstract ApiDeck map(Deck deck, @Context Integer userId, @Context boolean collectionTracker);
 
     @BeanMapping(qualifiedByName = "mapSummary")
     @Mapping(target = "url", ignore = true)
@@ -57,7 +67,7 @@ public abstract class ApiDeckMapper {
 
     @Named("map")
     @AfterMapping
-    protected void afterMapping(@MappingTarget ApiDeck api, Deck deck, @Context Integer userId) {
+    protected void afterMapping(@MappingTarget ApiDeck api, Deck deck, @Context Integer userId, @Context boolean collectionTracker) {
         if (deck.getLibraryByType() != null) {
             List<ApiCard> cardList = new ArrayList<>();
             for (Map.Entry<String, List<Card>> deckEntry : deck.getLibraryByType().entrySet()) {
@@ -71,6 +81,32 @@ public abstract class ApiDeckMapper {
             if (deckUser != null) {
                 api.setRated(deckUser.getRate() != null);
             }
+        }
+        if (collectionTracker || (Boolean.TRUE.equals(api.getOwner()) && Boolean.TRUE.equals(api.getCollection()))) {
+            List<Collection> collectionList = collectionRepository.findByUserIdAndDeletedFalse(userId);
+            if (!collectionList.isEmpty()) {
+                List<CollectionCard> cards = collectionCardRepository.findByCollectionId(collectionList.getFirst().getId());
+                Map<Integer, Integer> collectionMap = cards.stream().collect(Collectors.toMap(CollectionCard::getCardId, CollectionCard::getNumber, Integer::sum));
+                for (ApiCard apiCard : api.getCrypt()) {
+                    fillCollectionTracker(apiCard, collectionMap);
+                }
+                for (ApiCard apiCard : api.getLibrary()) {
+                    fillCollectionTracker(apiCard, collectionMap);
+                }
+            }
+        }
+    }
+
+    private static void fillCollectionTracker(ApiCard apiCard, Map<Integer, Integer> collectionMap) {
+        Integer number = collectionMap.get(apiCard.getId());
+        if (number != null && apiCard.getNumber() != null) {
+            if (apiCard.getNumber() > number) {
+                apiCard.setCollection(CollectionTracker.PARTIAL);
+            } else {
+                apiCard.setCollection(CollectionTracker.FULL);
+            }
+        } else {
+            apiCard.setCollection(CollectionTracker.NONE);
         }
     }
 

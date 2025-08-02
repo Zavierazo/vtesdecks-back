@@ -6,6 +6,8 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.UUID;
+
 public class ApiUtils {
 
     public static Integer extractUserId() {
@@ -20,5 +22,9 @@ public class ApiUtils {
         String hash = DigestUtils.md5Hex(StringUtils.lowerCase(StringUtils.trim(user.getEmail())));
         return user.getProfileImage() != null ? user.getProfileImage()
                 : "https://www.gravatar.com/avatar/" + hash + "?d=https://vtesdecks.com/assets/img/default_user.png";
+    }
+
+    public static String generatePublicHash() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 20);
     }
 }

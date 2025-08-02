@@ -1,6 +1,5 @@
 package com.vtesdecks.service.impl;
 
-import com.anyascii.AnyAscii;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
@@ -12,6 +11,7 @@ import com.vtesdecks.model.DeckExportType;
 import com.vtesdecks.model.Discipline;
 import com.vtesdecks.service.DeckExportService;
 import com.vtesdecks.service.DeckService;
+import com.vtesdecks.util.Utils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -62,7 +62,7 @@ public class DeckExportServiceImpl implements DeckExportService {
                     result
                             .append(card.getNumber())
                             .append(TAB)
-                            .append(normalizeLackeyName(library.getName()))
+                            .append(Utils.normalizeLackeyName(library.getName()))
                             .append(NEW_LINE);
                 }
             }
@@ -74,22 +74,17 @@ public class DeckExportServiceImpl implements DeckExportService {
                 result
                         .append(card.getNumber())
                         .append(TAB)
-                        .append(normalizeLackeyName(crypt.getName()))
-                        .append(crypt.isAdv() ? " (ADV)" : "")
+                        .append(Utils.normalizeLackeyName(getCryptName(crypt)))
                         .append(NEW_LINE);
             }
         }
-    }
-
-    private String normalizeLackeyName(String name) {
-        return AnyAscii.transliterate(StringUtils.trim(name)).replaceAll("[/\\\\]", "");
     }
 
     private void exportJOL(StringBuilder result, Deck deck) {
         for (Card card : deck.getCrypt()) {
             Crypt crypt = cryptCache.get(card.getId());
             if (crypt != null) {
-                result.append(card.getNumber()).append(X).append(StringUtils.trim(crypt.getName())).append(crypt.isAdv() ? " (ADV)" : "")
+                result.append(card.getNumber()).append(X).append(getCryptName(crypt))
                         .append(NEW_LINE);
             }
         }
@@ -120,7 +115,7 @@ public class DeckExportServiceImpl implements DeckExportService {
             Crypt crypt = cryptCache.get(card.getId());
             if (crypt != null) {
                 numberSpaces = Math.max(numberSpaces, String.valueOf(card.getNumber()).length());
-                nameSpaces = Math.max(nameSpaces, StringUtils.trim(crypt.getName()).length());
+                nameSpaces = Math.max(nameSpaces, getCryptName(crypt).length());
                 capacitySpaces = Math.max(capacitySpaces, String.valueOf(crypt.getCapacity()).length());
                 int superiorDisciplineSpaces = crypt.getSuperiorDisciplines() != null ? crypt.getSuperiorDisciplines().stream()
                         .map(Discipline::getFromName)
@@ -144,7 +139,7 @@ public class DeckExportServiceImpl implements DeckExportService {
             if (crypt != null) {
                 String number = String.valueOf(card.getNumber());
                 result.append(number).append("x").append(" ".repeat(Math.max(0, numberSpaces - number.length()))).append(SPACE);
-                String name = StringUtils.trim(crypt.getName());
+                String name = getCryptName(crypt);
                 result.append(name).append(" ".repeat(Math.max(0, nameSpaces - name.length()))).append(SPACE).append(SPACE);
                 String capacity = String.valueOf(crypt.getCapacity());
                 result.append(" ".repeat(Math.max(0, capacitySpaces - capacity.length()))).append(capacity).append(SPACE).append(SPACE);
@@ -211,6 +206,10 @@ public class DeckExportServiceImpl implements DeckExportService {
             }
             result.append(NEW_LINE);
         }
+    }
+
+    private static String getCryptName(Crypt crypt) {
+        return StringUtils.trim(crypt.getName()) + (crypt.isAdv() ? " (ADV)" : "");
     }
 
     private String getCryptTitle(Deck deck) {

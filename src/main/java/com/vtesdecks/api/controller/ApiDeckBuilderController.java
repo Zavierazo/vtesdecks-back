@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
@@ -56,6 +57,12 @@ public class ApiDeckBuilderController {
         log.info("Deck builder user {} stores {} with id {}", ApiUtils.extractUserId(), deckBuilder.getName(), deckBuilder.getId());
         return new ResponseEntity<>(deckBuilderService.storeDeck(deckBuilder), HttpStatus.OK);
 
+    }
+
+    @RequestMapping(method = RequestMethod.PATCH, value = "/{id}")
+    public ResponseEntity<Boolean> updateCollectionTracker(@PathVariable String id, @RequestParam Boolean collectionTracker) {
+        log.info("Deck builder user {} collection tracker {} to {}", ApiUtils.extractUserId(), id, collectionTracker);
+        return new ResponseEntity<>(deckBuilderService.updateCollectionTracker(id, collectionTracker), HttpStatus.OK);
     }
 
 

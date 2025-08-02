@@ -2,6 +2,7 @@ package com.vtesdecks.cache.indexable;
 
 import com.googlecode.cqengine.attribute.Attribute;
 import com.googlecode.cqengine.query.QueryFactory;
+import com.vtesdecks.util.Utils;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 
@@ -13,8 +14,8 @@ import java.util.Set;
 @Data
 public class Library {
     public static final Attribute<Library, Integer> ID_ATTRIBUTE = QueryFactory.attribute(Library.class, Integer.class, "id", Library::getId);
-    public static final Attribute<Library, String> NAME_ATTRIBUTE = QueryFactory.attribute(Library.class, String.class, "name", (Library library) -> StringUtils.stripAccents(StringUtils.lowerCase(library.getName())));
-    public static final Attribute<Library, String> TEXT_ATTRIBUTE = QueryFactory.attribute(Library.class, String.class, "text", (Library library) -> StringUtils.stripAccents(StringUtils.lowerCase(library.getText())));
+    public static final Attribute<Library, String> NAME_ATTRIBUTE = QueryFactory.attribute(Library.class, String.class, "name", (Library library) -> Utils.normalizeLackeyName(StringUtils.lowerCase(library.getName())));
+    public static final Attribute<Library, String> TEXT_ATTRIBUTE = QueryFactory.attribute(Library.class, String.class, "text", (Library library) -> Utils.normalizeLackeyName(StringUtils.lowerCase(library.getText())));
     public static final Attribute<Library, LocalDateTime> LAST_UPDATE_ATTRIBUTE = QueryFactory.attribute(Library.class, LocalDateTime.class, "last_update", Library::getLastUpdate);
 
     private Integer id;

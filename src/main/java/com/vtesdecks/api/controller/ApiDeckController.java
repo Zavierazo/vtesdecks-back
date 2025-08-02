@@ -85,8 +85,8 @@ public class ApiDeckController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<ApiDeck> deck(@PathVariable String id) {
-        ApiDeck deck = deckService.getDeck(id, true);
+    public ResponseEntity<ApiDeck> deck(@PathVariable String id, @RequestParam(required = false, defaultValue = "false") boolean collectionTracker) {
+        ApiDeck deck = deckService.getDeck(id, true, collectionTracker);
         if (deck == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {

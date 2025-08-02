@@ -19,13 +19,13 @@ public interface DeckMapper {
     @Select("SELECT * FROM deck WHERE id=#{id}")
     DbDeck selectById(String id);
 
-    @Insert("INSERT INTO deck (id,type,user,name,tournament,players,`year`,author,url,source,description,creation_date,verified,published,deleted,views,extra)"
-            + "VALUES(#{id},#{type},#{user},#{name},#{tournament},#{players},#{year},#{author},#{url},#{source},#{description},#{creationDate},#{verified},#{published},#{deleted},#{views},#{extra})")
+    @Insert("INSERT INTO deck (id,type,user,name,tournament,players,`year`,author,url,source,description,`set`,creation_date,verified,published,collection,deleted,views,extra)"
+            + "VALUES(#{id},#{type},#{user},#{name},#{tournament},#{players},#{year},#{author},#{url},#{source},#{description},#{set},#{creationDate},#{verified},#{published},#{collection},#{deleted},#{views},#{extra})")
     void insert(DbDeck entity);
 
     @Update("UPDATE deck SET type=#{type},user=#{user},name=#{name},tournament=#{tournament},players=#{players},`year`=#{year}," +
-            "author=#{author},url=#{url},source=#{source},description=#{description},creation_date=#{creationDate},verified=#{verified}," +
-            "published=#{published},views=#{views},deleted=#{deleted},extra=#{extra} WHERE id=#{id}")
+            "author=#{author},url=#{url},source=#{source},`set`=#{set},description=#{description},creation_date=#{creationDate},verified=#{verified}," +
+            "published=#{published},collection=#{collection},views=#{views},deleted=#{deleted},extra=#{extra} WHERE id=#{id}")
     void update(DbDeck entity);
 
 

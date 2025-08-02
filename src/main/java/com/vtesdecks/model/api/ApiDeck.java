@@ -26,9 +26,11 @@ public class ApiDeck {
     private String url;
     private String source;
     private String description;
+    private String set;
     private String limitedFormat;
     private JsonNode extra;
     private Boolean published;
+    private Boolean collection;
     private List<ApiCard> crypt;
     private List<ApiCard> library;
     private List<ApiCard> filterCards;
