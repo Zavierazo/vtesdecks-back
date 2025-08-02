@@ -123,8 +123,10 @@ public class DeckFactory {
         value.setUrl(deck.getUrl());
         value.setSource(deck.getSource());
         value.setDescription(deck.getDescription());
+        value.setSet(deck.getSet());
         value.setExtra(deck.getExtra());
         value.setPublished(deck.isPublished());
+        value.setCollection(deck.isCollection());
         if (deck.getUser() != null) {
             value.setUser(deck.getUser());
             DbUser user = userMapper.selectById(deck.getUser());

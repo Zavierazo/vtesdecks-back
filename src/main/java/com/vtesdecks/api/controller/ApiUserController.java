@@ -7,7 +7,6 @@ import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.db.UserMapper;
 import com.vtesdecks.db.model.DbUser;
 import com.vtesdecks.model.api.ApiComment;
-import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiFavoriteDeck;
 import com.vtesdecks.model.api.ApiRateDeck;
 import com.vtesdecks.model.api.ApiResponse;
@@ -28,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/api/1.0/user")
@@ -81,29 +79,6 @@ public class ApiUserController {
             return false;
         }
     }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/decks/bookmark", produces = {
-            MediaType.APPLICATION_JSON_VALUE
-    })
-    @ResponseBody
-    @Deprecated
-    public List<ApiDeck> bookmarkDecks() {
-        log.info("Deprectaded /api/1.0/user/bookmark");
-        List<String> deckIds = deckUserService.getFavoriteDecks(ApiUtils.extractUserId());
-        return deckIds.stream().map(deckId -> deckService.getDeck(deckId, false)).collect(Collectors.toList());
-    }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/decks", produces = {
-            MediaType.APPLICATION_JSON_VALUE
-    })
-    @ResponseBody
-    @Deprecated
-    public List<ApiDeck> decks() {
-        log.info("Deprectaded /api/1.0/user/decks");
-        List<String> deckIds = deckUserService.getUserDecks(ApiUtils.extractUserId());
-        return deckIds.stream().map(deckId -> deckService.getDeck(deckId, false)).collect(Collectors.toList());
-    }
-
 
     @RequestMapping(method = RequestMethod.POST, value = "/decks/rating", produces = {
             MediaType.APPLICATION_JSON_VALUE

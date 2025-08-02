@@ -21,6 +21,7 @@ import com.vtesdecks.db.model.DbCardShop;
 import com.vtesdecks.db.model.DbLibrary;
 import com.vtesdecks.db.model.DbLibraryI18n;
 import com.vtesdecks.model.LibraryTaint;
+import com.vtesdecks.util.Utils;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -135,10 +136,10 @@ public class LibraryCache {
         QueryOptions queryOptions = queryOptions(orderBy(ascending(Library.NAME_ATTRIBUTE)), threshold);
         Query<Library> query = all(Library.class);
         if (name != null) {
-            query = and(query, contains(Library.NAME_ATTRIBUTE, StringUtils.stripAccents(StringUtils.lowerCase(name))));
+            query = and(query, contains(Library.NAME_ATTRIBUTE, Utils.normalizeLackeyName(StringUtils.lowerCase(name))));
         }
         if (text != null) {
-            query = and(query, contains(Library.TEXT_ATTRIBUTE, StringUtils.stripAccents(StringUtils.lowerCase(text))));
+            query = and(query, contains(Library.TEXT_ATTRIBUTE, Utils.normalizeLackeyName(StringUtils.lowerCase(text))));
         }
         if (log.isDebugEnabled()) {
             log.debug("Query {} with options {}", query, queryOptions);

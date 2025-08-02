@@ -32,13 +32,13 @@ public class ApiDeckService {
     @Autowired
     private DeckFactory deckFactory;
 
-    public ApiDeck getDeck(String deckId, boolean detailed) {
+    public ApiDeck getDeck(String deckId, boolean detailed, boolean collectionTracker) {
         Deck deck = deckService.getDeck(deckId);
         if (deck == null) {
             return null;
         }
         if (detailed) {
-            return mapper.map(deck, ApiUtils.extractUserId());
+            return mapper.map(deck, ApiUtils.extractUserId(), collectionTracker);
         } else {
             return mapper.mapSummary(deck, ApiUtils.extractUserId(), null);
         }
@@ -99,8 +99,13 @@ public class ApiDeckService {
         ApiDecks apiDecks = new ApiDecks();
         apiDecks.setTotal(decks.size());
         apiDecks.setOffset(offset);
+        Deck queryDeck;
         if (bySimilarity != null) {
-            Deck queryDeck = deckService.getDeck(bySimilarity);
+            queryDeck = deckService.getDeck(bySimilarity);
+        } else {
+            queryDeck = null;
+        }
+        if (queryDeck != null) {
             Map<Integer, Integer> queryVector = CosineSimilarityUtils.getVector(queryDeck);
             apiDecks.setDecks(decks
                     .stream()

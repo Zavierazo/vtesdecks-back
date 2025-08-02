@@ -11,6 +11,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -30,6 +31,7 @@ import java.util.Arrays;
 @EnableAsync
 @EnableScheduling
 @EnableFeignClients
+@EnableJpaRepositories("com.vtesdecks.jpa.repositories")
 @Slf4j
 public class Application {
 

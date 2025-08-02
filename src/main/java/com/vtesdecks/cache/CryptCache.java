@@ -21,6 +21,7 @@ import com.vtesdecks.db.model.DbCardShop;
 import com.vtesdecks.db.model.DbCrypt;
 import com.vtesdecks.db.model.DbCryptI18n;
 import com.vtesdecks.model.CryptTaint;
+import com.vtesdecks.util.Utils;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -134,10 +135,10 @@ public class CryptCache {
         QueryOptions queryOptions = queryOptions(orderBy(ascending(Crypt.NAME_ATTRIBUTE)), threshold);
         Query<Crypt> query = all(Crypt.class);
         if (name != null) {
-            query = and(query, contains(Crypt.NAME_ATTRIBUTE, StringUtils.stripAccents(StringUtils.lowerCase(name))));
+            query = and(query, contains(Crypt.NAME_ATTRIBUTE, Utils.normalizeLackeyName(StringUtils.lowerCase(name))));
         }
         if (text != null) {
-            query = and(query, contains(Crypt.TEXT_ATTRIBUTE, StringUtils.stripAccents(StringUtils.lowerCase(text))));
+            query = and(query, contains(Crypt.TEXT_ATTRIBUTE, Utils.normalizeLackeyName(StringUtils.lowerCase(text))));
         }
         if (log.isDebugEnabled()) {
             log.debug("Query {} with options {}", query, queryOptions);

@@ -21,9 +21,11 @@ public class DbDeck extends DbBase {
     private String source;
     private String name;
     private String description;
+    private String set;
     private JsonNode extra;
     private long views = 0;
     private boolean verified = false;
     private boolean published = true;
     private boolean deleted = false;
+    private boolean collection = false;
 }

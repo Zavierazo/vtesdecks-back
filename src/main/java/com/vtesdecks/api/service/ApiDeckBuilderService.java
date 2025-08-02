@@ -236,4 +236,17 @@ public class ApiDeckBuilderService {
         apiCard.setNumber(number);
         return apiCard;
     }
+
+    public boolean updateCollectionTracker(String deckId, Boolean collectionTracker) {
+        DbDeck deck = deckMapper.selectById(deckId);
+        if (deck == null || !deck.getUser().equals(ApiUtils.extractUserId())) {
+            log.warn("Deck update collection tracker invalid request for user {}, tying to update {}", ApiUtils.extractUserId(), deckId);
+            return false;
+        }
+        deck.setCollection(collectionTracker);
+        deckMapper.update(deck);
+        //Enqueue indexation of new deck
+        deckIndex.enqueueRefreshIndex(deck.getId());
+        return true;
+    }
 }

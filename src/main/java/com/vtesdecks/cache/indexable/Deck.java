@@ -104,9 +104,11 @@ public class Deck {
     private String url;
     private String source;
     private String description;
+    private String set;
     private String limitedFormat;
     private JsonNode extra;
     private boolean published;
+    private boolean collection;
     private List<Card> crypt = new ArrayList<>();
     private Map<String, List<Card>> libraryByType = new HashMap<>();
     private Set<String> clanIcons;
