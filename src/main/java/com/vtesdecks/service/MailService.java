@@ -7,6 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 @Slf4j
 @Service
 public class MailService {
@@ -27,7 +30,8 @@ public class MailService {
     }
 
     public void sendForgotPasswordMail(String email, String token) {
-        String passwordResetUrl = "https://vtesdecks.com/reset-password?email=" + email + "&token=" + token;
+        String encodedEmail = URLEncoder.encode(email, StandardCharsets.UTF_8);
+        String passwordResetUrl = "https://vtesdecks.com/reset-password?email=" + encodedEmail + "&token=" + token;
         Mail mail = Mail.builder()
                 .from("no-reply@vtesdecks.com")
                 .to(email)
