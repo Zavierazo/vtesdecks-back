@@ -125,7 +125,7 @@ public class ApiUserCollectionController {
     }
 
     @GetMapping(value = "/cards/{id}/stats", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiCollectionCardStats cardStats(@PathVariable Integer id, @RequestParam(defaultValue = "false") Boolean mini) throws Exception {
-        return collectionService.getCardStats(id, mini);
+    public ApiCollectionCardStats cardStats(@PathVariable Integer id, @RequestParam(defaultValue = "false") Boolean summary) throws Exception {
+        return collectionService.getCardStats(id, summary);
     }
 }

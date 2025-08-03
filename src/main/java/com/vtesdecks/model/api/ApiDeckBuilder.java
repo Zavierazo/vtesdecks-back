@@ -11,6 +11,7 @@ public class ApiDeckBuilder {
     private String name;
     private String description;
     private boolean published;
+    private boolean collection;
     private List<ApiCard> cards;
     private JsonNode extra;
 }

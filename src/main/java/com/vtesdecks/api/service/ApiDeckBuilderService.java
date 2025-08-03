@@ -70,6 +70,7 @@ public class ApiDeckBuilderService {
         deckBuilder.setName(deck.getName());
         deckBuilder.setDescription(deck.getDescription());
         deckBuilder.setPublished(deck.isPublished());
+        deckBuilder.setCollection(deck.isCollection());
         deckBuilder.setCards(new ArrayList<>());
         deckBuilder.setExtra(deck.getExtra());
         List<DbDeckCard> dbDeckCards = deckCardMapper.selectByDeck(deck.getId());
@@ -122,6 +123,7 @@ public class ApiDeckBuilderService {
         deck.setDescription(apiDeckBuilder.getDescription());
         deck.setExtra(apiDeckBuilder.getExtra());
         deck.setPublished(apiDeckBuilder.isPublished());
+        deck.setCollection(apiDeckBuilder.isCollection());
         if (!exists) {
             deckMapper.insert(deck);
         } else {

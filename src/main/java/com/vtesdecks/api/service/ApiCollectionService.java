@@ -509,7 +509,7 @@ public class ApiCollectionService {
         }
     }
 
-    public ApiCollectionCardStats getCardStats(Integer id, Boolean mini) throws Exception {
+    public ApiCollectionCardStats getCardStats(Integer id, Boolean summary) throws Exception {
         Collection collection = getCollectionOrCreate();
         try {
             List<CollectionCard> cards = collectionCardRepository.findByCollectionIdAndCardId(collection.getId(), id);
@@ -527,7 +527,7 @@ public class ApiCollectionService {
                     .filter(deck -> Boolean.TRUE.equals(deck.getCollection()))
                     .mapToInt(deck -> !isEmpty(deck.getFilterCards()) ? deck.getFilterCards().getFirst().getNumber() : 0)
                     .sum());
-            if (!Boolean.TRUE.equals(mini)) {
+            if (!Boolean.TRUE.equals(summary)) {
                 stats.setCollectionCards(apiCollectionMapper.mapCards(cards));
                 stats.setDecks(decks);
             }
