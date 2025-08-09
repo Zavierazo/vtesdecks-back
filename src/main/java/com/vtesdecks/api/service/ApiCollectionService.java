@@ -300,6 +300,14 @@ public class ApiCollectionService {
         }
     }
 
+    public List<ApiCollectionCard> createCardsBulk(List<ApiCollectionCard> cards, HttpServletResponse response) throws Exception {
+        List<ApiCollectionCard> result = new ArrayList<>();
+        for (ApiCollectionCard card : cards) {
+            result.add(createCards(card, response));
+        }
+        return result;
+    }
+
     public ApiCollectionCard updateCard(Integer id, ApiCollectionCard card, HttpServletResponse response) throws Exception {
         try {
             Collection collection = getCollectionOrCreate();

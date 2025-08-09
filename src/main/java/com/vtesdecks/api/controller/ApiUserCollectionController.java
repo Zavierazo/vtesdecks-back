@@ -89,6 +89,11 @@ public class ApiUserCollectionController {
         return collectionService.createCards(card, response);
     }
 
+    @PostMapping(value = "/cards/bulk", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<ApiCollectionCard> createCardsBulk(HttpServletResponse response, @RequestBody List<ApiCollectionCard> cards) throws Exception {
+        return collectionService.createCardsBulk(cards, response);
+    }
+
     @GetMapping(value = "/cards/{ids}", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<ApiCollectionCard> getCardsById(@PathVariable List<Integer> ids) {
         return collectionService.getCardsById(ids);
