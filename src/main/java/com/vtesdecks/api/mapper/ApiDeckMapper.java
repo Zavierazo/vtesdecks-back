@@ -1,5 +1,6 @@
 package com.vtesdecks.api.mapper;
 
+import com.vtesdecks.api.service.ApiCollectionService;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
@@ -9,8 +10,6 @@ import com.vtesdecks.cache.indexable.deck.CollectionTracker;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.db.DeckUserMapper;
 import com.vtesdecks.db.model.DbDeckUser;
-import com.vtesdecks.jpa.entities.Collection;
-import com.vtesdecks.jpa.entities.CollectionCard;
 import com.vtesdecks.jpa.repositories.CollectionCardRepository;
 import com.vtesdecks.jpa.repositories.CollectionRepository;
 import com.vtesdecks.model.Errata;
@@ -31,7 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import static com.vtesdecks.util.VtesUtils.isCrypt;
 
@@ -48,6 +46,8 @@ public abstract class ApiDeckMapper {
     private CollectionRepository collectionRepository;
     @Autowired
     private CollectionCardRepository collectionCardRepository;
+    @Autowired
+    private ApiCollectionService apiCollectionService;
 
 
     @BeanMapping(qualifiedByName = "map")
@@ -83,16 +83,12 @@ public abstract class ApiDeckMapper {
             }
         }
         if (collectionTracker || (Boolean.TRUE.equals(api.getOwner()) && Boolean.TRUE.equals(api.getCollection()))) {
-            List<Collection> collectionList = collectionRepository.findByUserIdAndDeletedFalse(userId);
-            if (!collectionList.isEmpty()) {
-                List<CollectionCard> cards = collectionCardRepository.findByCollectionId(collectionList.getFirst().getId());
-                Map<Integer, Integer> collectionMap = cards.stream().collect(Collectors.toMap(CollectionCard::getCardId, CollectionCard::getNumber, Integer::sum));
-                for (ApiCard apiCard : api.getCrypt()) {
-                    fillCollectionTracker(apiCard, collectionMap);
-                }
-                for (ApiCard apiCard : api.getLibrary()) {
-                    fillCollectionTracker(apiCard, collectionMap);
-                }
+            Map<Integer, Integer> collectionMap = apiCollectionService.getCollectionCardsMap();
+            for (ApiCard apiCard : api.getCrypt()) {
+                fillCollectionTracker(apiCard, collectionMap);
+            }
+            for (ApiCard apiCard : api.getLibrary()) {
+                fillCollectionTracker(apiCard, collectionMap);
             }
         }
     }

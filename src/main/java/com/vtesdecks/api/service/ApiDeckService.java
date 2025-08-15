@@ -5,6 +5,7 @@ import com.vtesdecks.api.mapper.ApiDeckMapper;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.factory.DeckFactory;
 import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.db.DeckMapper;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckType;
@@ -31,6 +32,8 @@ public class ApiDeckService {
     private DeckMapper deckMapper;
     @Autowired
     private DeckFactory deckFactory;
+    @Autowired
+    private ApiCollectionService apiCollectionService;
 
     public ApiDeck getDeck(String deckId, boolean detailed, boolean collectionTracker) {
         Deck deck = deckService.getDeck(deckId);
@@ -75,6 +78,7 @@ public class ApiDeckService {
                              List<String> tags,
                              String limitedFormat,
                              String bySimilarity,
+                             Integer collectionPercentage,
                              Boolean favorite,
                              Integer offset,
                              Integer limit) {
@@ -117,6 +121,15 @@ public class ApiDeckService {
                     .limit(limit)
                     .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap))
                     .toList());
+        } else if (collectionPercentage != null && collectionPercentage > 0) {
+            Map<Integer, Integer> collectionMap = apiCollectionService.getCollectionCardsMap();
+            apiDecks.setDecks(decks
+                    .stream()
+                    .filter(deck -> matchCollectionPercentage(deck, collectionMap, collectionPercentage))
+                    .skip(offset)
+                    .limit(limit)
+                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap))
+                    .toList());
         } else {
             apiDecks.setDecks(decks
                     .stream()
@@ -132,5 +145,35 @@ public class ApiDeckService {
                     .toList());
         }
         return apiDecks;
+    }
+
+    private boolean matchCollectionPercentage(Deck deck, Map<Integer, Integer> collectionMap, Integer collectionPercentage) {
+        int totalCards = 0;
+        int collectionCards = 0;
+        if (deck.getCrypt() != null) {
+            for (Card card : deck.getCrypt()) {
+                if (card.getNumber() != null && card.getNumber() > 0) {
+                    totalCards += card.getNumber();
+                    if (collectionMap.containsKey(card.getId())) {
+                        collectionCards += Math.min(card.getNumber(), collectionMap.get(card.getId()));
+                    }
+                }
+            }
+        }
+        if (deck.getLibraryByType() != null) {
+            for (List<Card> cards : deck.getLibraryByType().values()) {
+                if (cards != null) {
+                    for (Card card : cards) {
+                        if (card.getNumber() != null && card.getNumber() > 0) {
+                            totalCards += card.getNumber();
+                            if (collectionMap.containsKey(card.getId())) {
+                                collectionCards += Math.min(card.getNumber(), collectionMap.get(card.getId()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return totalCards > 0 && (collectionCards * 100 / totalCards) >= collectionPercentage;
     }
 }

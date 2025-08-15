@@ -10,8 +10,6 @@ import com.vtesdecks.jpa.repositories.CollectionCardRepository;
 import com.vtesdecks.jpa.repositories.CollectionCardRepositoryCustom;
 import com.vtesdecks.jpa.repositories.CollectionRepository;
 import com.vtesdecks.model.CollectionType;
-import com.vtesdecks.model.DeckSort;
-import com.vtesdecks.model.DeckType;
 import com.vtesdecks.model.api.ApiCollection;
 import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
@@ -35,10 +33,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.vtesdecks.util.Constants.CARDS_DELETED_HEADER;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
@@ -52,7 +52,6 @@ public class ApiCollectionService {
     private final CollectionCardRepositoryCustom collectionCardRepositoryCustom;
     private final ApiCollectionMapper apiCollectionMapper;
     private final ApiCollectionImportService apiCollectionImportService;
-    private final ApiDeckService apiDeckService;
 
     public ApiCollection getCollection() throws Exception {
         try {
@@ -517,15 +516,10 @@ public class ApiCollectionService {
         }
     }
 
-    public ApiCollectionCardStats getCardStats(Integer id, Boolean summary) throws Exception {
+    public ApiCollectionCardStats getCardStats(Integer id, ApiDecks decks, Boolean summary) throws Exception {
         Collection collection = getCollectionOrCreate();
         try {
             List<CollectionCard> cards = collectionCardRepository.findByCollectionIdAndCardId(collection.getId(), id);
-            ApiDecks decks = apiDeckService.getDecks(DeckType.USER, DeckSort.NEWEST, ApiUtils.extractUserId(), null, null, null,
-                    null, null, List.of(id + "=1"), null, null, null, null,
-                    null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null,
-                    null, null, null, null, null, 0, 10);
             ApiCollectionCardStats stats = new ApiCollectionCardStats();
             stats.setCollectionNumber(cards.stream().map(CollectionCard::getNumber).filter(Objects::nonNull).mapToInt(Integer::intValue).sum());
             stats.setDecksNumber(decks.getDecks().stream()
@@ -544,6 +538,17 @@ public class ApiCollectionService {
             throw e; // Propagate validation errors
         } catch (Exception e) {
             throw new Exception("An unexpected error occurred while obtaining card stats", e);
+        }
+    }
+
+    public Map<Integer, Integer> getCollectionCardsMap() {
+        Integer userId = ApiUtils.extractUserId();
+        List<Collection> collection = collectionRepository.findByUserIdAndDeletedFalse(userId);
+        if (collection != null && !collection.isEmpty()) {
+            List<CollectionCard> cards = collectionCardRepository.findByCollectionId(collection.getFirst().getId());
+            return cards.stream().collect(Collectors.toMap(CollectionCard::getCardId, CollectionCard::getNumber, Integer::sum));
+        } else {
+            return new HashMap<>();
         }
     }
 

@@ -1,13 +1,18 @@
 package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.ApiCollectionService;
+import com.vtesdecks.api.service.ApiDeckService;
+import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.model.CollectionType;
+import com.vtesdecks.model.DeckSort;
+import com.vtesdecks.model.DeckType;
 import com.vtesdecks.model.api.ApiCollection;
 import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
 import com.vtesdecks.model.api.ApiCollectionImport;
 import com.vtesdecks.model.api.ApiCollectionPage;
+import com.vtesdecks.model.api.ApiDecks;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +44,7 @@ public class ApiUserCollectionController {
     protected static final List<String> ALLOWED_FILTERS = List.of("binderId", "cardType", "set", "cardId", "cardName");
 
     private final ApiCollectionService collectionService;
+    private final ApiDeckService apiDeckService;
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiCollection getCollection() throws Exception {
@@ -131,6 +137,11 @@ public class ApiUserCollectionController {
 
     @GetMapping(value = "/cards/{id}/stats", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiCollectionCardStats cardStats(@PathVariable Integer id, @RequestParam(defaultValue = "false") Boolean summary) throws Exception {
-        return collectionService.getCardStats(id, summary);
+        ApiDecks decks = apiDeckService.getDecks(DeckType.USER, DeckSort.NEWEST, ApiUtils.extractUserId(), null, null, null,
+                null, null, List.of(id + "=1"), null, null, null, null,
+                null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
+                null, null, null, null, null, null, 0, 10);
+        return collectionService.getCardStats(id, decks, summary);
     }
 }
