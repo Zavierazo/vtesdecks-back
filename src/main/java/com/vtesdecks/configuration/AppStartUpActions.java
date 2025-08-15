@@ -15,16 +15,16 @@ import com.vtesdecks.db.LibraryI18nMapper;
 import com.vtesdecks.db.LibraryMapper;
 import com.vtesdecks.db.LoadHistoryMapper;
 import com.vtesdecks.db.SetMapper;
-import com.vtesdecks.db.model.DbBase;
 import com.vtesdecks.db.model.DbCrypt;
 import com.vtesdecks.db.model.DbCryptI18n;
 import com.vtesdecks.db.model.DbLibrary;
 import com.vtesdecks.db.model.DbLibraryI18n;
 import com.vtesdecks.db.model.DbLoadHistory;
 import com.vtesdecks.db.model.DbSet;
+import com.vtesdecks.model.csv.SetCard;
 import com.vtesdecks.util.Utils;
 import com.vtesdecks.util.VtesUtils;
-import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.InitializingBean;
@@ -43,13 +43,14 @@ import java.io.Reader;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Configuration
 @Slf4j
@@ -57,10 +58,13 @@ public class AppStartUpActions implements InitializingBean {
     private static final String BASE_PATH = "D://Trabajo//Git//vtesdecks-front//src//assets//img//cards//";
     private static final char CSV_SEPARATOR = ',';
     private static final String SETS_FILE = "data/vtessets.csv";
+    private static final String CUSTOM_SETS_FILE = "data/vtessets_custom.csv";
     private static final String CRYPT_FILE = "data/vtescrypt.csv";
     private static final String LIBRARY_FILE = "data/vteslib.csv";
     private static final String CRYPT_I18N_FILE = "data/vtescrypt.i18n.csv";
     private static final String LIBRARY_I18N_FILE = "data/vteslib.i18n.csv";
+    private static final String FULL_ART_CARDS_FILE = "data/fullarts.csv";
+    private static final String BCP_BUSSINESS_CARDS_FILE = "data/bcp_business_cards.csv";
 
     @Autowired
     private CryptMapper cryptMapper;
@@ -112,10 +116,13 @@ public class AppStartUpActions implements InitializingBean {
         startActions.start();
     }
 
-    @AllArgsConstructor
+    @NoArgsConstructor
     private class StartUpActionsAsync extends Thread {
 
         public static final String PROMO = "Promo";
+        private Set<Integer> fullArtCards;
+        private Set<Integer> bcpBusinessCards;
+
 
         @Override
         public void run() {
@@ -125,6 +132,12 @@ public class AppStartUpActions implements InitializingBean {
                 sets();
                 changed = true;
             }
+            if (!isLoaded(CUSTOM_SETS_FILE)) {
+                customSets();
+                changed = true;
+            }
+            fullArtCards = readSetCardList(FULL_ART_CARDS_FILE);
+            bcpBusinessCards = readSetCardList(BCP_BUSSINESS_CARDS_FILE);
             if (!isLoaded(CRYPT_FILE)) {
                 crypt();
                 changed = true;
@@ -192,7 +205,7 @@ public class AppStartUpActions implements InitializingBean {
                 for (DbCrypt crypt : crypts) {
                     try {
                         fixName(crypt);
-                        crypt.setSet(mapPromoSets(crypt.getSet()));
+                        crypt.setSet(mapPromoSets(crypt.getId(), crypt.getSet()));
                         DbCrypt actual = cryptMapper.selectById(crypt.getId());
                         if (actual == null) {
                             cryptMapper.insert(crypt);
@@ -283,7 +296,7 @@ public class AppStartUpActions implements InitializingBean {
                 List<Integer> keys = libraryMapper.selectAll().stream().map(DbLibrary::getId).collect(Collectors.toList());
                 for (DbLibrary library : libraries) {
                     try {
-                        library.setSet(mapPromoSets(library.getSet()));
+                        library.setSet(mapPromoSets(library.getId(), library.getSet()));
                         DbLibrary actual = libraryMapper.selectById(library.getId());
                         if (actual == null) {
                             log.debug("Insert library {}", library.getId());
@@ -314,15 +327,12 @@ public class AppStartUpActions implements InitializingBean {
         }
 
 
-        private String mapPromoSets(String rawSet) {
-            if (isBlank(rawSet)) {
-                return rawSet;
-            }
-            return Splitter.on(',')
+        private String mapPromoSets(Integer id, String rawSet) {
+            List<String> sets = Splitter.on(',')
                     .trimResults()
                     .omitEmptyStrings()
                     .splitToStream(rawSet)
-                    .map((set) -> {
+                    .map(set -> {
                         if (set.startsWith(PROMO + "-")) {
                             if (set.length() < 7) {
                                 return PROMO;
@@ -331,8 +341,16 @@ public class AppStartUpActions implements InitializingBean {
                             }
                         }
                         return set;
-                    })
-                    .collect(Collectors.joining(","));
+                    }).toList();
+            if (fullArtCards != null && fullArtCards.contains(id)) {
+                sets = new ArrayList<>(sets);
+                sets.add("PFA:1");
+            }
+            if (bcpBusinessCards != null && bcpBusinessCards.contains(id)) {
+                sets = new ArrayList<>(sets);
+                sets.add("BCPBC:1");
+            }
+            return String.join(",", sets);
         }
 
         private void sets() {
@@ -345,25 +363,15 @@ public class AppStartUpActions implements InitializingBean {
                 List<DbSet> sets = parse(targetReader, DbSet.class);
                 for (DbSet set : sets) {
                     try {
-                        if (set.getAbbrev().startsWith("Promo-")) {
-                            log.debug("Insert promo set {}", set.getId());
-                            setMapper.deleteById(set.getId());
-                            setCache.deleteIndex(set.getId());
+                        if (set.getAbbrev().startsWith(PROMO + "-")) {
+                            log.debug("Ignore promo set {}", set.getId());
                         } else {
                             upsertSet(set);
                         }
                     } catch (Exception e) {
-                        log.error("Unable to load library {}", sets, e);
+                        log.error("Unable to load set {}", sets, e);
                     }
                 }
-                // Add custom promo set
-                DbSet promoSet = new DbSet();
-                promoSet.setId(399999);
-                promoSet.setAbbrev("Promo");
-                promoSet.setFullName("Promo");
-                promoSet.setCompany("Paradox Interactive AB");
-                promoSet.setReleaseDate(null);
-                upsertSet(promoSet);
                 loaded = true;
             } catch (IOException e) {
                 log.error("Unable to parse", e);
@@ -373,9 +381,51 @@ public class AppStartUpActions implements InitializingBean {
                 if (loaded) {
                     updateLoadedHistory(stopWatch, SETS_FILE);
                 }
-                log.info("Library load finished in {} ms", stopWatch.getLastTaskTimeMillis());
+                log.info("Set load finished in {} ms", stopWatch.getLastTaskTimeMillis());
             }
         }
+
+        private void customSets() {
+            log.info("Starting Custom Sets load...");
+            boolean loaded = false;
+            StopWatch stopWatch = new StopWatch();
+            stopWatch.start();
+            InputStream inputStream = getClass().getClassLoader().getResourceAsStream(CUSTOM_SETS_FILE);
+            try (Reader targetReader = new InputStreamReader(inputStream)) {
+                List<DbSet> sets = parse(targetReader, DbSet.class);
+                for (DbSet set : sets) {
+                    try {
+                        upsertSet(set);
+                    } catch (Exception e) {
+                        log.error("Unable to load set {}", sets, e);
+                    }
+                }
+                loaded = true;
+            } catch (IOException e) {
+                log.error("Unable to parse", e);
+
+            } finally {
+                stopWatch.stop();
+                if (loaded) {
+                    updateLoadedHistory(stopWatch, CUSTOM_SETS_FILE);
+                }
+                log.info("Custom sets load finished in {} ms", stopWatch.getLastTaskTimeMillis());
+            }
+        }
+
+        public Set<Integer> readSetCardList(String fileName) {
+            Set<Integer> cards = new HashSet<>();
+            try (Reader targetReader = new InputStreamReader(getClass().getClassLoader().getResourceAsStream(fileName))) {
+                List<SetCard> setCardList = parse(targetReader, SetCard.class);
+                for (SetCard setCard : setCardList) {
+                    cards.add(setCard.getId());
+                }
+            } catch (IOException e) {
+                log.error("Unable to parse", e);
+            }
+            return cards;
+        }
+
 
         private void upsertSet(DbSet set) {
             DbSet actual = setMapper.selectById(set.getId());
@@ -518,7 +568,7 @@ public class AppStartUpActions implements InitializingBean {
     }
 
 
-    private <T extends DbBase> List<T> parse(Reader targetReader, Class<T> type) {
+    private <T> List<T> parse(Reader targetReader, Class<T> type) {
         CsvToBean<T> build = new CsvToBeanBuilder<T>(targetReader)
                 .withSeparator(CSV_SEPARATOR)
                 .withType(type)

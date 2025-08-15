@@ -11,27 +11,27 @@ import java.util.List;
 
 @Mapper
 public interface SetMapper {
-    @Select("SELECT * FROM `set` ORDER BY Id")
+    @Select("SELECT * FROM `set` ORDER BY id")
     List<DbSet> selectAll();
 
-    @Select("SELECT * FROM `set` WHERE Id=#{id}")
+    @Select("SELECT * FROM `set` WHERE id=#{id}")
     DbSet selectById(Integer id);
 
-    @Select("SELECT * FROM `set` WHERE Abbrev = #{abbrev}")
+    @Select("SELECT * FROM `set` WHERE abbrev = #{abbrev}")
     DbSet selectByAbbreviation(String abbrev);
 
     @Select("SELECT Company FROM `set` WHERE full_name = #{fullName}")
     String selectCompanyByFullName(String fullName);
 
-    @Insert("INSERT INTO `set` (Id, Abbrev, release_date, full_name, Company)"
+    @Insert("INSERT INTO `set` (id, abbrev, release_date, full_name, company)"
             + "VALUES(#{Id}, #{Abbrev}, #{ReleaseDate}, #{FullName}, #{Company})")
     void insert(DbSet entity);
 
     @Update("UPDATE `set` SET "
-            + "Abbrev=#{Abbrev}, Aka=#{Aka}, `release_date`=#{ReleaseDate}, full_name=#{FullName}, Company=#{Company} "
-            + "WHERE Id=#{id}")
+            + "abbrev=#{Abbrev}, release_date=#{ReleaseDate}, full_name=#{FullName}, company=#{Company} "
+            + "WHERE id=#{id}")
     void update(DbSet entity);
 
-    @Delete("DELETE FROM `set` WHERE Id=#{id}")
+    @Delete("DELETE FROM `set` WHERE id=#{id}")
     void deleteById(Integer id);
 }

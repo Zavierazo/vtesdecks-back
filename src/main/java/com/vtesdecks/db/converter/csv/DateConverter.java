@@ -3,17 +3,28 @@ package com.vtesdecks.db.converter.csv;
 import com.opencsv.bean.AbstractBeanField;
 import com.opencsv.exceptions.CsvConstraintViolationException;
 import com.opencsv.exceptions.CsvDataTypeMismatchException;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 
+@Slf4j
 public class DateConverter extends AbstractBeanField<LocalDate> {
 
     @Override
-    protected Object convert(String s) throws CsvDataTypeMismatchException, CsvConstraintViolationException {
-        int year = Integer.parseInt(s.substring(0, 4));
-        int month = Integer.parseInt(s.substring(4, 6));
-        int day = Integer.parseInt(s.substring(6, 8));
+    protected Object convert(String value) throws CsvDataTypeMismatchException, CsvConstraintViolationException {
+        if (value == null || value.isEmpty()) {
+            return null;
+        }
 
-        return LocalDate.of(year, month, day);
+        try {
+            int year = Integer.parseInt(value.substring(0, 4));
+            int month = Integer.parseInt(value.substring(4, 6));
+            int day = Integer.parseInt(value.substring(6, 8));
+
+            return LocalDate.of(year, month, day);
+        } catch (Exception e) {
+            log.warn("Failed to convert date string '{}': {}", value, e.getMessage());
+            return null;
+        }
     }
 }

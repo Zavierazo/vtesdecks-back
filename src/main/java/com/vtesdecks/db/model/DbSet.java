@@ -2,7 +2,6 @@ package com.vtesdecks.db.model;
 
 import com.opencsv.bean.CsvBindByName;
 import com.opencsv.bean.CsvCustomBindByName;
-import com.vtesdecks.cache.indexable.Set;
 import com.vtesdecks.db.converter.csv.DateConverter;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -18,7 +17,7 @@ public class DbSet extends DbBase {
     private Integer Id;
     @CsvBindByName(required = true)
     private String Abbrev;
-    @CsvCustomBindByName(column = "Release Date", converter = DateConverter.class, required = true)
+    @CsvCustomBindByName(column = "Release Date", converter = DateConverter.class)
     private LocalDate ReleaseDate;
     @CsvBindByName(column = "Full Name", required = true)
     private String FullName;
