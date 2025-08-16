@@ -7,6 +7,7 @@ import com.vtesdecks.db.model.DbTextSearch;
 import com.vtesdecks.integration.FlareSolverr;
 import com.vtesdecks.model.flaresolverr.FlareRequest;
 import com.vtesdecks.model.flaresolverr.FlareResponse;
+import feign.RetryableException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +20,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,25 +47,33 @@ public class DriveThruCardsScheduler {
     public void scrapCards() {
         log.info("Starting DTC scrapping...");
         List<DbCardShop> currentCards = cardShopMapper.selectByPlatform(PLATFORM);
-        int numPages = getNumPages();
-        for (int pageIndex = 1; pageIndex <= numPages; pageIndex++) {
-            try {
-                Document page = getDocument(String.format(SEARCH_URL, pageIndex));
-                parsePage(page, currentCards);
-            } catch (Exception e) {
-                log.error("Error scrapping DTC page {}", pageIndex, e);
+        String session = null;
+        try {
+            session = createSession();
+            int numPages = getNumPages(session);
+            for (int pageIndex = 1; pageIndex <= numPages; pageIndex++) {
+                try {
+                    Document page = getDocument(String.format(SEARCH_URL, pageIndex), session);
+                    if (page != null) {
+                        parsePage(page, currentCards);
+                    }
+                } catch (Exception e) {
+                    log.error("Error scrapping DTC page {}", pageIndex, e);
+                }
             }
-        }
-        if (!isEmpty(currentCards.size())) {
-            cleanOutdatedCards(currentCards);
+            if (!isEmpty(currentCards.size())) {
+                cleanOutdatedCards(currentCards, session);
+            }
+        } finally {
+            destroySession(session);
         }
         log.info("DTC scrap finished!");
     }
 
-    private void cleanOutdatedCards(List<DbCardShop> currentCards) {
+    private void cleanOutdatedCards(List<DbCardShop> currentCards, String session) {
         for (DbCardShop cardShop : currentCards) {
             try {
-                Document page = getDocument(cardShop.getLink());
+                Document page = getDocument(cardShop.getLink(), session);
                 String pageTitle = page != null ? page.title() : null;
                 if (" -  | DriveThruCards.com".equalsIgnoreCase(pageTitle)) {
                     log.warn("Card {} no longer exists in shop {}", cardShop.getCardId(), cardShop.getLink());
@@ -77,9 +87,9 @@ public class DriveThruCardsScheduler {
         }
     }
 
-    private int getNumPages() {
+    private int getNumPages(String session) {
         try {
-            Document page = getDocument(String.format(SEARCH_URL, 1));
+            Document page = getDocument(String.format(SEARCH_URL, 1), session);
             if (page == null) return 0;
             Element pagesElement = page.selectFirst("[name=pages]");
             return pagesElement != null ? pagesElement.children().size() : 0;
@@ -104,7 +114,7 @@ public class DriveThruCardsScheduler {
 
     private Integer scrapCard(Element productCard) {
         Element cardNameElement = productCard.selectFirst("td h1 a span");
-        String cardNameRaw = cardNameElement.ownText();
+        String cardNameRaw = cardNameElement != null ? cardNameElement.ownText() : "";
         int firstIndex = cardNameRaw.indexOf("-");
         int lastIndex = cardNameRaw.lastIndexOf("-");
         String cardNameHtml;
@@ -186,9 +196,9 @@ public class DriveThruCardsScheduler {
         }
     }
 
-    private Document getDocument(String url) {
+    private Document getDocument(String url, String session) {
         try {
-            FlareResponse flareResponse = flareSolverr.getPage(FlareRequest.builder().cmd("request.get").url(url).maxTimeout(60000).build());
+            FlareResponse flareResponse = flareSolverr.getPage(FlareRequest.builder().cmd("request.get").session(session).url(url).maxTimeout(120000).build());
             if (flareResponse != null
                     && "ok".equalsIgnoreCase(flareResponse.getStatus())
                     && flareResponse.getSolution() != null
@@ -197,9 +207,40 @@ public class DriveThruCardsScheduler {
             } else {
                 log.warn("FlareSolverr did not return a valid response for URL {}: {}", url, flareResponse);
             }
+        } catch (RetryableException e) {
+            if (e.getCause() != null && e.getCause() instanceof SocketTimeoutException) {
+                log.warn("Unable to solve challenge for {}: {}", url, e.getCause().getMessage());
+            } else {
+                log.error("Error getting document from url {}", url, e);
+            }
         } catch (Exception e) {
             log.error("Error getting document from url {}", url, e);
         }
         return null;
+    }
+
+    private String createSession() {
+        try {
+            FlareResponse flareResponse = flareSolverr.getPage(FlareRequest.builder().cmd("sessions.create").build());
+            if (flareResponse != null && "ok".equalsIgnoreCase(flareResponse.getStatus()) && flareResponse.getSession() != null) {
+                return flareResponse.getSession();
+            } else {
+                log.warn("FlareSolverr unable to create session");
+            }
+        } catch (Exception e) {
+            log.error("FlareSolverr unable to create session", e);
+        }
+        return null;
+    }
+
+    private void destroySession(String session) {
+        try {
+            FlareResponse flareResponse = flareSolverr.getPage(FlareRequest.builder().cmd("sessions.destroy").session(session).build());
+            if (flareResponse == null || !"ok".equalsIgnoreCase(flareResponse.getStatus())) {
+                log.warn("FlareSolverr unable to destroy session");
+            }
+        } catch (Exception e) {
+            log.error("FlareSolverr unable to destroy session", e);
+        }
     }
 }

@@ -12,5 +12,6 @@ import lombok.NoArgsConstructor;
 public class FlareResponse {
     private String status;
     private String message;
+    private String session;
     private FlareSolution solution;
 }

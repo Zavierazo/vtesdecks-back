@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class FlareRequest {
     private String cmd;
+    private String session;
     private String url;
     private Integer maxTimeout;
 }

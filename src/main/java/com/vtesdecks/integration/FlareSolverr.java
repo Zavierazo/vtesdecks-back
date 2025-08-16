@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-@FeignClient(name = "FlareSolverr", url = "${flaresolverr.url:http://flaresolverr:8191}", configuration = FlareSolverr.Configuration.class)
+@FeignClient(name = "FlareSolverr", url = "${flaresolverr.url:http://localhost:8191}", configuration = FlareSolverr.Configuration.class)
 public interface FlareSolverr {
 
     @PostMapping(value = "/v1", produces = APPLICATION_JSON_VALUE)
