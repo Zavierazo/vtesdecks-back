@@ -1,22 +1,23 @@
 package com.vtesdecks.scheduler;
 
-import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
-import com.gargoylesoftware.htmlunit.WebClient;
-import com.gargoylesoftware.htmlunit.html.HtmlElement;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.vtesdecks.db.CardShopMapper;
 import com.vtesdecks.db.TextSearchMapper;
 import com.vtesdecks.db.model.DbCardShop;
 import com.vtesdecks.db.model.DbTextSearch;
+import com.vtesdecks.integration.FlareSolverr;
+import com.vtesdecks.model.flaresolverr.FlareRequest;
+import com.vtesdecks.model.flaresolverr.FlareResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -35,68 +36,61 @@ public class DriveThruCardsScheduler {
 
     @Autowired
     private TextSearchMapper textSearchMapper;
-
     @Autowired
     private CardShopMapper cardShopMapper;
+    @Autowired
+    private FlareSolverr flareSolverr;
 
-    @Scheduled(cron = "0 0 0 * * 0")
+    @Scheduled(initialDelay = 0, fixedDelay = 1)
     public void scrapCards() {
         log.info("Starting DTC scrapping...");
         List<DbCardShop> currentCards = cardShopMapper.selectByPlatform(PLATFORM);
-        WebClient client = configureClient();
-        int numPages = getNumPages(client);
+        int numPages = getNumPages();
         for (int pageIndex = 1; pageIndex <= numPages; pageIndex++) {
             try {
-                HtmlPage page = client.getPage(String.format(SEARCH_URL, pageIndex));
+                Document page = getDocument(String.format(SEARCH_URL, pageIndex));
                 parsePage(page, currentCards);
             } catch (Exception e) {
                 log.error("Error scrapping DTC page {}", pageIndex, e);
             }
         }
         if (!isEmpty(currentCards.size())) {
-            cleanOutdatedCards(client, currentCards);
+            cleanOutdatedCards(currentCards);
         }
         log.info("DTC scrap finished!");
     }
 
-    private void cleanOutdatedCards(WebClient client, List<DbCardShop> currentCards) {
+    private void cleanOutdatedCards(List<DbCardShop> currentCards) {
         for (DbCardShop cardShop : currentCards) {
             try {
-                client.getPage(cardShop.getLink());
-                log.warn("Card {} still exists in shop {}", cardShop.getCardId(), cardShop.getLink());
-            } catch (FailingHttpStatusCodeException e) {
-                if (e.getStatusCode() == 404) {
+                Document page = getDocument(cardShop.getLink());
+                String pageTitle = page.title();
+                if (pageTitle.equalsIgnoreCase(" -  | DriveThruCards.com")) {
                     log.warn("Card {} no longer exists in shop {}", cardShop.getCardId(), cardShop.getLink());
                     cardShopMapper.delete(cardShop.getId());
                 } else {
-                    log.error("Error scrapping DTC page {}", cardShop.getLink(), e);
+                    log.debug("Card {} still exists in shop {}", cardShop.getCardId(), cardShop.getLink());
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 log.error("Error scrapping DTC page {}", cardShop.getLink(), e);
             }
-
         }
     }
 
-    private WebClient configureClient() {
-        WebClient client = new WebClient();
-        client.getOptions().setCssEnabled(false);
-        client.getOptions().setJavaScriptEnabled(false);
-        return client;
-    }
-
-    private int getNumPages(WebClient client) {
+    private int getNumPages() {
         try {
-            HtmlPage page = client.getPage(String.format(SEARCH_URL, 1));
-            return page.getElementByName("pages").getChildElementCount();
+            Document page = getDocument(String.format(SEARCH_URL, 1));
+            if (page == null) return 0;
+            Element pagesElement = page.selectFirst("[name=pages]");
+            return pagesElement != null ? pagesElement.children().size() : 0;
         } catch (Exception e) {
             log.error("Error getting number of pages on DTC", e);
             return 0;
         }
     }
 
-    private void parsePage(HtmlPage page, List<DbCardShop> currentCards) {
-        for (HtmlElement productCard : (List<HtmlElement>) page.getByXPath("//tr[@class='dtrpgListing-row']")) {
+    private void parsePage(Document page, List<DbCardShop> currentCards) {
+        for (Element productCard : page.select("tr.dtrpgListing-row")) {
             try {
                 Integer cardId = scrapCard(productCard);
                 if (cardId != null) {
@@ -108,9 +102,9 @@ public class DriveThruCardsScheduler {
         }
     }
 
-    private Integer scrapCard(HtmlElement productCard) {
-        HtmlElement cardNameElement = (HtmlElement) productCard.getByXPath(".//td/h1/a/span").getFirst();
-        String cardNameRaw = cardNameElement.getFirstChild().getNodeValue();
+    private Integer scrapCard(Element productCard) {
+        Element cardNameElement = productCard.selectFirst("td h1 a span");
+        String cardNameRaw = cardNameElement.ownText();
         int firstIndex = cardNameRaw.indexOf("-");
         int lastIndex = cardNameRaw.lastIndexOf("-");
         String cardNameHtml;
@@ -142,9 +136,7 @@ public class DriveThruCardsScheduler {
         }
         final DbTextSearch card;
         if (cards.size() > 1) {
-            Optional<DbTextSearch> exactCard = cards.stream()
-                    .filter(cardSearch -> cardSearch.getName().replaceAll(SPECIAL_CHARACTERS, "").equalsIgnoreCase(cardName.replaceAll(SPECIAL_CHARACTERS, "")))
-                    .findFirst();
+            Optional<DbTextSearch> exactCard = cards.stream().filter(cardSearch -> cardSearch.getName().replaceAll(SPECIAL_CHARACTERS, "").equalsIgnoreCase(cardName.replaceAll(SPECIAL_CHARACTERS, ""))).findFirst();
             if (exactCard.isPresent()) {
                 card = exactCard.get();
             } else {
@@ -162,14 +154,7 @@ public class DriveThruCardsScheduler {
             return null;
         }
 
-        DbCardShop cardShop = DbCardShop.builder()
-                .cardId(card.getId())
-                .link(link)
-                .platform(PLATFORM)
-                .set(SET)
-                .price(price)
-                .currency(DOLLAR)
-                .build();
+        DbCardShop cardShop = DbCardShop.builder().cardId(card.getId()).link(link).platform(PLATFORM).set(SET).price(price).currency(DOLLAR).build();
         log.trace("Scrapped card {}", cardShop);
         List<DbCardShop> cardShopList = cardShopMapper.selectByCardIdAndPlatform(cardShop.getCardId(), PLATFORM);
         if (CollectionUtils.isEmpty(cardShopList)) {
@@ -184,20 +169,37 @@ public class DriveThruCardsScheduler {
         return cardShop.getCardId();
     }
 
-    private static String getLink(HtmlElement productCard) {
-        HtmlElement cardLinkElement = (HtmlElement) productCard.getByXPath(".//td/h1/a").getFirst();
-        String cardLink = cardLinkElement.getAttribute("href");
+    private static String getLink(Element productCard) {
+        Element cardLinkElement = productCard.selectFirst("td h1 a");
+        String cardLink = cardLinkElement != null ? cardLinkElement.attr("href") : "";
         return cardLink + "&affiliate_id=2900918";
     }
 
-    private static BigDecimal getPrice(String cardName, HtmlElement productCard) {
+    private static BigDecimal getPrice(String cardName, Element productCard) {
         try {
-            HtmlElement priceElement = (HtmlElement) productCard.getByXPath(".//td").get(2);
-            String priceString = priceElement.getFirstChild().getTextContent();
+            Element priceElement = productCard.select("td").get(2);
+            String priceString = priceElement.text();
             return new BigDecimal(priceString.substring(1));
         } catch (Exception e) {
             log.warn("Unable to obtain price for {}", cardName, e);
             return null;
         }
+    }
+
+    private Document getDocument(String url) {
+        try {
+            FlareResponse flareResponse = flareSolverr.getPage(FlareRequest.builder().cmd("request.get").url(url).maxTimeout(60000).build());
+            if (flareResponse != null
+                    && "ok".equalsIgnoreCase(flareResponse.getStatus())
+                    && flareResponse.getSolution() != null
+                    && flareResponse.getSolution().getResponse() != null) {
+                return Jsoup.parse(flareResponse.getSolution().getResponse());
+            } else {
+                log.warn("FlareSolverr did not return a valid response for URL {}: {}", url, flareResponse);
+            }
+        } catch (Exception e) {
+            log.error("Error getting document from url {}", url, e);
+        }
+        return null;
     }
 }

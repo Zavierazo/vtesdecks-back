@@ -48,8 +48,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Configuration
@@ -93,27 +91,27 @@ public class AppStartUpActions implements InitializingBean {
     public void afterPropertiesSet() throws Exception {
         // Start async tasks thread
         ExecutorService executor = null;
-        try {
-            log.info("Starting concurrent indexing...");
-            executor = Executors.newFixedThreadPool(3);
-            executor.execute(() -> cryptCache.refreshIndex());
-            executor.execute(() -> libraryCache.refreshIndex());
-            executor.execute(() -> setCache.refreshIndex());
-        } finally {
-            if (executor != null) {
-                executor.shutdown();
-                if (!executor.awaitTermination(5, TimeUnit.MINUTES)) {
-                    executor.shutdownNow();
-                }
-            }
-            log.info("Finish concurrent indexing...");
-        }
+//        try {
+//            log.info("Starting concurrent indexing...");
+//            executor = Executors.newFixedThreadPool(3);
+//            executor.execute(() -> cryptCache.refreshIndex());
+//            executor.execute(() -> libraryCache.refreshIndex());
+//            executor.execute(() -> setCache.refreshIndex());
+//        } finally {
+//            if (executor != null) {
+//                executor.shutdown();
+//                if (!executor.awaitTermination(5, TimeUnit.MINUTES)) {
+//                    executor.shutdownNow();
+//                }
+//            }
+//            log.info("Finish concurrent indexing...");
+//        }
         log.info("Starting serial indexing...");
-        deckIndex.refreshIndex();
+//        deckIndex.refreshIndex();
         log.info("Finish serial indexing...");
         StartUpActionsAsync startActions = new StartUpActionsAsync();
         log.info("Starting background tasks...");
-        startActions.start();
+//        startActions.start();
     }
 
     @NoArgsConstructor
