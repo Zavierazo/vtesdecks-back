@@ -41,7 +41,7 @@ public class DriveThruCardsScheduler {
     @Autowired
     private FlareSolverr flareSolverr;
 
-    @Scheduled(initialDelay = 0, fixedDelay = 1)
+    @Scheduled(cron = "0 0 0 * * *")
     public void scrapCards() {
         log.info("Starting DTC scrapping...");
         List<DbCardShop> currentCards = cardShopMapper.selectByPlatform(PLATFORM);
@@ -64,8 +64,8 @@ public class DriveThruCardsScheduler {
         for (DbCardShop cardShop : currentCards) {
             try {
                 Document page = getDocument(cardShop.getLink());
-                String pageTitle = page.title();
-                if (pageTitle.equalsIgnoreCase(" -  | DriveThruCards.com")) {
+                String pageTitle = page != null ? page.title() : null;
+                if (" -  | DriveThruCards.com".equalsIgnoreCase(pageTitle)) {
                     log.warn("Card {} no longer exists in shop {}", cardShop.getCardId(), cardShop.getLink());
                     cardShopMapper.delete(cardShop.getId());
                 } else {
