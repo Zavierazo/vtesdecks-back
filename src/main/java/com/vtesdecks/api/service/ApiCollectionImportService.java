@@ -115,17 +115,8 @@ public class ApiCollectionImportService {
         apiCollectionImport.setSuccess(true);
         List<ApiCollectionCardCsv> cards = new ArrayList<>();
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
-            Sheet sheet = workbook.getSheetAt(0);
-            boolean isHeader = true;
-            for (Row row : sheet) {
-                if (isHeader) { // Saltar encabezado
-                    isHeader = false;
-                    continue;
-                }
-                ApiCollectionCardCsv card = new ApiCollectionCardCsv();
-                card.setNumber(Utils.getCellInteger(row, 0));
-                card.setCardName(Utils.getCellString(row, 1));
-                cards.add(card);
+            for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+                readSheet(workbook.getSheetAt(i), cards);
             }
             if (binderId != null && binderId != 0) {
                 Optional<CollectionBinder> binderOptional = collectionBinderRepository.findByCollectionIdAndId(collection.getId(), binderId);
@@ -150,6 +141,20 @@ public class ApiCollectionImportService {
             apiCollectionImport.setSuccess(false);
         }
         return apiCollectionImport;
+    }
+
+    private static void readSheet(Sheet sheet, List<ApiCollectionCardCsv> cards) {
+        boolean isHeader = true;
+        for (Row row : sheet) {
+            if (isHeader) { // Saltar encabezado
+                isHeader = false;
+                continue;
+            }
+            ApiCollectionCardCsv card = new ApiCollectionCardCsv();
+            card.setNumber(Utils.getCellInteger(row, 0));
+            card.setCardName(Utils.getCellString(row, 1));
+            cards.add(card);
+        }
     }
 
     public ApiCollectionImport importCardsLackey(Collection collection, MultipartFile file, Integer binderId) {
