@@ -205,7 +205,8 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                     List<String> values = Splitter.on(',').trimResults().splitToList(value);
                     predicates.add(root.get(field).in(values));
                 } else {
-                    if (value.equalsIgnoreCase("none") || value.equalsIgnoreCase("null") || value.equals("0")) {
+                    if (value.equalsIgnoreCase("" +
+                            "") || value.equalsIgnoreCase("null") || value.equals("0")) {
                         predicates.add(cb.isNull(root.get(field)));
                     } else {
                         predicates.add(cb.equal(root.get(field), value));

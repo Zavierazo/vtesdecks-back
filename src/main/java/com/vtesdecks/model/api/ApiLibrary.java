@@ -31,6 +31,7 @@ public class ApiLibrary {
     private String cropImage;
     private Boolean trifle;
     private Set<String> disciplines;
+    private Set<String> types;
     private Set<String> typeIcons;
     private Set<String> disciplineIcons;
     private Set<String> sects;

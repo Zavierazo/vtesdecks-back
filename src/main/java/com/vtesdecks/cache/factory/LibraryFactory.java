@@ -15,6 +15,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Context;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 import java.time.LocalDateTime;
@@ -29,12 +30,14 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "spring")
 public abstract class LibraryFactory {
 
+    @Mapping(target = "types", ignore = true)
     public abstract Library getLibrary(DbLibrary dbLibrary, @Context List<DbLibraryI18n> libraryI18nList, @Context List<DbCardShop> cardShopList);
 
     @AfterMapping
     protected void afterMapping(@MappingTarget Library library, DbLibrary dbLibrary, @Context List<DbLibraryI18n> libraryI18nList, @Context List<DbCardShop> cardShopList) {
         library.setImage("/img/cards/" + +dbLibrary.getId() + ".jpg");
         library.setCropImage("/img/cards/crop/" + +dbLibrary.getId() + ".jpg");
+        library.setTypes(getTypes(dbLibrary));
         library.setTypeIcons(getTypeIcons(dbLibrary));
         library.setClans(VtesUtils.getLibraryClans(dbLibrary.getClan()));
         library.setClanIcons(library.getClans().stream().map(VtesUtils::getClanIcon).collect(Collectors.toSet()));
@@ -81,6 +84,22 @@ public abstract class LibraryFactory {
         }
     }
 
+    private Set<String> getTypes(DbLibrary library) {
+        Set<String> types = new HashSet<>();
+        List<String> cardTypes = new ArrayList<>();
+        if (library.getType().contains("/")) {
+            cardTypes.addAll(Splitter.on('/').trimResults().omitEmptyStrings().splitToList(library.getType()));
+        } else {
+            cardTypes.add(library.getType());
+        }
+        for (String cardType : cardTypes) {
+            String type = VtesUtils.getType(cardType);
+            if (type != null) {
+                types.add(type);
+            }
+        }
+        return types;
+    }
 
     private Set<String> getTypeIcons(DbLibrary library) {
         Set<String> types = new HashSet<>();

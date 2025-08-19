@@ -43,6 +43,7 @@ import static com.googlecode.cqengine.query.QueryFactory.ascending;
 import static com.googlecode.cqengine.query.QueryFactory.contains;
 import static com.googlecode.cqengine.query.QueryFactory.descending;
 import static com.googlecode.cqengine.query.QueryFactory.equal;
+import static com.googlecode.cqengine.query.QueryFactory.in;
 import static com.googlecode.cqengine.query.QueryFactory.orderBy;
 import static com.googlecode.cqengine.query.QueryFactory.queryOptions;
 import static com.googlecode.cqengine.query.QueryFactory.threshold;
@@ -71,6 +72,12 @@ public class LibraryCache {
         cache.addIndex(UniqueIndex.onAttribute(Library.ID_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Library.NAME_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Library.TEXT_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Library.TYPE_NUMBER_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Library.TYPE_MULTI_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Library.CLAN_NUMBER_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Library.CLAN_MULTI_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Library.DISCIPLINE_NUMBER_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Library.DISCIPLINE_MULTI_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Library.LAST_UPDATE_ATTRIBUTE));
     }
 
@@ -140,6 +147,40 @@ public class LibraryCache {
         }
         if (text != null) {
             query = and(query, contains(Library.TEXT_ATTRIBUTE, Utils.normalizeLackeyName(StringUtils.lowerCase(text))));
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Query {} with options {}", query, queryOptions);
+        }
+        return cache.retrieve(query, queryOptions);
+    }
+
+
+    public ResultSet<Library> selectAll(List<String> types, List<String> clans, List<String> disciplines) {
+        Thresholds threshold = QueryFactory.applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
+        QueryOptions queryOptions = queryOptions(orderBy(ascending(Library.NAME_ATTRIBUTE)), threshold);
+        Query<Library> query = all(Library.class);
+        if (types != null && !types.isEmpty()) {
+            for (String type : types) {
+                query = and(query, in(Library.TYPE_MULTI_ATTRIBUTE, type));
+            }
+        }
+        if (clans != null && !clans.isEmpty()) {
+            for (String clan : clans) {
+                if (clan.equals("none")) {
+                    query = and(query, equal(Library.CLAN_NUMBER_ATTRIBUTE, 0));
+                } else {
+                    query = and(query, in(Library.CLAN_MULTI_ATTRIBUTE, clan));
+                }
+            }
+        }
+        if (disciplines != null && !disciplines.isEmpty()) {
+            for (String discipline : disciplines) {
+                if (discipline.equals("none")) {
+                    query = and(query, equal(Library.DISCIPLINE_NUMBER_ATTRIBUTE, 0));
+                } else {
+                    query = and(query, in(Library.DISCIPLINE_MULTI_ATTRIBUTE, discipline));
+                }
+            }
         }
         if (log.isDebugEnabled()) {
             log.debug("Query {} with options {}", query, queryOptions);

@@ -43,6 +43,7 @@ import static com.googlecode.cqengine.query.QueryFactory.ascending;
 import static com.googlecode.cqengine.query.QueryFactory.contains;
 import static com.googlecode.cqengine.query.QueryFactory.descending;
 import static com.googlecode.cqengine.query.QueryFactory.equal;
+import static com.googlecode.cqengine.query.QueryFactory.in;
 import static com.googlecode.cqengine.query.QueryFactory.orderBy;
 import static com.googlecode.cqengine.query.QueryFactory.queryOptions;
 import static com.googlecode.cqengine.query.QueryFactory.threshold;
@@ -70,6 +71,10 @@ public class CryptCache {
         cache.addIndex(UniqueIndex.onAttribute(Crypt.ID_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Crypt.NAME_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Crypt.TEXT_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Crypt.TYPE_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Crypt.CLAN_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Crypt.DISCIPLINE_NUMBER_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Crypt.DISCIPLINE_MULTI_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Crypt.LAST_UPDATE_ATTRIBUTE));
     }
 
@@ -139,6 +144,39 @@ public class CryptCache {
         }
         if (text != null) {
             query = and(query, contains(Crypt.TEXT_ATTRIBUTE, Utils.normalizeLackeyName(StringUtils.lowerCase(text))));
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Query {} with options {}", query, queryOptions);
+        }
+        return cache.retrieve(query, queryOptions);
+    }
+    
+    public ResultSet<Crypt> selectAll(List<String> types, List<String> clans, List<String> disciplines) {
+        Thresholds threshold = QueryFactory.applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
+        QueryOptions queryOptions = queryOptions(orderBy(ascending(Crypt.NAME_ATTRIBUTE)), threshold);
+        Query<Crypt> query = all(Crypt.class);
+        if (types != null && !types.isEmpty()) {
+            for (String type : types) {
+                query = and(query, equal(Crypt.TYPE_ATTRIBUTE, type));
+            }
+        }
+        if (clans != null && !clans.isEmpty()) {
+            for (String clan : clans) {
+                if (clan.equals("none")) {
+                    query = and(query, equal(Crypt.CLAN_ATTRIBUTE, ""));
+                } else {
+                    query = and(query, equal(Crypt.CLAN_ATTRIBUTE, clan));
+                }
+            }
+        }
+        if (disciplines != null && !disciplines.isEmpty()) {
+            for (String discipline : disciplines) {
+                if (discipline.equals("none")) {
+                    query = and(query, equal(Crypt.DISCIPLINE_NUMBER_ATTRIBUTE, 0));
+                } else {
+                    query = and(query, in(Crypt.DISCIPLINE_MULTI_ATTRIBUTE, discipline));
+                }
+            }
         }
         if (log.isDebugEnabled()) {
             log.debug("Query {} with options {}", query, queryOptions);

@@ -1,8 +1,13 @@
 package com.vtesdecks.api.controller;
 
+import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.service.ApiCollectionService;
 import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.api.util.ApiUtils;
+import com.vtesdecks.cache.CryptCache;
+import com.vtesdecks.cache.LibraryCache;
+import com.vtesdecks.cache.indexable.Crypt;
+import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.model.CollectionType;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckType;
@@ -29,9 +34,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -45,6 +53,8 @@ public class ApiUserCollectionController {
 
     private final ApiCollectionService collectionService;
     private final ApiDeckService apiDeckService;
+    private final CryptCache cryptCache;
+    private final LibraryCache libraryCache;
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiCollection getCollection() throws Exception {
@@ -87,7 +97,33 @@ public class ApiUserCollectionController {
                 .filter(entry -> ALLOWED_FILTERS.contains(entry.getKey()))
                 .filter(entry -> !isEmpty(entry.getValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)) : new HashMap<>();
+        if (params != null && (params.containsKey("cardTypes") || params.containsKey("cardClans") || params.containsKey("cardDisciplines"))) {
+            Set<Integer> filteredIds = getCardIdFilter(params.get("cardTypes"), params.get("cardClans"), params.get("cardDisciplines"));
+            if (filters.containsKey("cardId")) {
+                filteredIds.retainAll(Arrays.stream(filters.get("cardId").split(","))
+                        .map(Integer::parseInt)
+                        .collect(Collectors.toSet()));
+            } else {
+                filters.put("cardId", filteredIds.stream()
+                        .map(String::valueOf)
+                        .collect(Collectors.joining(",")));
+            }
+        }
         return collectionService.getCards(page, size, groupBy, sortBy, sortDirection, filters);
+    }
+
+    private Set<Integer> getCardIdFilter(String cardTypes, String cardClans, String cardDisciplines) {
+        Set<Integer> filteredIds = new HashSet<>();
+        List<String> cardTypeList = isEmpty(cardTypes) ? null : Arrays.stream(cardTypes.split(",")).toList();
+        List<String> cardClanList = isEmpty(cardClans) ? null : Arrays.stream(cardClans.split(",")).toList();
+        List<String> cardDisciplineList = isEmpty(cardDisciplines) ? null : Arrays.stream(cardDisciplines.split(",")).toList();
+        try (ResultSet<Crypt> result = cryptCache.selectAll(cardTypeList, cardClanList, cardDisciplineList)) {
+            result.stream().forEach(crypt -> filteredIds.add(crypt.getId()));
+        }
+        try (ResultSet<Library> result = libraryCache.selectAll(cardTypeList, cardClanList, cardDisciplineList)) {
+            result.stream().forEach(library -> filteredIds.add(library.getId()));
+        }
+        return filteredIds;
     }
 
     @PostMapping(value = "/cards", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)

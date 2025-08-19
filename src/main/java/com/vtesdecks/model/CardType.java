@@ -32,13 +32,13 @@ public enum CardType {
     }
 
     public static CardType getFromName(String name) {
-        for (CardType discipline : CardType.values()) {
-            if (discipline.getName().equalsIgnoreCase(name)) {
-                return discipline;
-            } else if (discipline.getAlias() != null) {
-                for (String alias : discipline.getAlias()) {
+        for (CardType type : CardType.values()) {
+            if (type.getName().equalsIgnoreCase(name)) {
+                return type;
+            } else if (type.getAlias() != null) {
+                for (String alias : type.getAlias()) {
                     if (alias.equalsIgnoreCase(name)) {
-                        return discipline;
+                        return type;
                     }
                 }
             }

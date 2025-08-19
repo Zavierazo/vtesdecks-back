@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -24,9 +23,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class ApiProxyService {
-
-    private static final Set POD_SET = Set.builder().abbrev("POD").fullName("Print On Demand").releaseDate(LocalDate.MIN).build();
-
     private final ProxyService proxyService;
     private final ProxyCardOptionCache cardOptionCache;
     private final SetCache setCache;
@@ -59,12 +55,8 @@ public class ApiProxyService {
     }
 
     private ApiProxyCardOption map(ProxyCardOption proxyCardOption) {
-        Set set;
-        if (isPodSet(proxyCardOption)) {
-            set = POD_SET;
-        } else {
-            set = setCache.get(proxyCardOption.getSetAbbrev());
-        }
+        Set set = setCache.get(proxyCardOption.getSetAbbrev());
+
         if (set == null) {
             log.warn("Set '{}' not found for proxy option", proxyCardOption.getSetAbbrev());
             return null;
@@ -76,9 +68,5 @@ public class ApiProxyService {
                 .setName(set.getFullName())
                 .imageUrl(proxyService.getProxyImageUrl(set.getAbbrev(), proxyCardOption.getCardId()))
                 .build();
-    }
-
-    private boolean isPodSet(ProxyCardOption proxyCardOption) {
-        return "POD".equals(proxyCardOption.getSetAbbrev());
     }
 }

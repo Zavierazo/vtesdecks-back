@@ -69,6 +69,16 @@ public class VtesUtils {
         }
     }
 
+    public static String getType(String type) {
+        CardType cardType = CardType.getFromName(type);
+        if (cardType != null) {
+            return cardType.getName();
+        } else {
+            log.info("Type not found for {}", type);
+        }
+        return null;
+    }
+
     public static String getTypeIcon(String type) {
         CardType cardType = CardType.getFromName(type);
         if (cardType != null) {

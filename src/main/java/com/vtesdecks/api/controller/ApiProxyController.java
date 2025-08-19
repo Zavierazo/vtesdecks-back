@@ -61,6 +61,7 @@ public class ApiProxyController {
         return new ResponseEntity<>(proxyService.getProxyOptions(id), HttpStatus.OK);
     }
 
+    @Deprecated
     @RequestMapping(
             value = "/options/{id}/{set}",
             method = RequestMethod.GET, produces = {
@@ -68,6 +69,7 @@ public class ApiProxyController {
     })
     @ResponseBody
     public ResponseEntity<ApiProxyCardOption> getProxyOption(@PathVariable Integer id, @PathVariable String set) {
+        log.warn("calling deprecated endpoint for proxy option with id: {}, set: {}", id, set);
         return new ResponseEntity<>(proxyService.getProxyOption(id, set), HttpStatus.OK);
     }
 }
