@@ -74,11 +74,6 @@ public class DeckFactory {
                     "/decks?type=COMMUNITY&order=NEWEST",
                     "/decks?type=COMMUNITY&order=POPULAR",
                     "/decks?type=COMMUNITY");
-    private static final String NEW_LINE_REGEX = "[^(\\.|>)]<br(\\/)?>";
-    private static final String NEW_LINE_HTML = "<br/>";
-    private static final String PARAGRAPH_START = "<p>";
-    private static final String PARAGRAPH_END = "</p>";
-    public static final String DECK_HASH_SEPARATOR = "#";
     @Autowired
     private DeckUserMapper deckUserMapper;
     @Autowired

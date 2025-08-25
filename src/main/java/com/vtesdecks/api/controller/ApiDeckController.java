@@ -33,7 +33,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/api/1.0/decks")
@@ -166,6 +165,6 @@ public class ApiDeckController {
     })
     @ResponseBody
     public ResponseEntity<List<String>> deckTags() {
-        return new ResponseEntity<>(Arrays.stream(DeckTag.values()).map(DeckTag::getTag).collect(Collectors.toList()), HttpStatus.OK);
+        return new ResponseEntity<>(Arrays.stream(DeckTag.values()).map(DeckTag::getTag).toList(), HttpStatus.OK);
     }
 }

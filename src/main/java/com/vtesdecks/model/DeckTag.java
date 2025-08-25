@@ -13,6 +13,8 @@ import java.util.stream.Stream;
 
 @AllArgsConstructor
 public enum DeckTag {
+    TWO_PLAYER("2player", 0, crypt -> true, library -> false, deck -> deck.getLimitedFormat() != null && deck.getLimitedFormat().startsWith("Two-player") && !deck.getLimitedFormat().endsWith("(Custom)")),
+    V5("v5", 0, crypt -> true, library -> false, deck -> deck.getLimitedFormat() != null && deck.getLimitedFormat().startsWith("V5") && !deck.getLimitedFormat().endsWith("(Custom)")),
     BLEED("bleed", 15, crypt -> hasTaint(crypt, CryptTaint.BLEED), library -> hasTaint(library, LibraryTaint.BLEED), deck -> true),
     STEALTH("stealth", 15, crypt -> hasTaint(crypt, CryptTaint.STEALTH), library -> hasTaint(library, LibraryTaint.NEGATIVE_INTERCEPT), deck -> true),
     BLOCK("block", 12, crypt -> hasTaint(crypt, CryptTaint.INTERCEPT), DeckTag::isBlockLibrary, deck -> true),
