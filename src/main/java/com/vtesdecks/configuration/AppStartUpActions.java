@@ -120,6 +120,11 @@ public class AppStartUpActions implements InitializingBean {
     private class StartUpActionsAsync extends Thread {
 
         public static final String PROMO = "Promo";
+        public static final String OLD_V5_HECATA = "V5:PH";
+        public static final String NEW_V5_HECATA = "V5H:";
+        public static final String OLD_V5_LASOMBRA = "V5:PL";
+        public static final String NEW_V5_LASOMBRA = "V5L:";
+
         private Set<Integer> fullArtCards;
         private Set<Integer> bcpBusinessCards;
 
@@ -205,7 +210,7 @@ public class AppStartUpActions implements InitializingBean {
                 for (DbCrypt crypt : crypts) {
                     try {
                         fixName(crypt);
-                        crypt.setSet(mapPromoSets(crypt.getId(), crypt.getSet()));
+                        crypt.setSet(mapSets(crypt.getId(), crypt.getSet()));
                         DbCrypt actual = cryptMapper.selectById(crypt.getId());
                         if (actual == null) {
                             cryptMapper.insert(crypt);
@@ -296,7 +301,7 @@ public class AppStartUpActions implements InitializingBean {
                 List<Integer> keys = libraryMapper.selectAll().stream().map(DbLibrary::getId).collect(Collectors.toList());
                 for (DbLibrary library : libraries) {
                     try {
-                        library.setSet(mapPromoSets(library.getId(), library.getSet()));
+                        library.setSet(mapSets(library.getId(), library.getSet()));
                         DbLibrary actual = libraryMapper.selectById(library.getId());
                         if (actual == null) {
                             log.debug("Insert library {}", library.getId());
@@ -327,8 +332,8 @@ public class AppStartUpActions implements InitializingBean {
         }
 
 
-        private String mapPromoSets(Integer id, String rawSet) {
-            List<String> sets = Splitter.on(',')
+        private String mapSets(Integer id, String rawSet) {
+            List<String> sets = new ArrayList<>(Splitter.on(',')
                     .trimResults()
                     .omitEmptyStrings()
                     .splitToStream(rawSet)
@@ -341,14 +346,24 @@ public class AppStartUpActions implements InitializingBean {
                             }
                         }
                         return set;
-                    }).toList();
+                    }).toList());
             if (fullArtCards != null && fullArtCards.contains(id)) {
-                sets = new ArrayList<>(sets);
                 sets.add("PFA:1");
             }
             if (bcpBusinessCards != null && bcpBusinessCards.contains(id)) {
-                sets = new ArrayList<>(sets);
                 sets.add("BCPBC:1");
+            }
+            String hecataSet = sets.stream().filter(set -> set.startsWith(OLD_V5_HECATA)).findFirst().orElse(null);
+            if (hecataSet != null) {
+                sets.remove(hecataSet);
+                String cardCount = hecataSet.substring(OLD_V5_HECATA.length());
+                sets.add(NEW_V5_HECATA + cardCount);
+            }
+            String laSombraSet = sets.stream().filter(set -> set.startsWith(OLD_V5_LASOMBRA)).findFirst().orElse(null);
+            if (laSombraSet != null) {
+                sets.remove(laSombraSet);
+                String cardCount = laSombraSet.substring(OLD_V5_LASOMBRA.length());
+                sets.add(NEW_V5_LASOMBRA + cardCount);
             }
             return String.join(",", sets);
         }
