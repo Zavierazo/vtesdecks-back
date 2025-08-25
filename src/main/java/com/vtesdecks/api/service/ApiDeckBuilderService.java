@@ -21,6 +21,7 @@ import com.vtesdecks.model.krcg.Card;
 import com.vtesdecks.model.krcg.Deck;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -56,13 +57,7 @@ public class ApiDeckBuilderService {
     public ApiDeckBuilder getDeck(String deckId) {
         Integer userId = ApiUtils.extractUserId();
         DbDeck deck = deckMapper.selectById(deckId);
-        if (deck == null) {
-            return null;
-        }
-        if (!deck.getUser().equals(userId)) {
-            return null;
-        }
-        if (deck.isDeleted()) {
+        if (deck == null || !isOwnerOrAdmin(deck, userId) || deck.isDeleted()) {
             return null;
         }
         ApiDeckBuilder deckBuilder = new ApiDeckBuilder();
@@ -103,7 +98,7 @@ public class ApiDeckBuilderService {
         String deckId = apiDeckBuilder.getId();
         if (deckId == null) {
             DbUser user = userMapper.selectById(userId);
-            deckId = "user-" + user.getUsername() + "-" + UUID.randomUUID().toString().replaceAll("-", "");
+            deckId = "user-" + StringUtils.lowerCase(user.getUsername()) + "-" + UUID.randomUUID().toString().replace("-", "");
         }
         boolean exists = true;
         if (deck == null) {
@@ -114,16 +109,17 @@ public class ApiDeckBuilderService {
             deck.setVerified(true);
             deck.setCreationDate(LocalDateTime.now());
             exists = false;
-            //TODO: Validate duplicated? validateDeck(deckBuilder);
-        } else if (!userId.equals(deck.getUser())) {
+        } else if (!isOwnerOrAdmin(deck, userId)) {
             log.warn("Deck {} is not valid for user {}", apiDeckBuilder.getId(), userId);
             throw new IllegalArgumentException("Deck " + apiDeckBuilder.getId() + " is not valid for user " + userId);
         }
         deck.setName(apiDeckBuilder.getName());
         deck.setDescription(apiDeckBuilder.getDescription());
-        deck.setExtra(apiDeckBuilder.getExtra());
         deck.setPublished(apiDeckBuilder.isPublished());
-        deck.setCollection(apiDeckBuilder.isCollection());
+        if (deck.getType() == DeckType.COMMUNITY) {
+            deck.setExtra(apiDeckBuilder.getExtra());
+            deck.setCollection(apiDeckBuilder.isCollection());
+        }
         if (!exists) {
             deckMapper.insert(deck);
         } else {
@@ -151,7 +147,7 @@ public class ApiDeckBuilderService {
         //Delete removed cards
         for (DbDeckCard card : dbCards) {
             try {
-                Integer deckCard = deckCards.stream().filter(c -> c.getId().equals(card.getId())).map(ApiCard::getId).findFirst().orElse(null);
+                Integer deckCard = deckCards.stream().map(ApiCard::getId).filter(id -> id.equals(card.getId())).findFirst().orElse(null);
                 if (deckCard == null) {
                     deckCardMapper.delete(card.getDeckId(), card.getId());
                 }
@@ -166,9 +162,10 @@ public class ApiDeckBuilderService {
     }
 
     public boolean deleteDeck(String deckId) {
+        Integer userId = ApiUtils.extractUserId();
         DbDeck deck = deckMapper.selectById(deckId);
-        if (!deck.getUser().equals(ApiUtils.extractUserId())) {
-            log.warn("Deck delete invalid request for user {}, tying to delete {}", ApiUtils.extractUserId(), deckId);
+        if (!isOwnerOrAdmin(deck, userId)) {
+            log.warn("Deck delete invalid request for user {}, trying to delete {}", userId, deckId);
             return false;
         }
         deck.setDeleted(true);
@@ -179,11 +176,12 @@ public class ApiDeckBuilderService {
     }
 
     public boolean restoreDeck(String deckId) {
+        Integer userId = ApiUtils.extractUserId();
         DbDeck deck = deckMapper.selectById(deckId);
         if (deck == null) {
             return false;
-        } else if (!deck.getUser().equals(ApiUtils.extractUserId())) {
-            log.warn("Deck restore invalid request for user {}, tying to delete {}", ApiUtils.extractUserId(), deckId);
+        } else if (!isOwnerOrAdmin(deck, userId)) {
+            log.warn("Deck restore invalid request for user {}, trying to restore {}", userId, deckId);
             return false;
         }
         deck.setDeleted(false);
@@ -240,9 +238,12 @@ public class ApiDeckBuilderService {
     }
 
     public boolean updateCollectionTracker(String deckId, Boolean collectionTracker) {
+        Integer userId = ApiUtils.extractUserId();
         DbDeck deck = deckMapper.selectById(deckId);
-        if (deck == null || !deck.getUser().equals(ApiUtils.extractUserId())) {
-            log.warn("Deck update collection tracker invalid request for user {}, tying to update {}", ApiUtils.extractUserId(), deckId);
+        if (deck == null) {
+            return false;
+        } else if (!isOwnerOrAdmin(deck, userId) || deck.getType() != DeckType.COMMUNITY) {
+            log.warn("Deck update collection tracker invalid request for user {}, tying to update {}", userId, deckId);
             return false;
         }
         deck.setCollection(collectionTracker);
@@ -250,5 +251,14 @@ public class ApiDeckBuilderService {
         //Enqueue indexation of new deck
         deckIndex.enqueueRefreshIndex(deck.getId());
         return true;
+    }
+
+    private boolean isOwnerOrAdmin(DbDeck deck, Integer userId) {
+        boolean isDeckOwner = deck.getUser() != null && deck.getUser().equals(userId);
+        if (isDeckOwner) {
+            return true;
+        }
+        DbUser user = userMapper.selectById(userId);
+        return user != null && user.isAdmin();
     }
 }
