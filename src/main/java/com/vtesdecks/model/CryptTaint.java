@@ -18,6 +18,7 @@ public enum CryptTaint {
     BLOOD_CURSED("Blood Cursed"),
     CIRCLE("Circle"),
     MANEUVER("Maneuver"),
+    STRIKE("Strike", "\\sas a( ranged)? strike|may strike to|may strike for"),
     ADDITIONAL_STRIKE("Additional Strike"),
     AGGRAVATED("Aggravated", "(?:[^non-])aggravated"),
     PREVENT("Prevent", "(?:[^un])prevent(?:[^able])"),

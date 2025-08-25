@@ -15,6 +15,7 @@ public enum LibraryTaint {
     HAND_SIZE("+Hand Size", "\\+\\d hand size"),
     DODGE("Dodge"),
     MANEUVER("Maneuver"),
+    STRIKE("Strike", "strike:|\\sas a strike"),
     ADDITIONAL_STRIKE("Additional Strike"),
     AGGRAVATED("Aggravated", "(?:[^non-])aggravated"),
     PREVENT("Prevent", "(?:[^un])prevent(?:[^able])"),
