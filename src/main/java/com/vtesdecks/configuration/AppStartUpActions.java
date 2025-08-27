@@ -45,7 +45,9 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -120,10 +122,6 @@ public class AppStartUpActions implements InitializingBean {
     private class StartUpActionsAsync extends Thread {
 
         public static final String PROMO = "Promo";
-        public static final String OLD_V5_HECATA = "V5:PH";
-        public static final String NEW_V5_HECATA = "V5H:";
-        public static final String OLD_V5_LASOMBRA = "V5:PL";
-        public static final String NEW_V5_LASOMBRA = "V5L:";
 
         private Set<Integer> fullArtCards;
         private Set<Integer> bcpBusinessCards;
@@ -353,19 +351,34 @@ public class AppStartUpActions implements InitializingBean {
             if (bcpBusinessCards != null && bcpBusinessCards.contains(id)) {
                 sets.add("BCPBC:1");
             }
-            String hecataSet = sets.stream().filter(set -> set.startsWith(OLD_V5_HECATA)).findFirst().orElse(null);
-            if (hecataSet != null) {
-                sets.remove(hecataSet);
-                String cardCount = hecataSet.substring(OLD_V5_HECATA.length());
-                sets.add(NEW_V5_HECATA + cardCount);
-            }
-            String laSombraSet = sets.stream().filter(set -> set.startsWith(OLD_V5_LASOMBRA)).findFirst().orElse(null);
-            if (laSombraSet != null) {
-                sets.remove(laSombraSet);
-                String cardCount = laSombraSet.substring(OLD_V5_LASOMBRA.length());
-                sets.add(NEW_V5_LASOMBRA + cardCount);
-            }
+            convertSubSetToSet(sets, "V5", "PH", "V5H");
+            convertSubSetToSet(sets, "V5", "PL", "V5L");
             return String.join(",", sets);
+        }
+
+        private void convertSubSetToSet(List<String> sets, String oldSet, String subSet, String newSet) {
+            List<String> newSets = new ArrayList<>();
+            for (Iterator<String> it = sets.iterator(); it.hasNext(); ) {
+                String set = it.next();
+                List<String> setInfo = Splitter.on(':').splitToList(set);
+                if (setInfo.size() != 2) {
+                    continue;
+                }
+                if (setInfo.getFirst().equals(oldSet) && setInfo.getLast().contains(subSet)) {
+                    it.remove();
+                    List<String> subSets = Splitter.on('/').splitToList(setInfo.getLast());
+                    Optional<String> subSetOpt = subSets.stream().filter(s -> s.startsWith(subSet)).findFirst();
+                    if (subSetOpt.isPresent()) {
+                        String subSetInfo = subSetOpt.get().substring(subSet.length());
+                        newSets.add(newSet + ':' + subSetInfo);
+                    }
+                    if (subSets.size() > 1) {
+                        List<String> otherSubSet = subSets.stream().filter(s -> !s.startsWith(subSet)).toList();
+                        newSets.add(oldSet + ':' + String.join("/", otherSubSet));
+                    }
+                }
+            }
+            sets.addAll(newSets);
         }
 
         private void sets() {
