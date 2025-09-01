@@ -23,8 +23,10 @@ import com.vtesdecks.db.model.DbDeckView;
 import com.vtesdecks.db.model.DbUser;
 import com.vtesdecks.model.DeckTag;
 import com.vtesdecks.model.Errata;
+import com.vtesdecks.model.limitedformat.LimitedFormatPayload;
 import com.vtesdecks.util.CosineSimilarityUtils;
 import com.vtesdecks.util.VtesUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -36,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -43,7 +46,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.math.RoundingMode.HALF_UP;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
+@Slf4j
 @Component
 public class DeckFactory {
     private static final List<String> DOMAIN_IGNORED = Lists.newArrayList("localhost", "beta.vtesdecks.com");
@@ -87,7 +92,7 @@ public class DeckFactory {
     @Autowired
     private CommentMapper commentMapper;
 
-    public Deck getDeck(DbDeck deck, List<DeckCard> deckCards) {
+    public Deck getDeck(DbDeck deck, List<DeckCard> deckCards, List<LimitedFormatPayload> limitedFormats) {
         Deck value = new Deck();
         value.setId(deck.getId());
         value.setType(deck.getType() != null ? DeckType.valueOf(deck.getType().name()) : null);
@@ -217,7 +222,7 @@ public class DeckFactory {
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList());
-        value.setTags(getDeckTags(value));
+        value.setTags(getDeckTags(value, limitedFormats));
         value.setL2Norm(CosineSimilarityUtils.computeL2Norm(CosineSimilarityUtils.getVector(value)));
         return value;
     }
@@ -342,9 +347,9 @@ public class DeckFactory {
         deckStats.setMinCrypt(groups.stream().mapToInt(Integer::valueOf).limit(4).sum());
         Collections.reverse(groups);
         deckStats.setMaxCrypt(groups.stream().mapToInt(Integer::valueOf).limit(4).sum());
-        Collections.sort(deckStats.getCryptDisciplines(), Comparator.comparingInt(DisciplineStat::getSuperior).reversed());
-        Collections.sort(deckStats.getLibraryDisciplines(), Comparator.comparingInt(DisciplineStat::getInferior).reversed());
-        Collections.sort(deckStats.getLibraryClans(), Comparator.comparingInt(ClanStat::getNumber).reversed());
+        deckStats.getCryptDisciplines().sort(Comparator.comparingInt(DisciplineStat::getSuperior).reversed());
+        deckStats.getLibraryDisciplines().sort(Comparator.comparingInt(DisciplineStat::getInferior).reversed());
+        deckStats.getLibraryClans().sort(Comparator.comparingInt(ClanStat::getNumber).reversed());
         return deckStats;
     }
 
@@ -422,7 +427,7 @@ public class DeckFactory {
 
     }
 
-    private Set<String> getDeckTags(Deck deck) {
+    private Set<String> getDeckTags(Deck deck, List<LimitedFormatPayload> limitedFormats) {
         Map<DeckTag, BigDecimal> deckTagScore = new EnumMap<>(DeckTag.class);
         if (!CollectionUtils.isEmpty(deck.getCrypt())) {
             BigDecimal cryptFactor = BigDecimal.valueOf(12.0).divide(BigDecimal.valueOf(deck.getStats().getCrypt()), HALF_UP).multiply(BigDecimal.valueOf(1.5));
@@ -461,12 +466,92 @@ public class DeckFactory {
                 deckTagScore.put(DeckTag.MMPA, newScore);
             }
         }
-        return deckTagScore.entrySet().stream()
+        Set<String> tags = deckTagScore.entrySet().stream()
                 .filter(entry -> entry.getValue().compareTo(BigDecimal.valueOf(entry.getKey().getThreshold())) >= 0)
                 .map(Map.Entry::getKey)
                 .filter(deckTag -> deckTag.getDeckTest().test(deck))
                 .map(DeckTag::getTag)
                 .collect(Collectors.toSet());
+        for (LimitedFormatPayload limitedFormat : limitedFormats) {
+            if (isValidForLimitedFormat(deck, limitedFormat)) {
+                tags.add(limitedFormat.getTag());
+            }
+        }
+        return tags;
     }
+
+    private boolean isValidForLimitedFormat(Deck deck, LimitedFormatPayload limitedFormat) {
+        boolean isValid = true;
+        int cryptSize = deck.getStats().getCrypt();
+        int minCrypt = limitedFormat.getMinCrypt() != null ? limitedFormat.getMinCrypt() : 12;
+        Integer maxCrypt = limitedFormat.getMaxCrypt();
+
+        if (cryptSize < minCrypt) {
+            isValid = false;
+        }
+        if (maxCrypt != null && cryptSize > maxCrypt) {
+            isValid = false;
+        }
+
+        Set<Integer> groups = new HashSet<>();
+        for (Card crypt : deck.getCrypt()) {
+            Crypt cryptInfo = cryptCache.get(crypt.getId());
+            if (!isEmpty(cryptInfo.getBanned())) {
+                isValid = false;
+            } else {
+                boolean allowed = limitedFormat.getAllowed().getCrypt().containsKey(String.valueOf(crypt.getId()));
+                boolean banned = limitedFormat.getBanned().getCrypt().containsKey(String.valueOf(crypt.getId()));
+                boolean inSet = limitedFormat.getSets().keySet().stream().anyMatch(set ->
+                        cryptInfo.getSets().stream().anyMatch(cryptSet -> cryptSet.split(":")[0].equals(set))
+                );
+                if (!allowed && (banned || !inSet)) {
+                    isValid = false;
+                }
+            }
+            if (cryptInfo.getGroup() > 0) {
+                groups.add(cryptInfo.getGroup());
+            }
+        }
+        if (groups.size() > 2) {
+            isValid = false;
+        } else if (groups.size() > 1) {
+            List<Integer> sortedGroups = new ArrayList<>(groups);
+            Collections.sort(sortedGroups);
+            if (sortedGroups.get(1) - sortedGroups.get(0) > 1) {
+                isValid = false;
+            }
+        }
+
+        int librarySize = deck.getStats().getLibrary();
+        int minLibrary = limitedFormat.getMinLibrary() != null ? limitedFormat.getMinLibrary() : 60;
+        int maxLibrary = limitedFormat.getMaxLibrary() != null ? limitedFormat.getMaxLibrary() : 90;
+
+        if (librarySize < minLibrary) {
+            isValid = false;
+        }
+        if (librarySize > maxLibrary) {
+            isValid = false;
+        }
+        for (List<Card> libraries : deck.getLibraryByType().values()) {
+            for (Card library : libraries) {
+                Library libraryInfo = libraryCache.get(library.getId());
+                if (!isEmpty(libraryInfo.getBanned())) {
+                    isValid = false;
+                } else {
+                    boolean allowed = limitedFormat.getAllowed().getLibrary().containsKey(String.valueOf(library.getId()));
+                    boolean banned = limitedFormat.getBanned().getLibrary().containsKey(String.valueOf(library.getId()));
+                    boolean inSet = limitedFormat.getSets().keySet().stream().anyMatch(set ->
+                            libraryInfo.getSets().stream().anyMatch(librarySet -> librarySet.split(":")[0].equals(set))
+                    );
+                    if (!allowed && (banned || !inSet)) {
+                        isValid = false;
+                    }
+                }
+            }
+        }
+
+        return isValid;
+    }
+
 
 }

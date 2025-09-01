@@ -130,7 +130,7 @@ public class ApiDeckService {
                 .toList());
         if (offset == 0 && userId != null && type == DeckType.USER) {
             apiDecks.setRestorableDecks(deckMapper.selectUserDeleted(userId).stream()
-                    .map(dbDeck -> deckFactory.getDeck(dbDeck, new ArrayList<>()))
+                    .map(dbDeck -> deckFactory.getDeck(dbDeck, new ArrayList<>(), new ArrayList<>()))
                     .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap))
                     .toList());
         }

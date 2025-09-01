@@ -1,6 +1,8 @@
 package com.vtesdecks.api.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Iterables;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.DeckIndex;
@@ -14,6 +16,7 @@ import com.vtesdecks.db.model.DbDeck;
 import com.vtesdecks.db.model.DbDeckCard;
 import com.vtesdecks.db.model.DbUser;
 import com.vtesdecks.integration.KRCGClient;
+import com.vtesdecks.jpa.repositories.LimitedFormatRepository;
 import com.vtesdecks.model.ImportType;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeckBuilder;
@@ -52,6 +55,8 @@ public class ApiDeckBuilderService {
     private UserMapper userMapper;
     @Autowired
     private DeckIndex deckIndex;
+    @Autowired
+    private LimitedFormatRepository limitedFormatRepository;
 
 
     public ApiDeckBuilder getDeck(String deckId) {
@@ -68,12 +73,29 @@ public class ApiDeckBuilderService {
         deckBuilder.setCollection(deck.isCollection());
         deckBuilder.setCards(new ArrayList<>());
         deckBuilder.setExtra(deck.getExtra());
+        if (deckBuilder.getExtra() != null && deckBuilder.getExtra().has("limitedFormat")) {
+            updatePredefinedLimitedFormat(deckBuilder.getExtra());
+        }
         List<DbDeckCard> dbDeckCards = deckCardMapper.selectByDeck(deck.getId());
         for (DbDeckCard deckCard : dbDeckCards) {
             ApiCard apiCard = getApiCard(deckCard.getId(), deckCard.getNumber());
             deckBuilder.getCards().add(apiCard);
         }
         return deckBuilder;
+    }
+
+    private void updatePredefinedLimitedFormat(JsonNode extra) {
+        if (extra.get("limitedFormat").has("id")) {
+            Integer formatId = extra.get("limitedFormat").get("id").asInt();
+            limitedFormatRepository.findById(formatId).ifPresent(format -> {
+                try {
+                    JsonNode formatNode = objectMapper.valueToTree(format.getFormat());
+                    ((ObjectNode) extra).set("limitedFormat", formatNode);
+                } catch (Exception e) {
+                    log.error("Unable to set predefined limited format {}", formatId, e);
+                }
+            });
+        }
     }
 
 

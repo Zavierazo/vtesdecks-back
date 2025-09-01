@@ -26,7 +26,7 @@
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <start-class>com.vtesdecks.Application</start-class>
     </properties>
-    
+
     <repositories>
         <repository>
             <id>jitpack.io</id>

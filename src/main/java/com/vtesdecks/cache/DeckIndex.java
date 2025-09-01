@@ -23,7 +23,10 @@ import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.db.DeckMapper;
 import com.vtesdecks.db.model.DbDeck;
 import com.vtesdecks.enums.CacheEnum;
+import com.vtesdecks.jpa.entities.LimitedFormat;
+import com.vtesdecks.jpa.repositories.LimitedFormatRepository;
 import com.vtesdecks.model.DeckQuery;
+import com.vtesdecks.model.limitedformat.LimitedFormatPayload;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
@@ -79,6 +82,8 @@ public class DeckIndex implements Runnable {
     private LibraryCache libraryCache;
     @Autowired
     private DeckCardIndex deckCardIndex;
+    @Autowired
+    private LimitedFormatRepository limitedFormatRepository;
     private IndexedCollection<Deck> decks = new ConcurrentIndexedCollection<Deck>();
     private final BlockingQueue<String> refreshQueue = new LinkedBlockingQueue<>();
     private boolean keepRunning = true;
@@ -160,9 +165,10 @@ public class DeckIndex implements Runnable {
             stopWatch.start();
             Set<String> currentKeys = decks.stream().map(Deck::getId).collect(Collectors.toSet());
             executor = Executors.newFixedThreadPool(20);
+            List<LimitedFormatPayload> limitedFormats = getLimitedFormats();
             for (DbDeck deck : deckMapper.selectAll()) {
                 if (!deck.isDeleted()) {
-                    executor.execute(() -> refreshDeck(deck));
+                    executor.execute(() -> refreshDeck(deck, limitedFormats));
                     currentKeys.remove(deck.getId());
                 }
             }
@@ -194,7 +200,7 @@ public class DeckIndex implements Runnable {
     private void refreshIndex(String deckId) {
         DbDeck deck = deckMapper.selectById(deckId);
         if (deck != null && !deck.isDeleted()) {
-            refreshDeck(deck);
+            refreshDeck(deck, getLimitedFormats());
         } else {
             Deck deletedDeck = get(deckId);
             if (deletedDeck != null) {
@@ -204,11 +210,11 @@ public class DeckIndex implements Runnable {
         }
     }
 
-    private synchronized void refreshDeck(DbDeck deck) {
+    private synchronized void refreshDeck(DbDeck deck, List<LimitedFormatPayload> limitedFormats) {
         try {
             Deck oldDeck = get(deck.getId());
             List<DeckCard> deckCards = deckCardIndex.refreshIndex(deck.getId());
-            Deck newDeck = deckFactory.getDeck(deck, deckCards);
+            Deck newDeck = deckFactory.getDeck(deck, deckCards, limitedFormats);
             if (oldDeck != null && !oldDeck.equals(newDeck)) {
                 decks.update(Lists.newArrayList(oldDeck), Lists.newArrayList(newDeck));
             } else if (oldDeck == null) {
@@ -219,9 +225,15 @@ public class DeckIndex implements Runnable {
         }
     }
 
+    private List<LimitedFormatPayload> getLimitedFormats() {
+        List<LimitedFormat> limitedFormats = limitedFormatRepository.findAll();
+        return limitedFormats.stream().map(LimitedFormat::getFormat).toList();
+    }
+
     public void enqueueRefreshIndex(String deckId) {
         refreshQueue.add(deckId);
     }
+
 
     public Deck get(String id) {
         Query<Deck> findByKeyQuery = equal(Deck.ID_ATTRIBUTE, id);
