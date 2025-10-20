@@ -45,6 +45,7 @@ public abstract class LibraryFactory {
         library.setDisciplineIcons(VtesUtils.getLibraryDisciplines(dbLibrary.getDiscipline()));
         library.setTrifle(dbLibrary.getType().equals("Master") && dbLibrary.getText() != null && dbLibrary.getText().contains("Trifle."));
         library.setSects(VtesUtils.getLibrarySect(dbLibrary.getText()));
+        library.setPathIcon(VtesUtils.getPathIcon(dbLibrary.getPath()));
         library.setTaints(VtesUtils.getLibraryTaints(dbLibrary).stream().map(LibraryTaint::getName).collect(Collectors.toSet()));
         library.setTitles(VtesUtils.getLibraryTitles(dbLibrary).stream().map(LibraryTitle::getName).collect(Collectors.toSet()));
         library.setSets(VtesUtils.getSets(dbLibrary.getSet()));

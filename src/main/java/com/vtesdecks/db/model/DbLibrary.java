@@ -23,6 +23,8 @@ public class DbLibrary extends DbBase {
     @CsvBindByName
     private String Clan;
     @CsvBindByName
+    private String Path;
+    @CsvBindByName
     private String Discipline;
     @CsvCustomBindByName(column = "Pool Cost", converter = CostConverter.class)
     private Integer PoolCost;

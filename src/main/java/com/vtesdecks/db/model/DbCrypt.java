@@ -23,6 +23,8 @@ public class DbCrypt extends DbBase {
     private String Type;
     @CsvBindByName(required = true)
     private String Clan;
+    @CsvBindByName
+    private String Path;
     @CsvCustomBindByName(converter = AdvConverter.class)
     private Boolean Adv;
     @CsvCustomBindByName(required = true, converter = GroupConverter.class)

@@ -208,6 +208,7 @@ public class AppStartUpActions implements InitializingBean {
                 for (DbCrypt crypt : crypts) {
                     try {
                         fixName(crypt);
+                        fixClan(crypt);
                         crypt.setSet(mapSets(crypt.getId(), crypt.getSet()));
                         DbCrypt actual = cryptMapper.selectById(crypt.getId());
                         if (actual == null) {
@@ -235,6 +236,14 @@ public class AppStartUpActions implements InitializingBean {
                     updateLoadedHistory(stopWatch, CRYPT_FILE);
                 }
                 log.info("Crypt load finished in {} ms", stopWatch.getLastTaskTimeMillis());
+            }
+        }
+
+        private void fixClan(DbCrypt crypt) {
+            if (crypt.getClan().equalsIgnoreCase("Ministry")) {
+                crypt.setClan("Follower of Set");
+            } else if (crypt.getClan().equalsIgnoreCase("Banu Haqim")) {
+                crypt.setClan("Assamite");
             }
         }
 

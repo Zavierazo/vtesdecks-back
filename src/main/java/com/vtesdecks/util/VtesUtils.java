@@ -10,6 +10,7 @@ import com.vtesdecks.model.CryptTaint;
 import com.vtesdecks.model.Discipline;
 import com.vtesdecks.model.LibraryTaint;
 import com.vtesdecks.model.LibraryTitle;
+import com.vtesdecks.model.Path;
 import com.vtesdecks.model.Sect;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
@@ -44,17 +45,31 @@ public class VtesUtils {
         if (clanEnum != null) {
             return clanEnum.getIcon();
         } else {
-            log.info("Clan not found for {}", clan);
+            log.info("Clan not found for '{}'", clan);
             return null;
         }
     }
+
+    public static String getPathIcon(String path) {
+        if (StringUtils.isBlank(path)) {
+            return null;
+        }
+        Path pathEnum = Path.getFromName(path);
+        if (pathEnum != null) {
+            return pathEnum.getIcon();
+        } else {
+            log.info("Path not found for '{}'", path);
+            return null;
+        }
+    }
+
 
     public static String getDisciplineIcon(String discipline, boolean superior) {
         Discipline disciplineEnum = Discipline.getFromName(discipline);
         if (disciplineEnum != null) {
             return (disciplineEnum.getIcon() + (superior ? "sup" : ""));
         } else {
-            log.info("Discipline not found for {}", discipline);
+            log.info("Discipline not found for '{}'", discipline);
         }
         return null;
     }

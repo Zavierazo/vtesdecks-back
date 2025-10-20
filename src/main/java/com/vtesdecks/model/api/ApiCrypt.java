@@ -15,6 +15,7 @@ public class ApiCrypt {
     private String aka;
     private String type;
     private String clan;
+    private String path;
     private Boolean adv;
     private Integer group;
     private Integer capacity;
@@ -26,6 +27,7 @@ public class ApiCrypt {
     private String image;
     private String cropImage;
     private String clanIcon;
+    private String pathIcon;
     private Set<String> disciplines;
     private Set<String> superiorDisciplines;
     private Set<String> disciplineIcons;

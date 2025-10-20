@@ -35,6 +35,7 @@ public class Crypt {
     private String aka;
     private String type;
     private String clan;
+    private String path;
     private boolean adv;
     private Integer group;
     private Integer capacity;
@@ -48,6 +49,7 @@ public class Crypt {
     private String image;
     private String cropImage;
     private String clanIcon;
+    private String pathIcon;
     private Set<String> disciplines;
     private Set<String> superiorDisciplines;
     private Set<String> disciplineIcons;

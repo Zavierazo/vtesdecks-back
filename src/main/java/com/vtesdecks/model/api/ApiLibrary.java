@@ -15,7 +15,7 @@ public class ApiLibrary {
     private String aka;
     private String type;
     private Set<String> clans;
-    private Set<String> clanIcons;
+    private String path;
     private Integer poolCost;
     private Integer bloodCost;
     private Integer convictionCost;
@@ -33,6 +33,8 @@ public class ApiLibrary {
     private Set<String> disciplines;
     private Set<String> types;
     private Set<String> typeIcons;
+    private Set<String> clanIcons;
+    private String pathIcon;
     private Set<String> disciplineIcons;
     private Set<String> sects;
     private Set<String> titles;

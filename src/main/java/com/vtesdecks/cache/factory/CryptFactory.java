@@ -33,6 +33,7 @@ public abstract class CryptFactory {
         crypt.setImage("/img/cards/" + +dbCrypt.getId() + ".jpg");
         crypt.setCropImage("/img/cards/crop/" + +dbCrypt.getId() + ".jpg");
         crypt.setClanIcon(VtesUtils.getClanIcon(dbCrypt.getClan()));
+        crypt.setPathIcon(VtesUtils.getPathIcon(dbCrypt.getPath()));
         crypt.setDisciplines(VtesUtils.getCryptDisciplineNames(dbCrypt.getType(), dbCrypt.getDisciplines(), false));
         crypt.setSuperiorDisciplines(VtesUtils.getCryptDisciplineNames(dbCrypt.getType(), dbCrypt.getDisciplines(), true));
         crypt.setDisciplineIcons(VtesUtils.getCryptDisciplines(dbCrypt.getType(), dbCrypt.getDisciplines()));

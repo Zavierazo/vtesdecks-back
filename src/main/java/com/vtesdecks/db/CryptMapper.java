@@ -21,12 +21,12 @@ public interface CryptMapper {
     DbCrypt selectByName(String name);
 
     @Insert("INSERT INTO crypt " +
-            "(Id, Name, Aka, `Type`, Clan, Adv, `Group`, Capacity, Disciplines, Text, `Set`, Title, Banned, Artist)"
+            "(Id, Name, Aka, `Type`, Clan, Path, Adv, `Group`, Capacity, Disciplines, Text, `Set`, Title, Banned, Artist)"
             + " VALUES " +
-            "(#{Id}, #{Name}, #{Aka}, #{Type}, #{Clan}, #{Adv}, #{Group}, #{Capacity}, #{Disciplines}, #{Text}, #{Set}, #{Title}, #{Banned}, #{Artist})")
+            "(#{Id}, #{Name}, #{Aka}, #{Type}, #{Clan}, #{Path}, #{Adv}, #{Group}, #{Capacity}, #{Disciplines}, #{Text}, #{Set}, #{Title}, #{Banned}, #{Artist})")
     void insert(DbCrypt entity);
 
-    @Update("UPDATE crypt SET Name=#{Name}, Aka=#{Aka}, `Type`=#{Type}, Clan=#{Clan}, Adv=#{Adv}, `Group`=#{Group}, " +
+    @Update("UPDATE crypt SET Name=#{Name}, Aka=#{Aka}, `Type`=#{Type}, Clan=#{Clan}, Path=#{Path}, Adv=#{Adv}, `Group`=#{Group}, " +
             "Capacity=#{Capacity}, Disciplines=#{Disciplines}, Text=#{Text}, `Set`=#{Set}, Title=#{Title}, " +
             "Banned=#{Banned}, Artist=#{Artist} " +
             "WHERE Id=#{id}")
