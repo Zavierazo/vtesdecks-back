@@ -208,7 +208,7 @@ public class AppStartUpActions implements InitializingBean {
                 for (DbCrypt crypt : crypts) {
                     try {
                         fixName(crypt);
-                        fixClan(crypt);
+                        crypt.setClan(mapClan(crypt.getClan()));
                         crypt.setSet(mapSets(crypt.getId(), crypt.getSet()));
                         DbCrypt actual = cryptMapper.selectById(crypt.getId());
                         if (actual == null) {
@@ -239,13 +239,6 @@ public class AppStartUpActions implements InitializingBean {
             }
         }
 
-        private void fixClan(DbCrypt crypt) {
-            if (crypt.getClan().equalsIgnoreCase("Ministry")) {
-                crypt.setClan("Follower of Set");
-            } else if (crypt.getClan().equalsIgnoreCase("Banu Haqim")) {
-                crypt.setClan("Assamite");
-            }
-        }
 
         private void fixName(DbCrypt crypt) {
             switch (crypt.getId()) {
@@ -308,6 +301,7 @@ public class AppStartUpActions implements InitializingBean {
                 List<Integer> keys = libraryMapper.selectAll().stream().map(DbLibrary::getId).collect(Collectors.toList());
                 for (DbLibrary library : libraries) {
                     try {
+                        library.setClan(mapClan(library.getClan()));
                         library.setSet(mapSets(library.getId(), library.getSet()));
                         DbLibrary actual = libraryMapper.selectById(library.getId());
                         if (actual == null) {
@@ -338,6 +332,22 @@ public class AppStartUpActions implements InitializingBean {
             }
         }
 
+
+        private String mapClan(String rawClans) {
+            return Splitter.on('/')
+                    .trimResults()
+                    .omitEmptyStrings()
+                    .splitToStream(rawClans)
+                    .map(rawClan -> {
+                        if (rawClan.equalsIgnoreCase("Follower of Set")) {
+                            return "Ministry";
+                        } else if (rawClan.equalsIgnoreCase("Assamite")) {
+                            return "Banu Haqim";
+                        }
+                        return rawClan;
+                    })
+                    .collect(Collectors.joining("/"));
+        }
 
         private String mapSets(Integer id, String rawSet) {
             List<String> sets = new ArrayList<>(Splitter.on(',')
