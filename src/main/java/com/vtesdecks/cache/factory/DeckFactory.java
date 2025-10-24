@@ -211,6 +211,22 @@ public class DeckFactory {
                 .map(Library::getDisciplines)
                 .flatMap(Set::stream)
                 .collect(Collectors.toSet()));
+        value.setPath(cards
+                .stream()
+                .map(Card::getId)
+                .filter(VtesUtils::isLibrary)
+                .map(libraryCache::get)
+                .map(Library::getPath)
+                .filter(Objects::nonNull)
+                .findAny().orElse(null));
+        value.setPathIcon(cards
+                .stream()
+                .map(Card::getId)
+                .filter(VtesUtils::isLibrary)
+                .map(libraryCache::get)
+                .map(Library::getPathIcon)
+                .filter(Objects::nonNull)
+                .findAny().orElse(null));
         value.setStats(getDeckStats(cards));
         value.setCreationDate(deck.getCreationDate());
         value.setModifyDate(deck.getModificationDate());

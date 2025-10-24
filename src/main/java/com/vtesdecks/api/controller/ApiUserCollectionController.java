@@ -177,7 +177,7 @@ public class ApiUserCollectionController {
                 null, null, List.of(id + "=1"), null, null, null, null,
                 null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
-                null, null, null, null, null, null, 0, 10);
+                null, null, null, null, null, null, null, 0, 10);
         return collectionService.getCardStats(id, decks, summary);
     }
 }

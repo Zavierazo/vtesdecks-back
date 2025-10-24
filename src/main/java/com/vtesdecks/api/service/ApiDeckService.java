@@ -78,6 +78,7 @@ public class ApiDeckService {
                              Boolean absoluteProportion,
                              List<String> tags,
                              String limitedFormat,
+                             List<String> paths,
                              String bySimilarity,
                              Integer collectionPercentage,
                              Boolean favorite,
@@ -100,7 +101,7 @@ public class ApiDeckService {
         }
         ResultSet<Deck> decks = deckService.getDecks(type, order, userId, name, author, cardText, clans, disciplines,
                 cardMap, cryptSize, librarySize, group, starVampire, singleClan, singleDiscipline, year, players, master, action, political, retainer,
-                equipment, ally, modifier, combat, reaction, event, absoluteProportion, tags, limitedFormat, favorite);
+                equipment, ally, modifier, combat, reaction, event, absoluteProportion, tags, limitedFormat, paths, favorite);
         ApiDecks apiDecks = new ApiDecks();
         apiDecks.setTotal(decks.size());
         apiDecks.setOffset(offset);

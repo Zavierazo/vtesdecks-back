@@ -178,7 +178,7 @@ public class ApiStatisticsService {
                 null, null, null, null, null, null, null,
                 null, null, year != null ? Lists.newArrayList(year, year) : null, null, null, null, null,
                 null, null, null, null, null, null, null,
-                null, null, null, null);
+                null, null, null, null, null);
     }
 
     private static BigDecimal getPercentage(Integer count, int size) {

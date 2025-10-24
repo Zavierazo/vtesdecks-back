@@ -36,6 +36,7 @@ public class ApiDeck {
     private List<ApiCard> filterCards;
     private Set<String> clanIcons;
     private Set<String> disciplineIcons;
+    private String pathIcon;
     private ApiDeckStats stats;
     private Boolean favorite = false;
     private Boolean rated = false;

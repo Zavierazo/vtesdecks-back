@@ -42,5 +42,6 @@ public interface DeckService {
                              Boolean absoluteProportion,
                              List<String> tags,
                              String limitedFormat,
+                             List<String> paths,
                              Boolean favorite);
 }

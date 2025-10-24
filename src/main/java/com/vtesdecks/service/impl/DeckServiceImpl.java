@@ -53,6 +53,7 @@ public class DeckServiceImpl implements DeckService {
                                     Boolean absoluteProportion,
                                     List<String> tags,
                                     String limitedFormat,
+                                    List<String> paths,
                                     Boolean favorite) {
         DeckQuery.DeckQueryBuilder builder = DeckQuery.builder()
                 .order(order)
@@ -68,7 +69,8 @@ public class DeckServiceImpl implements DeckService {
                 .tags(tags)
                 .favorite(favorite)
                 .cards(cards)
-                .limitedFormat(limitedFormat);
+                .limitedFormat(limitedFormat)
+                .paths(paths);
         if (cryptSize != null && cryptSize.size() == 2) {
             Integer cryptSizeMin = cryptSize.get(0);
             if (cryptSizeMin <= 12) {

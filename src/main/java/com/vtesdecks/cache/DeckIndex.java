@@ -135,6 +135,7 @@ public class DeckIndex implements Runnable {
         decks.addIndex(HashIndex.onAttribute(Deck.TAG_MULTI_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.FAVORITE_MULTI_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.LIMITED_FORMAT_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(Deck.PATH_ATTRIBUTE));
         Thread workerThread = new Thread(this);
         workerThread.setDaemon(true);
         workerThread.start();
@@ -481,6 +482,9 @@ public class DeckIndex implements Runnable {
         }
         if (deckQuery.getLimitedFormat() != null) {
             query = and(query, contains(Deck.LIMITED_FORMAT_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getLimitedFormat())));
+        }
+        if (CollectionUtils.isNotEmpty(deckQuery.getPaths())) {
+            query = and(query, in(Deck.PATH_ATTRIBUTE, deckQuery.getPaths()));
         }
         if (log.isDebugEnabled()) {
             log.debug("Query {} with options {}", query, queryOptions);
