@@ -12,11 +12,13 @@ import com.vtesdecks.model.LibraryTaint;
 import com.vtesdecks.model.LibraryTitle;
 import com.vtesdecks.util.VtesUtils;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.Named;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -31,6 +33,7 @@ import java.util.stream.Collectors;
 public abstract class LibraryFactory {
 
     @Mapping(target = "types", ignore = true)
+    @Mapping(target = "path", source = "dbLibrary.path", qualifiedByName = "mapNonEmpty")
     public abstract Library getLibrary(DbLibrary dbLibrary, @Context List<DbLibraryI18n> libraryI18nList, @Context List<DbCardShop> cardShopList);
 
     @AfterMapping
@@ -117,5 +120,13 @@ public abstract class LibraryFactory {
             }
         }
         return types;
+    }
+
+    @Named("mapNonEmpty")
+    public String mapNonEmpty(String value) {
+        if (StringUtils.isNotEmpty(value)) {
+            return value;
+        }
+        return null;
     }
 }

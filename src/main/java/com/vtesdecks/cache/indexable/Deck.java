@@ -86,7 +86,7 @@ public class Deck {
         }
     };
     public static final Attribute<Deck, String> LIMITED_FORMAT_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, String.class, "limited_format", (Deck deck) -> StringUtils.lowerCase(deck.getLimitedFormat()));
-    public static final Attribute<Deck, String> PATH_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, String.class, "path", (Deck deck) -> StringUtils.lowerCase(deck.getPath()));
+    public static final Attribute<Deck, String> PATH_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, String.class, "path", Deck::getPath);
 
     private String id;
     private DeckType type;

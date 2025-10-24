@@ -484,7 +484,7 @@ public class DeckIndex implements Runnable {
             query = and(query, contains(Deck.LIMITED_FORMAT_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getLimitedFormat())));
         }
         if (CollectionUtils.isNotEmpty(deckQuery.getPaths())) {
-            query = and(query, in(Deck.PATH_ATTRIBUTE, deckQuery.getPaths().stream().map(StringUtils::lowerCase).collect(Collectors.toSet())));
+            query = and(query, in(Deck.PATH_ATTRIBUTE, deckQuery.getPaths()));
         }
         if (log.isDebugEnabled()) {
             log.debug("Query {} with options {}", query, queryOptions);
