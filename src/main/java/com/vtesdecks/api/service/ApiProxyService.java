@@ -54,6 +54,15 @@ public class ApiProxyService {
                 .toList();
     }
 
+    public List<ApiProxyCardOption> getMissingProxyOptions() {
+        return cardOptionCache.getAllPossibleOptions()
+                .filter(proxyCardOption -> getProxyOption(proxyCardOption.getCardId(), proxyCardOption.getSetAbbrev()) == null)
+                .map(this::map)
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(ApiProxyCardOption::getCardId))
+                .toList();
+    }
+
     private ApiProxyCardOption map(ProxyCardOption proxyCardOption) {
         Set set = setCache.get(proxyCardOption.getSetAbbrev());
 
@@ -63,6 +72,7 @@ public class ApiProxyService {
         }
         return ApiProxyCardOption.builder()
                 .cardId(proxyCardOption.getCardId())
+                .cardName(proxyCardOption.getCardName())
                 .setAbbrev(set.getAbbrev())
                 .setReleaseDate(set.getReleaseDate())
                 .setName(set.getFullName())

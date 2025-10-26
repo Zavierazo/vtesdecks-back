@@ -11,6 +11,7 @@ import java.time.LocalDate;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiProxyCardOption {
     private Integer cardId;
+    private String cardName;
     private String setAbbrev;
     private String setName;
     private LocalDate setReleaseDate;

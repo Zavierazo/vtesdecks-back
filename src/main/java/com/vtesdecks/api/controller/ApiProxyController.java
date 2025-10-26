@@ -61,6 +61,16 @@ public class ApiProxyController {
         return new ResponseEntity<>(proxyService.getProxyOptions(id), HttpStatus.OK);
     }
 
+    @RequestMapping(
+            value = "/options/missing",
+            method = RequestMethod.GET, produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public ResponseEntity<List<ApiProxyCardOption>> getMissingProxyOptions() {
+        return new ResponseEntity<>(proxyService.getMissingProxyOptions(), HttpStatus.OK);
+    }
+
     @Deprecated
     @RequestMapping(
             value = "/options/{id}/{set}",

@@ -76,7 +76,7 @@ public class ProxyCardOptionCache {
         cache.addAll(proxyOptions);
     }
 
-    private Stream<ProxyCardOption> getAllPossibleOptions() {
+    public Stream<ProxyCardOption> getAllPossibleOptions() {
         Stream<ProxyCardOption> libraryStream = libraryMapper.selectAll().stream().flatMap(this::libraryToProxyOptions);
         Stream<ProxyCardOption> cryptStream = cryptMapper.selectAll().stream().flatMap(this::cryptToProxyOptions);
 
@@ -85,12 +85,12 @@ public class ProxyCardOptionCache {
 
     private Stream<ProxyCardOption> libraryToProxyOptions(DbLibrary dbLibrary) {
         return getSetsAbbrev(dbLibrary.getSet())
-                .map(abbrev -> new ProxyCardOption(dbLibrary.getId(), abbrev));
+                .map(abbrev -> new ProxyCardOption(dbLibrary.getId(), dbLibrary.getName(), abbrev));
     }
 
     private Stream<ProxyCardOption> cryptToProxyOptions(DbCrypt dbCrypt) {
         return getSetsAbbrev(dbCrypt.getSet())
-                .map(abbrev -> new ProxyCardOption(dbCrypt.getId(), abbrev));
+                .map(abbrev -> new ProxyCardOption(dbCrypt.getId(), dbCrypt.getName(), abbrev));
     }
 
     private Stream<String> getSetsAbbrev(String rawSet) {
