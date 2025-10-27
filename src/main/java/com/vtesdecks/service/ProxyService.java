@@ -33,7 +33,7 @@ public class ProxyService {
     private final static float CARD_WIDTH = 63 * MILLIMETERS;
     private final static float MARGIN_LEFT = 10 * MILLIMETERS;
     private final static float MARGIN_BOT = 15 * MILLIMETERS;
-    private final static String CARD_IMAGES_URL = "https://statics.vtesdecks.com/img/cards/sets/%s/%d.jpg";
+    private final static String CARD_IMAGES_URL = "https://cdn.vtesdecks.com/img/cards/sets/%s/%d.jpg";
     private final static String CARD_IMAGE_FAILOVER_URL = "https://vtesdecks.com/assets/img/cards/%d.jpg";
 
 
