@@ -26,7 +26,6 @@ import com.vtesdecks.util.Utils;
 import com.vtesdecks.util.VtesUtils;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -35,14 +34,10 @@ import org.springframework.util.StopWatch;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -218,7 +213,6 @@ public class AppStartUpActions implements InitializingBean {
                             cryptMapper.update(crypt);
                             log.debug("Update crypt {}", crypt.getId());
                         }
-                        //downloadImage(crypt.getId(), crypt.getSet());
                         //cropImage(crypt.getId());
                         keys.remove(crypt.getId());
                     } catch (Exception e) {
@@ -311,7 +305,6 @@ public class AppStartUpActions implements InitializingBean {
                             libraryMapper.update(library);
                             log.debug("Update library {}", library.getId());
                         }
-                        //downloadImage(library.getId(), library.getSet());
                         //cropImage(library.getId());
                         keys.remove(library.getId());
                     } catch (Exception e) {
@@ -570,31 +563,6 @@ public class AppStartUpActions implements InitializingBean {
                 log.info("Crypt i18n load finished in {} ms", stopWatch.getLastTaskTimeMillis());
             }
 
-        }
-    }
-
-
-    private void downloadImage(Integer id, String rawSet) throws IOException {
-        String set = rawSet;
-        if (rawSet.indexOf(":") > 0) {
-            set = rawSet.substring(0, rawSet.indexOf(":"));
-        }
-        if (set.indexOf(",") > 0) {
-            set = set.substring(0, rawSet.indexOf(","));
-        }
-        set = StringUtils.lowerCase(set);
-        if (set.contains("promo")) {
-            set = "promo";
-        }
-        try {
-            URL website = new URL("https://statics.bloodlibrary.info/img/sets/" + set + "/" + id + ".jpg");
-            try (ReadableByteChannel rbc = Channels.newChannel(website.openStream())) {
-                try (FileOutputStream fos = new FileOutputStream(BASE_PATH + id + ".jpg")) {
-                    fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-                }
-            }
-        } catch (Exception e) {
-            log.error("Unable to download {}", id, e);
         }
     }
 
