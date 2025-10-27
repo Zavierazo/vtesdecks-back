@@ -58,7 +58,7 @@ class ProxyServiceTest {
     @Test
     public void prova() {
         RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity rs = restTemplate.exchange("https://statics.vtesdecks.com/img/sets/anarchs/300299.jpg", HttpMethod.HEAD, null, String.class);
+        ResponseEntity rs = restTemplate.exchange("https://statics.vtesdecks.com/img/cards/sets/anarchs/300299.jpg", HttpMethod.HEAD, null, String.class);
         int a = 1;
     }
 
