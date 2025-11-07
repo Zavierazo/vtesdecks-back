@@ -148,7 +148,7 @@ public class TournamentDeckScheduler {
                 deck.setAuthor(getAuthor(headers));
                 deck.setUrl(getUrl(headers));
                 deck.setViews(actual != null ? actual.getViews() : 0);
-                deck.setVerified(true);//Assume first scan goes ok, manual mark for rescan if needed
+                deck.setVerified(actual != null ? actual.getVerified() : false);
 
                 boolean crypt = false;
                 List<String> nameDescriptionPart = new ArrayList<>();
