@@ -35,7 +35,7 @@ public class CardShopEntity {
     @Column(name = "platform", nullable = false)
     private String platform;
 
-    @Column(name = "set", nullable = false)
+    @Column(name = "`set`", nullable = false)
     private String set;
 
     @Column(name = "link", nullable = false)
