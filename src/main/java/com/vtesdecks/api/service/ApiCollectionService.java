@@ -201,16 +201,25 @@ public class ApiCollectionService {
         Integer userId = ApiUtils.extractUserId();
         List<CollectionEntity> collectionEntityList = collectionRepository.findByUserIdAndDeletedFalse(userId);
         if (collectionEntityList.isEmpty()) {
-            // If no collection exists, return new Collection
-            CollectionEntity newCollectionEntity = new CollectionEntity();
-            newCollectionEntity.setUserId(userId);
-            newCollectionEntity.setDeleted(false);
-            return collectionRepository.save(newCollectionEntity);
+            return createCollection(userId);
         } else if (collectionEntityList.size() > 1) {
             // If multiple collections exist, log an error or handle it as needed
             throw new IllegalStateException("Multiple collections found for user ID: " + userId);
         }
         return collectionEntityList.getFirst();
+    }
+
+    private synchronized CollectionEntity createCollection(Integer userId) {
+        List<CollectionEntity> collectionEntityList = collectionRepository.findByUserIdAndDeletedFalse(userId);
+        if (collectionEntityList.isEmpty()) {
+            // If no collection exists, return new Collection
+            CollectionEntity newCollectionEntity = new CollectionEntity();
+            newCollectionEntity.setUserId(userId);
+            newCollectionEntity.setDeleted(false);
+            return collectionRepository.save(newCollectionEntity);
+        }
+        return collectionEntityList.getFirst();
+
     }
 
     public ApiCollectionPage<ApiCollectionCard> getPublicCards(String publicHash, Integer page, Integer size, String groupBy, String sortBy, String sortDirection, Map<String, String> filters) throws Exception {
