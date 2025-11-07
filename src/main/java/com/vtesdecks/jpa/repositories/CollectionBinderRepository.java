@@ -1,24 +1,24 @@
 package com.vtesdecks.jpa.repositories;
 
-import com.vtesdecks.jpa.entities.CollectionBinder;
+import com.vtesdecks.jpa.entity.CollectionBinderEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface CollectionBinderRepository extends JpaRepository<CollectionBinder, Integer> {
-    List<CollectionBinder> findByCollectionId(Integer collectionId);
+public interface CollectionBinderRepository extends JpaRepository<CollectionBinderEntity, Integer> {
+    List<CollectionBinderEntity> findByCollectionId(Integer collectionId);
 
     boolean existsByCollectionIdAndNameIgnoreCase(Integer collectionId, String name);
 
-    Optional<CollectionBinder> findByCollectionIdAndNameIgnoreCase(Integer collectionId, String name);
+    Optional<CollectionBinderEntity> findByCollectionIdAndNameIgnoreCase(Integer collectionId, String name);
 
-    Optional<CollectionBinder> findByCollectionIdAndId(Integer collectionId, Integer id);
+    Optional<CollectionBinderEntity> findByCollectionIdAndId(Integer collectionId, Integer id);
 
     boolean existsByCollectionIdAndId(Integer collectionId, Integer binderId);
 
 
-    Optional<CollectionBinder> findByPublicHash(String publicHash);
+    Optional<CollectionBinderEntity> findByPublicHash(String publicHash);
 
     boolean existsByPublicHash(String publicHash);
 }

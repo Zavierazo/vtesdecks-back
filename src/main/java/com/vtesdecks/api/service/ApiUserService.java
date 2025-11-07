@@ -2,8 +2,8 @@ package com.vtesdecks.api.service;
 
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.configuration.ApiSecurityConfiguration;
-import com.vtesdecks.db.UserMapper;
-import com.vtesdecks.db.model.DbUser;
+import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiUser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -22,18 +22,18 @@ public class ApiUserService {
     private static final long EXPIRATION_TIME = 30L * 24L * 60L * 60L * 1000L;
     private static final long SHORT_EXPIRATION_TIME = 24L * 60L * 60L * 1000L;
     @Autowired
-    private UserMapper userMapper;
+    private UserRepository userRepository;
     @Autowired
     private ApiUserNotificationService userNotificationService;
     @Autowired
     private ApiSecurityConfiguration securityConfiguration;
 
-    public ApiUser getAuthenticatedUser(DbUser dbUser, List<String> roles) {
+    public ApiUser getAuthenticatedUser(UserEntity dbUser, List<String> roles) {
         ApiUser user = new ApiUser();
         user.setUser(dbUser.getUsername());
         user.setToken(getJWTToken(dbUser, roles, false));
         user.setEmail(dbUser.getEmail());
-        user.setAdmin(dbUser.isAdmin());
+        user.setAdmin(dbUser.getAdmin() != null && dbUser.getAdmin());
         user.setRoles(roles);
         user.setDisplayName(dbUser.getDisplayName() != null ? dbUser.getDisplayName() : dbUser.getUsername());
         user.setProfileImage(ApiUtils.getProfileImage(dbUser));
@@ -41,7 +41,7 @@ public class ApiUserService {
         return user;
     }
 
-    public String getJWTToken(DbUser user, List<String> roles, boolean expireOneDay) {
+    public String getJWTToken(UserEntity user, List<String> roles, boolean expireOneDay) {
         List<GrantedAuthority> grantedAuthorities = AuthorityUtils
                 .commaSeparatedStringToAuthorityList("USER");
         return Jwts

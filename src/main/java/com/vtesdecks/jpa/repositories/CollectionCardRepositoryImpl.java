@@ -1,7 +1,7 @@
 package com.vtesdecks.jpa.repositories;// CollectionCardRepositoryImpl.java
 
 import com.google.common.base.Splitter;
-import com.vtesdecks.jpa.entities.CollectionCard;
+import com.vtesdecks.jpa.entity.CollectionCardEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -32,10 +32,10 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
     @PersistenceContext
     private EntityManager em;
 
-    public Page<CollectionCard> findByDynamicFiltersGroupBy(Integer collectionId, Map<String, String> filters, String groupBy, Pageable pageable) {
+    public Page<CollectionCardEntity> findByDynamicFiltersGroupBy(Integer collectionId, Map<String, String> filters, String groupBy, Pageable pageable) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Object[]> cq = cb.createQuery(Object[].class);
-        Root<CollectionCard> root = cq.from(CollectionCard.class);
+        Root<CollectionCardEntity> root = cq.from(CollectionCardEntity.class);
         switch (groupBy) {
             case SET:
                 cq.multiselect(root.get(CARD_ID), root.get(SET), cb.sum(root.get(NUMBER)));
@@ -92,9 +92,9 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                 .setMaxResults(pageable.getPageSize())
                 .getResultList();
 
-        List<CollectionCard> collectionCards = resultList.stream()
+        List<CollectionCardEntity> collectionCardEntities = resultList.stream()
                 .map(result -> {
-                    CollectionCard card = new CollectionCard();
+                    CollectionCardEntity card = new CollectionCardEntity();
                     card.setCardId((Integer) result[0]);
                     switch (groupBy) {
                         case SET:
@@ -115,7 +115,7 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                 .toList();
 
         CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
-        Root<CollectionCard> countRoot = countQuery.from(CollectionCard.class);
+        Root<CollectionCardEntity> countRoot = countQuery.from(CollectionCardEntity.class);
         long total;
         switch (groupBy) {
             case SET:
@@ -133,14 +133,14 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                 countQuery.select(cb.countDistinct(countRoot.get(CARD_ID)));
                 total = em.createQuery(countQuery).getSingleResult();
         }
-        return new PageImpl<>(collectionCards, pageable, total);
+        return new PageImpl<>(collectionCardEntities, pageable, total);
     }
 
     @Override
-    public Page<CollectionCard> findByDynamicFilters(Integer collectionId, Map<String, String> filters, Pageable pageable) {
+    public Page<CollectionCardEntity> findByDynamicFilters(Integer collectionId, Map<String, String> filters, Pageable pageable) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<CollectionCard> cq = cb.createQuery(CollectionCard.class);
-        Root<CollectionCard> root = cq.from(CollectionCard.class);
+        CriteriaQuery<CollectionCardEntity> cq = cb.createQuery(CollectionCardEntity.class);
+        Root<CollectionCardEntity> root = cq.from(CollectionCardEntity.class);
         cq.where(getPredicates(cb, root, collectionId, filters).toArray(new Predicate[0]));
         if (pageable.getSort().isSorted()) {
             List<Order> orders = new ArrayList<>();
@@ -163,27 +163,27 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
             cq.orderBy(orders);
         }
 
-        List<CollectionCard> resultList = em.createQuery(cq)
+        List<CollectionCardEntity> resultList = em.createQuery(cq)
                 .setFirstResult((int) pageable.getOffset())
                 .setMaxResults(pageable.getPageSize())
                 .getResultList();
 
         CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
-        Root<CollectionCard> countRoot = countQuery.from(CollectionCard.class);
+        Root<CollectionCardEntity> countRoot = countQuery.from(CollectionCardEntity.class);
         countQuery.select(cb.count(countRoot)).where(getPredicates(cb, countRoot, collectionId, filters).toArray(new Predicate[0]));
         Long total = em.createQuery(countQuery).getSingleResult();
         return new PageImpl<>(resultList, pageable, total);
     }
 
-    private static Expression<Object> getCardNameJoin(CriteriaBuilder cb, Root<CollectionCard> root) {
-        Join<CollectionCard, Object> libraryJoin = root.join("library", JoinType.LEFT);
-        Join<CollectionCard, Object> cryptJoin = root.join("crypt", JoinType.LEFT);
+    private static Expression<Object> getCardNameJoin(CriteriaBuilder cb, Root<CollectionCardEntity> root) {
+        Join<CollectionCardEntity, Object> libraryJoin = root.join("library", JoinType.LEFT);
+        Join<CollectionCardEntity, Object> cryptJoin = root.join("crypt", JoinType.LEFT);
         return cb.selectCase()
                 .when(cb.lessThan(root.get(CARD_ID), 200000), libraryJoin.get("name"))
                 .otherwise(cryptJoin.get("name"));
     }
 
-    private static List<Predicate> getPredicates(CriteriaBuilder cb, Root<CollectionCard> root, Integer collectionId, Map<String, String> filters) {
+    private static List<Predicate> getPredicates(CriteriaBuilder cb, Root<CollectionCardEntity> root, Integer collectionId, Map<String, String> filters) {
         List<Predicate> predicates = new ArrayList<>();
         predicates.add(cb.equal(root.get("collectionId"), collectionId));
         filters.forEach((field, value) -> {
@@ -195,8 +195,8 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                         predicates.add(cb.greaterThanOrEqualTo(root.get(CARD_ID), 200000));
                     }
                 } else if (field.equals("cardName")) {
-                    Join<CollectionCard, Object> libraryJoin = root.join("library", JoinType.LEFT);
-                    Join<CollectionCard, Object> cryptJoin = root.join("crypt", JoinType.LEFT);
+                    Join<CollectionCardEntity, Object> libraryJoin = root.join("library", JoinType.LEFT);
+                    Join<CollectionCardEntity, Object> cryptJoin = root.join("crypt", JoinType.LEFT);
                     predicates.add(cb.or(
                             cb.like(libraryJoin.get("name").as(String.class), "%" + value + "%"),
                             cb.like(cryptJoin.get("name").as(String.class), "%" + value + "%")

@@ -3,7 +3,7 @@ package com.vtesdecks.api.mapper;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.I18n;
 import com.vtesdecks.cache.indexable.Library;
-import com.vtesdecks.db.model.DbCardShop;
+import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiI18n;
 import com.vtesdecks.model.api.ApiLibrary;
@@ -41,7 +41,7 @@ public abstract class ApiCardMapper {
 
     public abstract ApiI18n mapI18n(I18n entity);
 
-    public abstract List<ApiShop> mapCardShop(List<DbCardShop> entity);
+    public abstract List<ApiShop> mapCardShop(List<CardShopEntity> entity);
 
 
 }

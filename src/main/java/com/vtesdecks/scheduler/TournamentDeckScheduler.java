@@ -10,16 +10,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.indexable.deck.DeckType;
-import com.vtesdecks.db.CryptMapper;
-import com.vtesdecks.db.DeckCardMapper;
-import com.vtesdecks.db.DeckMapper;
-import com.vtesdecks.db.LibraryMapper;
-import com.vtesdecks.db.TextSearchMapper;
-import com.vtesdecks.db.model.DbCrypt;
-import com.vtesdecks.db.model.DbDeck;
-import com.vtesdecks.db.model.DbDeckCard;
-import com.vtesdecks.db.model.DbLibrary;
-import com.vtesdecks.db.model.DbTextSearch;
+import com.vtesdecks.jpa.entity.CryptEntity;
+import com.vtesdecks.jpa.entity.DeckCardEntity;
+import com.vtesdecks.jpa.entity.DeckEntity;
+import com.vtesdecks.jpa.entity.LibraryEntity;
+import com.vtesdecks.jpa.entity.extra.TextSearch;
+import com.vtesdecks.jpa.repositories.CryptRepository;
+import com.vtesdecks.jpa.repositories.DeckCardRepository;
+import com.vtesdecks.jpa.repositories.DeckRepository;
+import com.vtesdecks.jpa.repositories.LibraryRepository;
 import com.vtesdecks.util.VtesUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
@@ -39,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -65,19 +65,16 @@ public class TournamentDeckScheduler {
     private CacheManager cacheManager;
 
     @Autowired
-    private DeckMapper deckMapper;
+    private DeckRepository deckRepository;
 
     @Autowired
-    private TextSearchMapper textSearchMapper;
+    private CryptRepository cryptRepository;
 
     @Autowired
-    private CryptMapper cryptMapper;
+    private LibraryRepository libraryRepository;
 
     @Autowired
-    private LibraryMapper libraryMapper;
-
-    @Autowired
-    private DeckCardMapper deckCardMapper;
+    private DeckCardRepository deckCardRepository;
 
     @Autowired
     private DeckIndex deckIndex;
@@ -120,13 +117,14 @@ public class TournamentDeckScheduler {
 
     private void parseDeck(String deckId, String text) {
         String id = "tournament-" + deckId;
-        DbDeck actual = deckMapper.selectById(id);
-        if (actual == null || !actual.isVerified()) {
-            DbDeck deck = actual != null ? actual : new DbDeck();
+        Optional<DeckEntity> optionalDeck = deckRepository.findById(id);
+        DeckEntity actual = optionalDeck.orElse(null);
+        if (actual == null || Boolean.FALSE.equals(actual.getVerified())) {
+            DeckEntity deck = actual != null ? actual : new DeckEntity();
             deck.setId(id);
             deck.setType(DeckType.TOURNAMENT);
             deck.setSource("http://www.vekn.fr/decks/twd.htm#" + deckId);
-            Map<Integer, DbDeckCard> deckCards = new HashMap<>();
+            Map<Integer, DeckCardEntity> deckCards = new HashMap<>();
             Map<Integer, String> debugLines = new HashMap<>();
             try (Scanner scanner = new Scanner(text)) {
                 scanner.nextLine();//Skip first empty string
@@ -150,7 +148,7 @@ public class TournamentDeckScheduler {
                 deck.setAuthor(getAuthor(headers));
                 deck.setUrl(getUrl(headers));
                 deck.setViews(actual != null ? actual.getViews() : 0);
-                deck.setVerified(actual != null ? actual.isVerified() : false);
+                deck.setVerified(actual != null ? actual.getVerified() : false);
 
                 boolean crypt = false;
                 List<String> nameDescriptionPart = new ArrayList<>();
@@ -225,19 +223,19 @@ public class TournamentDeckScheduler {
                             name = TYPO_FIXES.get(name);
                         }
                         if (!DISCARDED_NAMES.contains(name)) {
-                            List<DbTextSearch> results = textSearchMapper.search(name, name.contains("(ADV)"));//TODO Search ADV (Advanced)
+                            List<TextSearch> results = deckCardRepository.search(name, name.contains("(ADV)"));//TODO Search ADV (Advanced)
                             if (CollectionUtils.isNotEmpty(results)) {
                                 //Get result with exact string or first element who have more score
-                                DbTextSearch result = selectResult(name, line, results);
+                                TextSearch result = selectResult(name, line, results);
                                 Integer cardId = result.getId();
                                 storeDeckCard(deck, deckCards, debugLines, line, cardId, number);
                             } else {
                                 try {
-                                    DbCrypt dbCrypt = cryptMapper.selectByName(name);
+                                    CryptEntity dbCrypt = cryptRepository.selectByName(name);
                                     if (dbCrypt != null) {
                                         storeDeckCard(deck, deckCards, debugLines, line, dbCrypt.getId(), number);
                                     } else {
-                                        DbLibrary dbLibrary = libraryMapper.selectByName(name);
+                                        LibraryEntity dbLibrary = libraryRepository.selectByName(name);
                                         if (dbLibrary != null) {
                                             storeDeckCard(deck, deckCards, debugLines, line, dbLibrary.getId(), number);
                                         } else {
@@ -250,7 +248,7 @@ public class TournamentDeckScheduler {
                             }
                         }
                     } else if (line.contains("x 419 Operation")) {
-                        DbLibrary dbLibrary = libraryMapper.selectByName("419 Operation");
+                        LibraryEntity dbLibrary = libraryRepository.selectByName("419 Operation");
                         storeDeckCard(deck, deckCards, debugLines, line, dbLibrary.getId(), Integer.parseInt(line.substring(0, line.indexOf('x'))));
                     }
                 }
@@ -274,7 +272,7 @@ public class TournamentDeckScheduler {
                 boolean updated = false;
                 boolean insert = false;
                 if (actual == null) {
-                    deckMapper.insert(deck);
+                    deckRepository.save(deck);
                     updated = true;
                     insert = true;
                     log.debug("Insert deck {}", deck.getId());
@@ -283,12 +281,12 @@ public class TournamentDeckScheduler {
 //                    deckMapper.update(deck);
 //                    updated = true;
                 }
-                List<DbDeckCard> dbCards = deckCardMapper.selectByDeck(deck.getId());
-                for (Map.Entry<Integer, DbDeckCard> card : deckCards.entrySet()) {
-                    DbDeckCard dbCard = dbCards.stream().filter(db -> db.getId().equals(card.getKey()) && db.getDeckId().equals(deck.getId())).findFirst().orElse(null);
+                List<DeckCardEntity> dbCards = deckCardRepository.findByIdDeckId(deck.getId());
+                for (Map.Entry<Integer, DeckCardEntity> card : deckCards.entrySet()) {
+                    DeckCardEntity dbCard = dbCards.stream().filter(db -> db.getId().getCardId().equals(card.getKey()) && db.getId().getDeckId().equals(deck.getId())).findFirst().orElse(null);
                     if (dbCard == null) {
                         if (insert) {
-                            deckCardMapper.insert(card.getValue());
+                            deckCardRepository.save(card.getValue());
                             updated = true;
                             log.debug("Insert deck card {}", card.getValue());
                         } else {
@@ -296,17 +294,17 @@ public class TournamentDeckScheduler {
                         }
                     } else if (!dbCard.equals(card.getValue())) {
                         log.warn("Found new card count for card {} of deck {}", card.getValue(), id);
-//                        deckCardMapper.update(card.getValue());
-//                        updated = true;
+                        deckCardRepository.save(card.getValue());
+                        updated = true;
                     }
                 }
                 //Delete removed cards
-                for (DbDeckCard card : dbCards) {
-                    DbDeckCard deckCard = deckCards.get(card.getId());
-                    if (deckCard == null) {
+                for (DeckCardEntity card : dbCards) {
+                    DeckCardEntity deckCardEntity = deckCards.get(card.getId().getCardId());
+                    if (deckCardEntity == null) {
                         log.warn("Missing card {} of deck {}", card, id);
-//                        deckCardMapper.delete(card.getDeckId(), card.getId());
-//                        updated = true;
+                        deckCardRepository.delete(card);
+                        updated = true;
                     }
                 }
                 if (updated) {
@@ -316,13 +314,13 @@ public class TournamentDeckScheduler {
         }
     }
 
-    private boolean isValidDeck(DbDeck deck, Map<Integer, DbDeckCard> deckCards) {
+    private boolean isValidDeck(DeckEntity deck, Map<Integer, DeckCardEntity> deckCards) {
         int crypt = 0;
         int library = 0;
-        for (DbDeckCard card : deckCards.values()) {
-            if (VtesUtils.isCrypt(card.getId())) {
+        for (DeckCardEntity card : deckCards.values()) {
+            if (VtesUtils.isCrypt(card.getId().getCardId())) {
                 crypt += card.getNumber();
-            } else if (VtesUtils.isLibrary(card.getId())) {
+            } else if (VtesUtils.isLibrary(card.getId().getCardId())) {
                 library += card.getNumber();
             }
         }
@@ -339,31 +337,32 @@ public class TournamentDeckScheduler {
     }
 
 
-    private void storeDeckCard(DbDeck deck, Map<Integer, DbDeckCard> deckCards, Map<Integer, String> debugLines, String line, Integer cardId, Integer number) {
-        DbDeckCard dbDeckCard = new DbDeckCard();
-        dbDeckCard.setDeckId(deck.getId());
-        dbDeckCard.setId(cardId);
-        dbDeckCard.setNumber(number);
+    private void storeDeckCard(DeckEntity deck, Map<Integer, DeckCardEntity> deckCards, Map<Integer, String> debugLines, String line, Integer cardId, Integer number) {
+        DeckCardEntity dbDeckCardEntity = new DeckCardEntity();
+        dbDeckCardEntity.setId(new DeckCardEntity.DeckCardId());
+        dbDeckCardEntity.getId().setDeckId(deck.getId());
+        dbDeckCardEntity.getId().setCardId(cardId);
+        dbDeckCardEntity.setNumber(number);
         if (deckCards.containsKey(cardId)) {
-            DbDeckCard previousCard = deckCards.get(cardId);
+            DeckCardEntity previousCard = deckCards.get(cardId);
             //Exactly the same line duplicated, author have made a mistake
             String debugLine = debugLines.get(cardId);
             if (debugLine.equalsIgnoreCase(line)) {
-                previousCard.setNumber(previousCard.getNumber() + dbDeckCard.getNumber());
+                previousCard.setNumber(previousCard.getNumber() + dbDeckCardEntity.getNumber());
             } else if ((debugLine.contains("Dominate Kine") || debugLine.contains("Kine Dominance")) && (line.contains("Dominate Kine") || line.contains("Kine Dominance"))) {
-                previousCard.setNumber(previousCard.getNumber() + dbDeckCard.getNumber());
+                previousCard.setNumber(previousCard.getNumber() + dbDeckCardEntity.getNumber());
             } else {
                 log.warn("Duplicated card on deck {} - {}!! \"{}\": {} Debug: {}", deck.getId(), deck.getName(), line, deckCards.get(cardId), debugLines.get(cardId));
             }
         } else {
-            deckCards.put(cardId, dbDeckCard);
+            deckCards.put(cardId, dbDeckCardEntity);
             debugLines.put(cardId, line);
         }
     }
 
-    private DbTextSearch selectResult(String name, String line, List<DbTextSearch> results) {
+    private TextSearch selectResult(String name, String line, List<TextSearch> results) {
         //First loop for exact name with G6 & G7 cards...
-        for (DbTextSearch result : results) {
+        for (TextSearch result : results) {
             if (result.getName().toLowerCase().startsWith(name.toLowerCase())) {
                 if (result.getName().endsWith("(G6)") && line.endsWith(":6")) {
                     return result;
@@ -373,7 +372,7 @@ public class TournamentDeckScheduler {
             }
         }
         //Second loop with exact name
-        for (DbTextSearch result : results) {
+        for (TextSearch result : results) {
             if (result.getName().equalsIgnoreCase(name)) {
                 return result;
             }

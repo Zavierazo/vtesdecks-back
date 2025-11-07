@@ -12,14 +12,14 @@ import com.googlecode.cqengine.query.option.Thresholds;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.factory.LibraryFactory;
 import com.vtesdecks.cache.indexable.Library;
-import com.vtesdecks.db.CardShopMapper;
-import com.vtesdecks.db.DeckCardMapper;
-import com.vtesdecks.db.LibraryI18nMapper;
-import com.vtesdecks.db.LibraryMapper;
-import com.vtesdecks.db.model.DbCardCount;
-import com.vtesdecks.db.model.DbCardShop;
-import com.vtesdecks.db.model.DbLibrary;
-import com.vtesdecks.db.model.DbLibraryI18n;
+import com.vtesdecks.jpa.entity.CardShopEntity;
+import com.vtesdecks.jpa.entity.LibraryEntity;
+import com.vtesdecks.jpa.entity.LibraryI18nEntity;
+import com.vtesdecks.jpa.entity.extra.DeckCardCount;
+import com.vtesdecks.jpa.repositories.CardShopRepository;
+import com.vtesdecks.jpa.repositories.DeckCardRepository;
+import com.vtesdecks.jpa.repositories.LibraryI18nRepository;
+import com.vtesdecks.jpa.repositories.LibraryRepository;
 import com.vtesdecks.model.LibraryTaint;
 import com.vtesdecks.util.Utils;
 import jakarta.annotation.PostConstruct;
@@ -32,7 +32,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -55,13 +54,13 @@ import static com.googlecode.cqengine.query.option.EngineThresholds.INDEX_ORDERI
 public class LibraryCache {
     private IndexedCollection<Library> cache = new ConcurrentIndexedCollection<Library>();
     @Autowired
-    private LibraryMapper libraryMapper;
+    private LibraryRepository libraryRepository;
     @Autowired
-    private LibraryI18nMapper libraryI18nMapper;
+    private LibraryI18nRepository libraryI18nRepository;
     @Autowired
-    private DeckCardMapper deckCardMapper;
+    private DeckCardRepository deckCardRepository;
     @Autowired
-    private CardShopMapper cardShopMapper;
+    private CardShopRepository cardShopRepository;
     @Autowired
     private LibraryFactory libraryFactory;
 
@@ -87,17 +86,17 @@ public class LibraryCache {
         StopWatch stopWatch = new StopWatch();
         try {
             stopWatch.start();
-            Set<Integer> currentKeys = new HashSet<>(cache.stream().map(Library::getId).collect(Collectors.toSet()));
-            List<DbCardCount> countByCard = deckCardMapper.selectCountByCard();
-            List<DbCardCount> deckCountByCard = deckCardMapper.selectDeckCountByCard();
-            List<DbCardShop> cardShopList = cardShopMapper.selectAll();
-            List<DbLibraryI18n> libraryI18nList = libraryI18nMapper.selectAll();
-            for (DbLibrary library : libraryMapper.selectAll()) {
+            Set<Integer> currentKeys = cache.stream().map(Library::getId).collect(Collectors.toSet());
+            List<DeckCardCount> countByCard = deckCardRepository.selectCountByCard();
+            List<DeckCardCount> deckCountByCard = deckCardRepository.selectDeckCountByCard();
+            List<CardShopEntity> cardShopList = cardShopRepository.findAll();
+            List<LibraryI18nEntity> libraryI18nList = libraryI18nRepository.findAll();
+            for (LibraryEntity library : libraryRepository.findAll()) {
                 refreshIndex(library,
-                        libraryI18nList.stream().filter(libraryI18n -> libraryI18n.getId().equals(library.getId())).collect(Collectors.toList()),
-                        cardShopList.stream().filter(cardShop -> cardShop.getCardId().equals(library.getId())).collect(Collectors.toList()),
-                        deckCountByCard.stream().filter(count -> count.getId().equals(library.getId())).mapToLong(DbCardCount::getNumber).sum(),
-                        countByCard.stream().filter(count -> count.getId().equals(library.getId())).mapToLong(DbCardCount::getNumber).sum());
+                        libraryI18nList.stream().filter(libraryI18n -> libraryI18n.getId().getCardId().equals(library.getId())).toList(),
+                        cardShopList.stream().filter(cardShop -> cardShop.getCardId().equals(library.getId())).toList(),
+                        deckCountByCard.stream().filter(count -> count.getId().equals(library.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum(),
+                        countByCard.stream().filter(count -> count.getId().equals(library.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum());
                 currentKeys.remove(library.getId());
             }
             if (!currentKeys.isEmpty()) {
@@ -108,11 +107,11 @@ public class LibraryCache {
             }
         } finally {
             stopWatch.stop();
-            log.info("Index finished in {} ms. Colletion size is {}", stopWatch.getLastTaskTimeMillis(), cache.size());
+            log.info("Index finished in {} ms. Colletion size is {}", stopWatch.lastTaskInfo().getTimeMillis(), cache.size());
         }
     }
 
-    private void refreshIndex(DbLibrary library, List<DbLibraryI18n> libraryI18nList, List<DbCardShop> cardShopList, Long deckCount, Long count) {
+    private void refreshIndex(LibraryEntity library, List<LibraryI18nEntity> libraryI18nList, List<CardShopEntity> cardShopList, Long deckCount, Long count) {
         try {
             Library oldLibrary = get(library.getId());
             Library newLibrary = libraryFactory.getLibrary(library, libraryI18nList, cardShopList);

@@ -4,8 +4,8 @@ import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.deck.DeckType;
-import com.vtesdecks.db.DeckUserMapper;
-import com.vtesdecks.db.model.DbDeckUser;
+import com.vtesdecks.jpa.entity.DeckUserEntity;
+import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.service.DeckUserService;
@@ -22,25 +22,26 @@ import java.util.stream.Collectors;
 @Service
 public class DeckUserServiceImpl implements DeckUserService {
     @Autowired
-    private DeckUserMapper deckUserMapper;
+    private DeckUserRepository deckUserRepository;
     @Autowired
     private DeckIndex deckIndex;
 
     @Override
     public void rate(Integer userId, String deckId, Integer rate) {
         if (rate != null && userId != null && deckId != null) {
-            DbDeckUser deckUser = deckUserMapper.selectById(userId, deckId);
+            DeckUserEntity deckUser = deckUserRepository.findById(new DeckUserEntity.DeckUserId(userId, deckId)).orElse(null);
             boolean updated = false;
             if (deckUser == null) {
-                deckUser = new DbDeckUser();
-                deckUser.setUser(userId);
-                deckUser.setDeckId(deckId);
+                deckUser = new DeckUserEntity();
+                deckUser.setId(new DeckUserEntity.DeckUserId());
+                deckUser.getId().setUser(userId);
+                deckUser.getId().setDeckId(deckId);
                 deckUser.setRate(rate);
-                deckUserMapper.insert(deckUser);
+                deckUserRepository.save(deckUser);
                 updated = true;
             } else if (!rate.equals(deckUser.getRate())) {
                 deckUser.setRate(rate);
-                deckUserMapper.update(deckUser);
+                deckUserRepository.save(deckUser);
                 updated = true;
             }
             if (updated) {
@@ -53,19 +54,20 @@ public class DeckUserServiceImpl implements DeckUserService {
     @Override
     public Boolean favorite(Integer userId, String deckId, Boolean favorite) {
         if (userId != null && deckId != null && favorite != null) {
-            DbDeckUser deckUser = deckUserMapper.selectById(userId, deckId);
+            DeckUserEntity deckUser = deckUserRepository.findById(new DeckUserEntity.DeckUserId(userId, deckId)).orElse(null);
             log.debug("Update favorite for {} {} to {}", userId, deckId, favorite);
             boolean updated = false;
             if (deckUser == null) {
-                deckUser = new DbDeckUser();
-                deckUser.setUser(userId);
-                deckUser.setDeckId(deckId);
+                deckUser = new DeckUserEntity();
+                deckUser.setId(new DeckUserEntity.DeckUserId());
+                deckUser.getId().setUser(userId);
+                deckUser.getId().setDeckId(deckId);
                 deckUser.setFavorite(favorite);
-                deckUserMapper.insert(deckUser);
+                deckUserRepository.save(deckUser);
                 updated = true;
-            } else if (favorite != deckUser.isFavorite()) {
+            } else if (!favorite.equals(deckUser.getFavorite())) {
                 deckUser.setFavorite(favorite);
-                deckUserMapper.update(deckUser);
+                deckUserRepository.save(deckUser);
                 updated = true;
             }
             if (updated) {
@@ -78,9 +80,9 @@ public class DeckUserServiceImpl implements DeckUserService {
 
     @Override
     public List<String> getFavoriteDecks(Integer userId) {
-        List<DbDeckUser> deckUsers = deckUserMapper.selectFavoriteByUser(userId);
+        List<DeckUserEntity> deckUsers = deckUserRepository.findFavoriteTrueByIdUserOrderByModificationDateDesc(userId);
         if (CollectionUtils.isNotEmpty(deckUsers)) {
-            return deckUsers.stream().map(DbDeckUser::getDeckId).collect(Collectors.toList());
+            return deckUsers.stream().map(deckUserEntity -> deckUserEntity.getId().getDeckId()).collect(Collectors.toList());
         }
         return Collections.emptyList();
     }

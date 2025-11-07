@@ -2,8 +2,8 @@ package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.api.util.ApiUtils;
-import com.vtesdecks.db.UserMapper;
-import com.vtesdecks.db.model.DbUser;
+import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.DeckExportType;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckTag;
@@ -46,7 +46,7 @@ public class ApiDeckController {
     private DeckFeedbackWorker deckFeedbackWorker;
     ;
     @Autowired
-    private UserMapper userMapper;
+    private UserRepository userRepository;
 
     @RequestMapping(method = RequestMethod.GET, value = "/home", produces = {
             MediaType.APPLICATION_JSON_VALUE
@@ -152,10 +152,10 @@ public class ApiDeckController {
     })
     @ResponseBody
     public ResponseEntity<Boolean> view(@PathVariable String id, @RequestBody ApiDeckView deckView, HttpServletRequest httpServletRequest) {
-        DbUser user = null;
+        UserEntity user = null;
         Integer userId = ApiUtils.extractUserId();
         if (userId != null) {
-            user = userMapper.selectById(ApiUtils.extractUserId());
+            user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
         }
         deckFeedbackWorker.enqueueView(id, user, deckView.getSource(), httpServletRequest);
         return new ResponseEntity<>(true, HttpStatus.OK);

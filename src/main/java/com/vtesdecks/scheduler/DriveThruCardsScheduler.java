@@ -1,10 +1,10 @@
 package com.vtesdecks.scheduler;
 
-import com.vtesdecks.db.CardShopMapper;
-import com.vtesdecks.db.TextSearchMapper;
-import com.vtesdecks.db.model.DbCardShop;
-import com.vtesdecks.db.model.DbTextSearch;
 import com.vtesdecks.integration.FlareSolverr;
+import com.vtesdecks.jpa.entity.CardShopEntity;
+import com.vtesdecks.jpa.entity.extra.TextSearch;
+import com.vtesdecks.jpa.repositories.CardShopRepository;
+import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.model.flaresolverr.FlareRequest;
 import com.vtesdecks.model.flaresolverr.FlareResponse;
 import feign.RetryableException;
@@ -37,16 +37,16 @@ public class DriveThruCardsScheduler {
 
 
     @Autowired
-    private TextSearchMapper textSearchMapper;
+    private DeckCardRepository deckCardRepository;
     @Autowired
-    private CardShopMapper cardShopMapper;
+    private CardShopRepository cardShopRepository;
     @Autowired
     private FlareSolverr flareSolverr;
 
     @Scheduled(cron = "0 0 0 * * *")
     public void scrapCards() {
         log.info("Starting DTC scrapping...");
-        List<DbCardShop> currentCards = cardShopMapper.selectByPlatform(PLATFORM);
+        List<CardShopEntity> currentCards = cardShopRepository.findByPlatform(PLATFORM);
         String session = null;
         try {
             session = createSession();
@@ -70,14 +70,14 @@ public class DriveThruCardsScheduler {
         log.info("DTC scrap finished!");
     }
 
-    private void cleanOutdatedCards(List<DbCardShop> currentCards, String session) {
-        for (DbCardShop cardShop : currentCards) {
+    private void cleanOutdatedCards(List<CardShopEntity> currentCards, String session) {
+        for (CardShopEntity cardShop : currentCards) {
             try {
                 Document page = getDocument(cardShop.getLink(), session);
                 String pageTitle = page != null ? page.title() : null;
                 if (" -  | DriveThruCards.com".equalsIgnoreCase(pageTitle)) {
                     log.warn("Card {} no longer exists in shop {}", cardShop.getCardId(), cardShop.getLink());
-                    cardShopMapper.delete(cardShop.getId());
+                    cardShopRepository.delete(cardShop);
                 } else {
                     log.debug("Card {} still exists in shop {}", cardShop.getCardId(), cardShop.getLink());
                 }
@@ -99,7 +99,7 @@ public class DriveThruCardsScheduler {
         }
     }
 
-    private void parsePage(Document page, List<DbCardShop> currentCards) {
+    private void parsePage(Document page, List<CardShopEntity> currentCards) {
         for (Element productCard : page.select("tr.dtrpgListing-row")) {
             try {
                 Integer cardId = scrapCard(productCard);
@@ -139,18 +139,18 @@ public class DriveThruCardsScheduler {
         }
         cardNameHtml = cardNameHtml.replace("_", ":");
         final String cardName = StringUtils.trim(StringEscapeUtils.unescapeXml(cardNameHtml));
-        List<DbTextSearch> cards = textSearchMapper.search(cardName, advanced);
+        List<TextSearch> cards = deckCardRepository.search(cardName, advanced);
         if (CollectionUtils.isEmpty(cards)) {
             log.warn("Unable to found card with name '{}' with full name {}", cardName, cardNameRaw);
             return null;
         }
-        final DbTextSearch card;
+        final TextSearch card;
         if (cards.size() > 1) {
-            Optional<DbTextSearch> exactCard = cards.stream().filter(cardSearch -> cardSearch.getName().replaceAll(SPECIAL_CHARACTERS, "").equalsIgnoreCase(cardName.replaceAll(SPECIAL_CHARACTERS, ""))).findFirst();
+            Optional<TextSearch> exactCard = cards.stream().filter(cardSearch -> cardSearch.getName().replaceAll(SPECIAL_CHARACTERS, "").equalsIgnoreCase(cardName.replaceAll(SPECIAL_CHARACTERS, ""))).findFirst();
             if (exactCard.isPresent()) {
                 card = exactCard.get();
             } else {
-                log.warn("Multiple finds for '{}' with raw '{}': {}", cardName, cardNameRaw, cards.stream().map(DbTextSearch::getName).toList());
+                log.warn("Multiple finds for '{}' with raw '{}': {}", cardName, cardNameRaw, cards.stream().map(TextSearch::getName).toList());
                 return null;
             }
         } else {
@@ -164,16 +164,16 @@ public class DriveThruCardsScheduler {
             return null;
         }
 
-        DbCardShop cardShop = DbCardShop.builder().cardId(card.getId()).link(link).platform(PLATFORM).set(SET).price(price).currency(DOLLAR).build();
+        CardShopEntity cardShop = CardShopEntity.builder().cardId(card.getId()).link(link).platform(PLATFORM).set(SET).price(price).currency(DOLLAR).build();
         log.trace("Scrapped card {}", cardShop);
-        List<DbCardShop> cardShopList = cardShopMapper.selectByCardIdAndPlatform(cardShop.getCardId(), PLATFORM);
+        List<CardShopEntity> cardShopList = cardShopRepository.findByCardIdAndPlatform(cardShop.getCardId(), PLATFORM);
         if (CollectionUtils.isEmpty(cardShopList)) {
-            cardShopMapper.insert(cardShop);
+            cardShopRepository.save(cardShop);
         } else {
-            DbCardShop current = cardShopList.getFirst();
+            CardShopEntity current = cardShopList.getFirst();
             cardShop.setId(current.getId());
             if (!cardShop.equals(current)) {
-                cardShopMapper.update(cardShop);
+                cardShopRepository.save(cardShop);
             }
         }
         return cardShop.getCardId();

@@ -13,14 +13,13 @@ import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.DisciplineStat;
 import com.vtesdecks.cache.indexable.deck.Stats;
 import com.vtesdecks.cache.indexable.deck.card.Card;
-import com.vtesdecks.db.CommentMapper;
-import com.vtesdecks.db.DeckUserMapper;
-import com.vtesdecks.db.DeckViewMapper;
-import com.vtesdecks.db.UserMapper;
-import com.vtesdecks.db.model.DbDeck;
-import com.vtesdecks.db.model.DbDeckUser;
-import com.vtesdecks.db.model.DbDeckView;
-import com.vtesdecks.db.model.DbUser;
+import com.vtesdecks.jpa.entity.DeckEntity;
+import com.vtesdecks.jpa.entity.DeckUserEntity;
+import com.vtesdecks.jpa.entity.DeckViewEntity;
+import com.vtesdecks.jpa.repositories.CommentRepository;
+import com.vtesdecks.jpa.repositories.DeckUserRepository;
+import com.vtesdecks.jpa.repositories.DeckViewRepository;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.DeckTag;
 import com.vtesdecks.model.Errata;
 import com.vtesdecks.model.limitedformat.LimitedFormatPayload;
@@ -80,31 +79,31 @@ public class DeckFactory {
                     "/decks?type=COMMUNITY&order=POPULAR",
                     "/decks?type=COMMUNITY");
     @Autowired
-    private DeckUserMapper deckUserMapper;
+    private DeckUserRepository deckUserRepository;
     @Autowired
-    private DeckViewMapper deckViewMapper;
+    private DeckViewRepository deckViewRepository;
     @Autowired
     private CryptCache cryptCache;
     @Autowired
     private LibraryCache libraryCache;
     @Autowired
-    private UserMapper userMapper;
+    private UserRepository userRepository;
     @Autowired
-    private CommentMapper commentMapper;
+    private CommentRepository commentRepository;
 
-    public Deck getDeck(DbDeck deck, List<DeckCard> deckCards, List<LimitedFormatPayload> limitedFormats) {
+    public Deck getDeck(DeckEntity deck, List<DeckCard> deckCards, List<LimitedFormatPayload> limitedFormats) {
         Deck value = new Deck();
         value.setId(deck.getId());
         value.setType(deck.getType() != null ? DeckType.valueOf(deck.getType().name()) : null);
         value.setName(deck.getName());
-        List<DbDeckView> views = deckViewMapper.selectByDeckId(deck.getId());
+        List<DeckViewEntity> views = deckViewRepository.findByIdDeckId(deck.getId());
         value.setViewsLastMonth(getViewsLastMonth(deck.getId(), views));
         value.setViews(deck.getViews() + (views != null ? views.size() : 0));
-        List<DbDeckUser> deckUsers = deckUserMapper.selectByDeckId(deck.getId());
+        List<DeckUserEntity> deckUsers = deckUserRepository.findByIdDeckId(deck.getId());
         if (!CollectionUtils.isEmpty(deckUsers) && deckUsers.stream().anyMatch(deckUser -> isDeckRatingExcludingAuthor(deck, deckUser))) {
             value.setRate(Math.round(deckUsers.stream()
                     .filter(deckUser -> isDeckRatingExcludingAuthor(deck, deckUser))
-                    .mapToDouble(DbDeckUser::getRate)
+                    .mapToDouble(DeckUserEntity::getRate)
                     .average()
                     .getAsDouble() * 10) / 10.0);
             value.setVotes(deckUsers.stream()
@@ -114,8 +113,8 @@ public class DeckFactory {
         } else {
             value.setVotes(0);
         }
-        value.setFavoriteUsers(deckUsers.stream().filter(DbDeckUser::isFavorite).map(DbDeckUser::getUser).collect(Collectors.toSet()));
-        value.setComments(commentMapper.countByPageIdentifier("deck_" + deck.getId()));
+        value.setFavoriteUsers(deckUsers.stream().filter(du -> du.getFavorite() != null && du.getFavorite()).map(du -> du.getId().getUser()).collect(Collectors.toSet()));
+        value.setComments(commentRepository.countByPageIdentifierAndDeletedFalse("deck_" + deck.getId()));
         value.setTournament(deck.getTournament());
         value.setPlayers(deck.getPlayers());
         value.setYear(deck.getYear() != null ? deck.getYear() : deck.getCreationDate().getYear());
@@ -125,14 +124,11 @@ public class DeckFactory {
         value.setDescription(deck.getDescription());
         value.setSet(deck.getSet());
         value.setExtra(deck.getExtra());
-        value.setPublished(deck.isPublished());
-        value.setCollection(deck.isCollection());
+        value.setPublished(deck.getPublished());
+        value.setCollection(deck.getCollection());
         if (deck.getUser() != null) {
             value.setUser(deck.getUser());
-            DbUser user = userMapper.selectById(deck.getUser());
-            if (user != null) {
-                value.setAuthor(user.getDisplayName());
-            }
+            userRepository.findById(deck.getUser()).ifPresent(user -> value.setAuthor(user.getDisplayName()));
         }
         if (deck.getExtra() != null && deck.getExtra().has("limitedFormat") && deck.getExtra().get("limitedFormat").has("name")) {
             if (deck.getExtra().get("limitedFormat").has("id")) {
@@ -243,11 +239,11 @@ public class DeckFactory {
         return value;
     }
 
-    private static boolean isDeckRatingExcludingAuthor(DbDeck deck, DbDeckUser deckUser) {
-        return deckUser.getRate() != null && (deck.getUser() == null || !deck.getUser().equals(deckUser.getUser()));
+    private static boolean isDeckRatingExcludingAuthor(DeckEntity deck, DeckUserEntity deckUser) {
+        return deckUser.getRate() != null && (deck.getUser() == null || !deck.getUser().equals(deckUser.getId().getUser()));
     }
 
-    private Long getViewsLastMonth(String deckId, List<DbDeckView> views) {
+    private Long getViewsLastMonth(String deckId, List<DeckViewEntity> views) {
         return views != null
                 ? views
                 .stream()

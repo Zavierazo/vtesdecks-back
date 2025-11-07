@@ -2,9 +2,9 @@ package com.vtesdecks.api.service;
 
 import com.vtesdecks.api.mapper.ApiCollectionMapper;
 import com.vtesdecks.api.util.ApiUtils;
-import com.vtesdecks.jpa.entities.Collection;
-import com.vtesdecks.jpa.entities.CollectionBinder;
-import com.vtesdecks.jpa.entities.CollectionCard;
+import com.vtesdecks.jpa.entity.CollectionBinderEntity;
+import com.vtesdecks.jpa.entity.CollectionCardEntity;
+import com.vtesdecks.jpa.entity.CollectionEntity;
 import com.vtesdecks.jpa.repositories.CollectionBinderRepository;
 import com.vtesdecks.jpa.repositories.CollectionCardRepository;
 import com.vtesdecks.jpa.repositories.CollectionCardRepositoryCustom;
@@ -55,8 +55,8 @@ public class ApiCollectionService {
 
     public ApiCollection getCollection() throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
-            return apiCollectionMapper.mapCollection(collection, collectionBinderRepository.findByCollectionId(collection.getId()));
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            return apiCollectionMapper.mapCollection(collectionEntity, collectionBinderRepository.findByCollectionId(collectionEntity.getId()));
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
         } catch (Exception e) {
@@ -66,11 +66,11 @@ public class ApiCollectionService {
 
     public ApiCollection resetCollection() throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
-            collection.setDeleted(true);
-            collectionRepository.save(collection);
-            Collection newCollection = getCollectionOrCreate();
-            return apiCollectionMapper.mapCollection(newCollection, collectionBinderRepository.findByCollectionId(newCollection.getId()));
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            collectionEntity.setDeleted(true);
+            collectionRepository.save(collectionEntity);
+            CollectionEntity newCollectionEntity = getCollectionOrCreate();
+            return apiCollectionMapper.mapCollection(newCollectionEntity, collectionBinderRepository.findByCollectionId(newCollectionEntity.getId()));
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
         } catch (Exception e) {
@@ -80,8 +80,8 @@ public class ApiCollectionService {
 
     public List<ApiCollectionBinder> getBinders() throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
-            return apiCollectionMapper.mapBinders(collectionBinderRepository.findByCollectionId(collection.getId()));
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            return apiCollectionMapper.mapBinders(collectionBinderRepository.findByCollectionId(collectionEntity.getId()));
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
         } catch (Exception e) {
@@ -92,8 +92,8 @@ public class ApiCollectionService {
 
     public ApiCollectionBinder getBinder(Integer id) throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
-            return collectionBinderRepository.findByCollectionIdAndId(collection.getId(), id)
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            return collectionBinderRepository.findByCollectionIdAndId(collectionEntity.getId(), id)
                     .map(apiCollectionMapper::mapBinder)
                     .orElseThrow(() -> new IllegalArgumentException("Binder does not exist"));
         } catch (IllegalArgumentException e) {
@@ -105,7 +105,7 @@ public class ApiCollectionService {
 
     public ApiCollectionBinder getPublicBinder(String publicHash) throws Exception {
         try {
-            CollectionBinder binder = collectionBinderRepository.findByPublicHash(publicHash)
+            CollectionBinderEntity binder = collectionBinderRepository.findByPublicHash(publicHash)
                     .orElseThrow(() -> new IllegalArgumentException("Binder does not exist"));
             return apiCollectionMapper.mapBinder(binder);
         } catch (IllegalArgumentException e) {
@@ -117,24 +117,24 @@ public class ApiCollectionService {
 
     public ApiCollectionBinder createBinder(ApiCollectionBinder binder) throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
+            CollectionEntity collectionEntity = getCollectionOrCreate();
             if (StringUtils.isBlank(binder.getName())) {
                 throw new IllegalArgumentException("Binder name cannot be empty");
-            } else if (collectionBinderRepository.existsByCollectionIdAndNameIgnoreCase(collection.getId(), binder.getName())) {
+            } else if (collectionBinderRepository.existsByCollectionIdAndNameIgnoreCase(collectionEntity.getId(), binder.getName())) {
                 throw new IllegalArgumentException("Binder with this name already exists in the collection");
             }
-            CollectionBinder collectionBinder = apiCollectionMapper.mapBinderEntity(binder);
-            collectionBinder.setCollectionId(collection.getId());
-            if (collectionBinder.isPublicVisibility()) {
+            CollectionBinderEntity collectionBinderEntity = apiCollectionMapper.mapBinderEntity(binder);
+            collectionBinderEntity.setCollectionId(collectionEntity.getId());
+            if (collectionBinderEntity.isPublicVisibility()) {
                 String publicHash;
                 do {
                     publicHash = ApiUtils.generatePublicHash();
                 } while (collectionBinderRepository.existsByPublicHash(publicHash));
-                collectionBinder.setPublicHash(publicHash);
+                collectionBinderEntity.setPublicHash(publicHash);
             } else {
-                collectionBinder.setPublicHash(null);
+                collectionBinderEntity.setPublicHash(null);
             }
-            return apiCollectionMapper.mapBinder(collectionBinderRepository.save(collectionBinder));
+            return apiCollectionMapper.mapBinder(collectionBinderRepository.save(collectionBinderEntity));
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
         } catch (Exception e) {
@@ -144,12 +144,12 @@ public class ApiCollectionService {
 
     public ApiCollectionBinder updateBinder(Integer id, ApiCollectionBinder binder) throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
-            CollectionBinder existingBinder = collectionBinderRepository.findByCollectionIdAndId(collection.getId(), id)
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            CollectionBinderEntity existingBinder = collectionBinderRepository.findByCollectionIdAndId(collectionEntity.getId(), id)
                     .orElseThrow(() -> new IllegalArgumentException("Binder does not exist"));
             if (StringUtils.isBlank(binder.getName())) {
                 throw new IllegalArgumentException("Binder name cannot be empty");
-            } else if (collectionBinderRepository.existsByCollectionIdAndNameIgnoreCase(collection.getId(), binder.getName())
+            } else if (collectionBinderRepository.existsByCollectionIdAndNameIgnoreCase(collectionEntity.getId(), binder.getName())
                     && !existingBinder.getName().equalsIgnoreCase(binder.getName())) {
                 throw new IllegalArgumentException("Binder with this name already exists in the collection");
             }
@@ -177,8 +177,8 @@ public class ApiCollectionService {
     @Transactional
     public Boolean deleteBinder(Integer id, boolean deleteCards) throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
-            CollectionBinder binder = collectionBinderRepository.findByCollectionIdAndId(collection.getId(), id)
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            CollectionBinderEntity binder = collectionBinderRepository.findByCollectionIdAndId(collectionEntity.getId(), id)
                     .orElseThrow(() -> new IllegalArgumentException("Binder does not exist"));
             if (collectionCardRepository.existsByBinderId(id)) {
                 if (deleteCards) {
@@ -197,25 +197,34 @@ public class ApiCollectionService {
     }
 
 
-    private Collection getCollectionOrCreate() {
+    private CollectionEntity getCollectionOrCreate() {
         Integer userId = ApiUtils.extractUserId();
-        List<Collection> collectionList = collectionRepository.findByUserIdAndDeletedFalse(userId);
-        if (collectionList.isEmpty()) {
-            // If no collection exists, return new Collection
-            Collection newCollection = new Collection();
-            newCollection.setUserId(userId);
-            newCollection.setDeleted(false);
-            return collectionRepository.save(newCollection);
-        } else if (collectionList.size() > 1) {
+        List<CollectionEntity> collectionEntityList = collectionRepository.findByUserIdAndDeletedFalse(userId);
+        if (collectionEntityList.isEmpty()) {
+            return createCollection(userId);
+        } else if (collectionEntityList.size() > 1) {
             // If multiple collections exist, log an error or handle it as needed
             throw new IllegalStateException("Multiple collections found for user ID: " + userId);
         }
-        return collectionList.getFirst();
+        return collectionEntityList.getFirst();
+    }
+
+    private synchronized CollectionEntity createCollection(Integer userId) {
+        List<CollectionEntity> collectionEntityList = collectionRepository.findByUserIdAndDeletedFalse(userId);
+        if (collectionEntityList.isEmpty()) {
+            // If no collection exists, return new Collection
+            CollectionEntity newCollectionEntity = new CollectionEntity();
+            newCollectionEntity.setUserId(userId);
+            newCollectionEntity.setDeleted(false);
+            return collectionRepository.save(newCollectionEntity);
+        }
+        return collectionEntityList.getFirst();
+
     }
 
     public ApiCollectionPage<ApiCollectionCard> getPublicCards(String publicHash, Integer page, Integer size, String groupBy, String sortBy, String sortDirection, Map<String, String> filters) throws Exception {
         try {
-            CollectionBinder binder = collectionBinderRepository.findByPublicHash(publicHash).orElseThrow(() -> new IllegalArgumentException("Binder does not exist"));
+            CollectionBinderEntity binder = collectionBinderRepository.findByPublicHash(publicHash).orElseThrow(() -> new IllegalArgumentException("Binder does not exist"));
             Sort.Direction sortDirectionEnum = StringUtils.equalsIgnoreCase(sortDirection, "desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
             String sortByEntity = StringUtils.isNotBlank(sortBy) ? sortBy : "cardName";
             Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirectionEnum, sortByEntity));
@@ -234,14 +243,14 @@ public class ApiCollectionService {
 
     public ApiCollectionPage<ApiCollectionCard> getCards(Integer page, Integer size, String groupBy, String sortBy, String sortDirection, Map<String, String> filters) throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
+            CollectionEntity collectionEntity = getCollectionOrCreate();
             Sort.Direction sortDirectionEnum = StringUtils.equalsIgnoreCase(sortDirection, "desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
             String sortByEntity = StringUtils.isNotBlank(sortBy) ? sortBy : "cardName";
             Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirectionEnum, sortByEntity));
             if (groupBy != null) {
-                return apiCollectionMapper.mapCards(collectionCardRepositoryCustom.findByDynamicFiltersGroupBy(collection.getId(), filters, groupBy, pageable));
+                return apiCollectionMapper.mapCards(collectionCardRepositoryCustom.findByDynamicFiltersGroupBy(collectionEntity.getId(), filters, groupBy, pageable));
             } else {
-                return apiCollectionMapper.mapCards(collectionCardRepositoryCustom.findByDynamicFilters(collection.getId(), filters, pageable));
+                return apiCollectionMapper.mapCards(collectionCardRepositoryCustom.findByDynamicFilters(collectionEntity.getId(), filters, pageable));
             }
 
         } catch (IllegalArgumentException e) {
@@ -253,8 +262,8 @@ public class ApiCollectionService {
 
     public List<ApiCollectionCard> getCardsById(List<Integer> ids) {
         try {
-            Collection collection = getCollectionOrCreate();
-            List<CollectionCard> cards = collectionCardRepository.findByCollectionIdAndCardIdIn(collection.getId(), ids);
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            List<CollectionCardEntity> cards = collectionCardRepository.findByCollectionIdAndCardIdIn(collectionEntity.getId(), ids);
             return apiCollectionMapper.mapCards(cards);
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
@@ -265,21 +274,21 @@ public class ApiCollectionService {
 
     public ApiCollectionCard createCards(ApiCollectionCard card, HttpServletResponse response) throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
-            if (card.getBinderId() != null && !collectionBinderRepository.existsByCollectionIdAndId(collection.getId(), card.getBinderId())) {
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            if (card.getBinderId() != null && !collectionBinderRepository.existsByCollectionIdAndId(collectionEntity.getId(), card.getBinderId())) {
                 throw new IllegalArgumentException("Binder does not exist in the collection");
             }
-            CollectionCard collectionCard = apiCollectionMapper.mapCardToEntity(card);
-            collectionCard.setCollectionId(collection.getId());
-            List<CollectionCard> existingCars = collectionCardRepository.findByCollectionIdAndCardIdAndSetAndConditionAndLanguageAndBinderId(
-                    collection.getId(), card.getCardId(), card.getSet(), card.getCondition() != null ? card.getCondition().name() : null, card.getLanguage(), card.getBinderId());
+            CollectionCardEntity collectionCardEntity = apiCollectionMapper.mapCardToEntity(card);
+            collectionCardEntity.setCollectionId(collectionEntity.getId());
+            List<CollectionCardEntity> existingCars = collectionCardRepository.findByCollectionIdAndCardIdAndSetAndConditionAndLanguageAndBinderId(
+                    collectionEntity.getId(), card.getCardId(), card.getSet(), card.getCondition() != null ? card.getCondition().name() : null, card.getLanguage(), card.getBinderId());
             if (!CollectionUtils.isEmpty(existingCars)) {
                 // If a card with the same attributes already exists, return it instead of creating a new one
-                CollectionCard existingCard = existingCars.getFirst();
+                CollectionCardEntity existingCard = existingCars.getFirst();
                 existingCard.setNumber(existingCard.getNumber() + card.getNumber());
                 if (existingCars.size() > 1) {
                     List<Integer> deleteIds = new ArrayList<>();
-                    for (CollectionCard duplicateCard : existingCars.subList(1, existingCars.size())) {
+                    for (CollectionCardEntity duplicateCard : existingCars.subList(1, existingCars.size())) {
                         existingCard.setNumber(existingCard.getNumber() + card.getNumber());
                         deleteIds.add(duplicateCard.getId());
                         collectionCardRepository.delete(duplicateCard);
@@ -290,7 +299,7 @@ public class ApiCollectionService {
                 }
                 return apiCollectionMapper.mapCard(collectionCardRepository.save(existingCard));
             } else {
-                return apiCollectionMapper.mapCard(collectionCardRepository.save(collectionCard));
+                return apiCollectionMapper.mapCard(collectionCardRepository.save(collectionCardEntity));
             }
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
@@ -309,10 +318,10 @@ public class ApiCollectionService {
 
     public ApiCollectionCard updateCard(Integer id, ApiCollectionCard card, HttpServletResponse response) throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
-            CollectionCard existingCard = collectionCardRepository.findByCollectionIdAndId(collection.getId(), id)
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            CollectionCardEntity existingCard = collectionCardRepository.findByCollectionIdAndId(collectionEntity.getId(), id)
                     .orElseThrow(() -> new IllegalArgumentException("Card does not exist"));
-            if (card.getBinderId() != null && !collectionBinderRepository.existsByCollectionIdAndId(collection.getId(), card.getBinderId())) {
+            if (card.getBinderId() != null && !collectionBinderRepository.existsByCollectionIdAndId(collectionEntity.getId(), card.getBinderId())) {
                 throw new IllegalArgumentException("Binder does not exist in the collection");
             }
             existingCard.setNumber(card.getNumber());
@@ -321,11 +330,11 @@ public class ApiCollectionService {
             existingCard.setLanguage(card.getLanguage());
             existingCard.setBinderId(card.getBinderId());
             existingCard.setNotes(card.getNotes());
-            List<CollectionCard> existingCards = collectionCardRepository.findByCollectionIdAndCardIdAndSetAndConditionAndLanguageAndBinderId(
-                    collection.getId(), card.getCardId(), card.getSet(), card.getCondition() != null ? card.getCondition().name() : null, card.getLanguage(), card.getBinderId());
+            List<CollectionCardEntity> existingCards = collectionCardRepository.findByCollectionIdAndCardIdAndSetAndConditionAndLanguageAndBinderId(
+                    collectionEntity.getId(), card.getCardId(), card.getSet(), card.getCondition() != null ? card.getCondition().name() : null, card.getLanguage(), card.getBinderId());
             if (!CollectionUtils.isEmpty(existingCards)) {
                 List<Integer> deleteIds = new ArrayList<>();
-                for (CollectionCard duplicateCard : existingCards) {
+                for (CollectionCardEntity duplicateCard : existingCards) {
                     if (!duplicateCard.getId().equals(existingCard.getId())) {
                         // If a card with the same attributes already exists, update the number and delete the duplicate
                         existingCard.setNumber(existingCard.getNumber() + duplicateCard.getNumber());
@@ -347,12 +356,12 @@ public class ApiCollectionService {
 
     public Boolean deleteCard(List<Integer> ids) throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
-            List<CollectionCard> card = collectionCardRepository.findByCollectionIdAndIdIn(collection.getId(), ids);
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            List<CollectionCardEntity> card = collectionCardRepository.findByCollectionIdAndIdIn(collectionEntity.getId(), ids);
             if (card.isEmpty()) {
                 throw new IllegalArgumentException("No cards found with the provided IDs");
             }
-            collectionCardRepository.deleteAllById(card.stream().map(CollectionCard::getId).toList());
+            collectionCardRepository.deleteAllById(card.stream().map(CollectionCardEntity::getId).toList());
             return true;
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
@@ -364,10 +373,10 @@ public class ApiCollectionService {
 
     public ApiCollectionCard moveCardToBinder(Integer id, Integer binderId, Integer quantity) throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
-            CollectionCard card = collectionCardRepository.findByCollectionIdAndId(collection.getId(), id)
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            CollectionCardEntity card = collectionCardRepository.findByCollectionIdAndId(collectionEntity.getId(), id)
                     .orElseThrow(() -> new IllegalArgumentException("Card does not exist"));
-            if (binderId != null && !collectionBinderRepository.existsByCollectionIdAndId(collection.getId(), binderId)) {
+            if (binderId != null && !collectionBinderRepository.existsByCollectionIdAndId(collectionEntity.getId(), binderId)) {
                 throw new IllegalArgumentException("Binder does not exist in the collection");
             }
             if (quantity <= 0) {
@@ -388,15 +397,15 @@ public class ApiCollectionService {
             } else {
                 collectionCardRepository.save(card);
             }
-            List<CollectionCard> existingCard = collectionCardRepository.findByCollectionIdAndCardIdAndSetAndConditionAndLanguageAndBinderId(
-                    collection.getId(), card.getCardId(), card.getSet(), card.getCondition(), card.getLanguage(), binderId);
+            List<CollectionCardEntity> existingCard = collectionCardRepository.findByCollectionIdAndCardIdAndSetAndConditionAndLanguageAndBinderId(
+                    collectionEntity.getId(), card.getCardId(), card.getSet(), card.getCondition(), card.getLanguage(), binderId);
             if (!CollectionUtils.isEmpty(existingCard)) {
-                CollectionCard existing = existingCard.getFirst();
+                CollectionCardEntity existing = existingCard.getFirst();
                 existing.setNumber(existing.getNumber() + quantity);
                 return apiCollectionMapper.mapCard(collectionCardRepository.save(existing));
             } else {
-                CollectionCard newCard = new CollectionCard();
-                newCard.setCollectionId(collection.getId());
+                CollectionCardEntity newCard = new CollectionCardEntity();
+                newCard.setCollectionId(collectionEntity.getId());
                 newCard.setCardId(card.getCardId());
                 newCard.setSet(card.getSet());
                 newCard.setNumber(quantity);
@@ -416,17 +425,17 @@ public class ApiCollectionService {
 
     public List<ApiCollectionCard> bulkEditCards(List<Integer> ids, Integer binderId, String condition, String language, HttpServletResponse response) throws Exception {
         try {
-            Collection collection = getCollectionOrCreate();
-            List<CollectionCard> cards = collectionCardRepository.findByCollectionIdAndIdIn(collection.getId(), ids);
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            List<CollectionCardEntity> cards = collectionCardRepository.findByCollectionIdAndIdIn(collectionEntity.getId(), ids);
             if (cards.isEmpty()) {
                 throw new IllegalArgumentException("No cards found with the provided IDs");
             }
             // Apply modifications to the cards
-            for (CollectionCard card : cards) {
+            for (CollectionCardEntity card : cards) {
                 if (binderId != null) {
                     if (binderId == 0) {
                         card.setBinderId(null);
-                    } else if (!collectionBinderRepository.existsByCollectionIdAndId(collection.getId(), binderId)) {
+                    } else if (!collectionBinderRepository.existsByCollectionIdAndId(collectionEntity.getId(), binderId)) {
                         throw new IllegalArgumentException("Binder does not exist in the collection");
                     } else {
                         card.setBinderId(binderId);
@@ -446,10 +455,10 @@ public class ApiCollectionService {
             collectionCardRepository.saveAll(cards);
             // Delete duplicated cards
             List<Integer> deleteIds = new ArrayList<>();
-            for (CollectionCard card : cards) {
-                List<CollectionCard> existingCards = collectionCardRepository.findByCollectionIdAndCardIdAndSetAndConditionAndLanguageAndBinderId(
-                        collection.getId(), card.getCardId(), card.getSet(), card.getCondition(), card.getLanguage(), card.getBinderId());
-                for (CollectionCard duplicateCard : existingCards) {
+            for (CollectionCardEntity card : cards) {
+                List<CollectionCardEntity> existingCards = collectionCardRepository.findByCollectionIdAndCardIdAndSetAndConditionAndLanguageAndBinderId(
+                        collectionEntity.getId(), card.getCardId(), card.getSet(), card.getCondition(), card.getLanguage(), card.getBinderId());
+                for (CollectionCardEntity duplicateCard : existingCards) {
                     if (cards.stream().noneMatch(c -> duplicateCard.getId().equals(c.getId()))) {
                         // If a card with the same attributes already exists, update the number and delete the duplicate
                         card.setNumber(card.getNumber() + duplicateCard.getNumber());
@@ -459,9 +468,9 @@ public class ApiCollectionService {
             }
             collectionCardRepository.saveAll(cards);
             // Delete duplicated cards in bulk execution
-            List<CollectionCard> cardWithoutDuplicates = new ArrayList<>();
-            for (CollectionCard card : cards) {
-                Optional<CollectionCard> existingCard = cardWithoutDuplicates.stream()
+            List<CollectionCardEntity> cardWithoutDuplicates = new ArrayList<>();
+            for (CollectionCardEntity card : cards) {
+                Optional<CollectionCardEntity> existingCard = cardWithoutDuplicates.stream()
                         .filter(c -> Objects.equals(c.getCardId(), card.getCardId())
                                 && Objects.equals(c.getSet(), card.getSet())
                                 && Objects.equals(c.getCondition(), card.getCondition())
@@ -489,9 +498,9 @@ public class ApiCollectionService {
     }
 
     public void export(HttpServletResponse response, Integer binderId) throws Exception {
-        Collection collection = getCollectionOrCreate();
-        List<CollectionBinder> binders = collectionBinderRepository.findByCollectionId(collection.getId());
-        List<CollectionCard> cards = binderId != null ? collectionCardRepository.findByCollectionIdAndBinderId(collection.getId(), binderId) : collectionCardRepository.findByCollectionId(collection.getId());
+        CollectionEntity collectionEntity = getCollectionOrCreate();
+        List<CollectionBinderEntity> binders = collectionBinderRepository.findByCollectionId(collectionEntity.getId());
+        List<CollectionCardEntity> cards = binderId != null ? collectionCardRepository.findByCollectionIdAndBinderId(collectionEntity.getId(), binderId) : collectionCardRepository.findByCollectionId(collectionEntity.getId());
         List<ApiCollectionCardCsv> apiCards = apiCollectionMapper.mapCsv(cards, binders);
         String nowDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                 .replace(":", "_")
@@ -503,25 +512,25 @@ public class ApiCollectionService {
     }
 
     public ApiCollectionImport importCards(CollectionType type, MultipartFile file, Integer binderId) {
-        Collection collection = getCollectionOrCreate();
+        CollectionEntity collectionEntity = getCollectionOrCreate();
         switch (type) {
             case VTESDECKS:
-                return apiCollectionImportService.importCardsVtesDecks(collection, file, binderId);
+                return apiCollectionImportService.importCardsVtesDecks(collectionEntity, file, binderId);
             case LACKEY:
-                return apiCollectionImportService.importCardsLackey(collection, file, binderId);
+                return apiCollectionImportService.importCardsLackey(collectionEntity, file, binderId);
             case VDB:
-                return apiCollectionImportService.importCardsVDB(collection, file, binderId);
+                return apiCollectionImportService.importCardsVDB(collectionEntity, file, binderId);
             default:
                 throw new IllegalArgumentException("Unsupported collection type: " + type);
         }
     }
 
     public ApiCollectionCardStats getCardStats(Integer id, ApiDecks decks, Boolean summary) throws Exception {
-        Collection collection = getCollectionOrCreate();
+        CollectionEntity collectionEntity = getCollectionOrCreate();
         try {
-            List<CollectionCard> cards = collectionCardRepository.findByCollectionIdAndCardId(collection.getId(), id);
+            List<CollectionCardEntity> cards = collectionCardRepository.findByCollectionIdAndCardId(collectionEntity.getId(), id);
             ApiCollectionCardStats stats = new ApiCollectionCardStats();
-            stats.setCollectionNumber(cards.stream().map(CollectionCard::getNumber).filter(Objects::nonNull).mapToInt(Integer::intValue).sum());
+            stats.setCollectionNumber(cards.stream().map(CollectionCardEntity::getNumber).filter(Objects::nonNull).mapToInt(Integer::intValue).sum());
             stats.setDecksNumber(decks.getDecks().stream()
                     .mapToInt(deck -> !isEmpty(deck.getFilterCards()) ? deck.getFilterCards().getFirst().getNumber() : 0)
                     .sum());
@@ -543,10 +552,10 @@ public class ApiCollectionService {
 
     public Map<Integer, Integer> getCollectionCardsMap() {
         Integer userId = ApiUtils.extractUserId();
-        List<Collection> collection = collectionRepository.findByUserIdAndDeletedFalse(userId);
-        if (collection != null && !collection.isEmpty()) {
-            List<CollectionCard> cards = collectionCardRepository.findByCollectionId(collection.getFirst().getId());
-            return cards.stream().collect(Collectors.toMap(CollectionCard::getCardId, CollectionCard::getNumber, Integer::sum));
+        List<CollectionEntity> collectionEntity = collectionRepository.findByUserIdAndDeletedFalse(userId);
+        if (collectionEntity != null && !collectionEntity.isEmpty()) {
+            List<CollectionCardEntity> cards = collectionCardRepository.findByCollectionId(collectionEntity.getFirst().getId());
+            return cards.stream().collect(Collectors.toMap(CollectionCardEntity::getCardId, CollectionCardEntity::getNumber, Integer::sum));
         } else {
             return new HashMap<>();
         }

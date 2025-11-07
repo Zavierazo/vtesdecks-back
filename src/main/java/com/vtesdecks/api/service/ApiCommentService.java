@@ -2,60 +2,60 @@ package com.vtesdecks.api.service;
 
 import com.vtesdecks.api.mapper.ApiCommonMapper;
 import com.vtesdecks.api.util.ApiUtils;
-import com.vtesdecks.db.CommentMapper;
-import com.vtesdecks.db.UserMapper;
-import com.vtesdecks.db.model.DbComment;
-import com.vtesdecks.db.model.DbUser;
+import com.vtesdecks.jpa.entity.CommentEntity;
+import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.repositories.CommentRepository;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiComment;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 import static com.vtesdecks.api.util.ApiUtils.getProfileImage;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ApiCommentService {
-    @Autowired
-    private CommentMapper commentMapper;
-    @Autowired
-    private UserMapper userMapper;
-    @Autowired
-    private ApiUserNotificationService userNotificationService;
+    private final CommentRepository commentRepository;
+    private final UserRepository userRepository;
+    private final ApiUserNotificationService userNotificationService;
 
 
     public List<ApiComment> getComments(String deckId) {
-        DbUser user = getUser();
+        UserEntity user = getUser();
         List<ApiComment> comments = new ArrayList<>();
-        for (DbComment dbComment : getActiveComments(getPageIdentifier(deckId))) {
-            comments.add(getComment(user, dbComment));
+        for (CommentEntity commentEntity : getActiveComments(getPageIdentifier(deckId))) {
+            comments.add(getComment(user, Optional.of(commentEntity)));
         }
         return comments;
     }
 
     public ApiComment addComment(ApiComment comment) {
-        DbUser user = getUser();
+        UserEntity user = getUser();
         if (user != null) {
-            DbComment dbComment = new DbComment();
-            dbComment.setUser(user.getId());
+            CommentEntity commentEntity = new CommentEntity();
+            commentEntity.setUser(user.getId());
             //Deprecated funcionality (reply in thread)
-            //dbComment.setParent(comment.getParent());
-            dbComment.setPageIdentifier(getPageIdentifier(comment.getDeckId()));
-            dbComment.setContent(comment.getContent());
-            commentMapper.insert(dbComment);
-            sendNotifications(comment, dbComment);
-            return getComment(user, commentMapper.selectById(dbComment.getId()));
+            //commentEntity.setParent(comment.getParent());
+            commentEntity.setPageIdentifier(getPageIdentifier(comment.getDeckId()));
+            commentEntity.setContent(comment.getContent());
+            commentEntity.setDeleted(false);
+            commentRepository.save(commentEntity);
+            sendNotifications(comment, commentEntity);
+            return getComment(user, commentRepository.findById(commentEntity.getId()));
         }
         return null;
     }
 
-    private void sendNotifications(ApiComment comment, DbComment dbComment) {
+    private void sendNotifications(ApiComment comment, CommentEntity dbComment) {
         try {
-            List<DbComment> commentList = getActiveComments(dbComment.getPageIdentifier());
+            List<CommentEntity> commentList = getActiveComments(dbComment.getPageIdentifier());
             userNotificationService.processCommentNotification(comment.getDeckId(), dbComment, commentList);
         } catch (Exception e) {
             log.error("Unexpected error creating comment notification for deckId {} with comment {}", comment.getDeckId(), comment, e);
@@ -63,27 +63,35 @@ public class ApiCommentService {
     }
 
     public ApiComment modifyComment(ApiComment comment) {
-        DbUser user = getUser();
+        UserEntity user = getUser();
         if (user != null) {
-            DbComment dbComment = commentMapper.selectById(comment.getId());
-            if (user.isAdmin() || dbComment.getUser().equals(user.getId())) {
-                dbComment.setContent(comment.getContent());
-                commentMapper.update(dbComment);
+            Optional<CommentEntity> optionalCommentEntity = commentRepository.findById(comment.getId());
+            if (optionalCommentEntity.isEmpty()) {
+                return null;
+            }
+            CommentEntity commentEntity = optionalCommentEntity.get();
+            if ((user.getAdmin() != null && user.getAdmin()) || commentEntity.getUser().equals(user.getId())) {
+                commentEntity.setContent(comment.getContent());
+                commentRepository.save(commentEntity);
                 userNotificationService.updateNotification(comment.getId(), comment.getContent());
-                return getComment(user, commentMapper.selectById(dbComment.getId()));
+                return getComment(user, commentRepository.findById(commentEntity.getId()));
             }
         }
         return null;
     }
 
     public boolean deleteComment(Integer id) {
-        DbUser user = getUser();
+        UserEntity user = getUser();
         if (user != null) {
-            DbComment dbComment = commentMapper.selectById(id);
-            if (user.isAdmin() || dbComment.getUser().equals(user.getId())) {
-                dbComment.setDeleted(true);
-                commentMapper.update(dbComment);
-                userNotificationService.deleteNotification(dbComment.getId());
+            Optional<CommentEntity> optionalCommentEntity = commentRepository.findById(id);
+            if (optionalCommentEntity.isEmpty()) {
+                return false;
+            }
+            CommentEntity commentEntity = optionalCommentEntity.get();
+            if ((user.getAdmin() != null && user.getAdmin()) || commentEntity.getUser().equals(user.getId())) {
+                commentEntity.setDeleted(true);
+                commentRepository.save(commentEntity);
+                userNotificationService.deleteNotification(commentEntity.getId());
                 return true;
             }
         }
@@ -94,32 +102,37 @@ public class ApiCommentService {
         return "deck_" + deckId;
     }
 
-    private DbUser getUser() {
+    private UserEntity getUser() {
         Integer userId = ApiUtils.extractUserId();
-        return userId != null ? userMapper.selectById(userId) : null;
+        return userId != null ? userRepository.findById(userId).orElse(null) : null;
     }
 
-    private ApiComment getComment(DbUser user, DbComment dbComment) {
+    private ApiComment getComment(UserEntity user, Optional<CommentEntity> commentEntity) {
+        return commentEntity.map(entity -> getComment(user, entity)).orElse(null);
+    }
+
+    private ApiComment getComment(UserEntity user, CommentEntity commentEntity) {
         ApiComment comment = new ApiComment();
-        comment.setId(dbComment.getId());
-        comment.setCreated(ApiCommonMapper.map(dbComment.getCreationDate()));
-        comment.setModified(ApiCommonMapper.map(dbComment.getModificationDate()));
-        comment.setContent(dbComment.getContent());
-        DbUser commentUser = userMapper.selectById(dbComment.getUser());
+        comment.setId(commentEntity.getId());
+        comment.setCreated(ApiCommonMapper.map(commentEntity.getCreationDate()));
+        comment.setModified(ApiCommonMapper.map(commentEntity.getModificationDate()));
+        comment.setContent(commentEntity.getContent());
+        UserEntity commentUser = userRepository.findById(commentEntity.getUser()).orElse(null);
         if (commentUser != null) {
             comment.setFullName(commentUser.getDisplayName());
             comment.setProfileImage(getProfileImage(commentUser));
-            comment.setCreatedByAdmin(commentUser.isAdmin());
+            comment.setCreatedByAdmin(commentUser.getAdmin() != null && commentUser.getAdmin());
             comment.setCreatedByCurrentUser(user != null && user.getId().equals(commentUser.getId()));
         }
         return comment;
     }
 
-    private List<DbComment> getActiveComments(String pageIdentifier) {
-        return commentMapper.selectByPageIdentifier(pageIdentifier)
+    private List<CommentEntity> getActiveComments(String pageIdentifier) {
+        return commentRepository.findByPageIdentifier(pageIdentifier)
                 .stream()
-                .filter(comment -> !comment.isDeleted())
-                .collect(Collectors.toList());
+                .filter(comment -> Boolean.FALSE.equals(comment.getDeleted()))
+                .sorted(Comparator.comparing(CommentEntity::getCreationDate))
+                .toList();
     }
 
 }

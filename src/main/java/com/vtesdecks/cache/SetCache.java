@@ -12,8 +12,8 @@ import com.googlecode.cqengine.query.option.Thresholds;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.factory.SetFactory;
 import com.vtesdecks.cache.indexable.Set;
-import com.vtesdecks.db.SetMapper;
-import com.vtesdecks.db.model.DbSet;
+import com.vtesdecks.jpa.entity.SetEntity;
+import com.vtesdecks.jpa.repositories.SetRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +42,7 @@ public class SetCache {
     private IndexedCollection<Set> cache = new ConcurrentIndexedCollection<>();
 
     @Autowired
-    private SetMapper setMapper;
+    private SetRepository setRepository;
     @Autowired
     private SetFactory setFactory;
 
@@ -60,7 +60,7 @@ public class SetCache {
         try {
             stopWatch.start();
             java.util.Set<Set> currentKeys = cache.stream().collect(Collectors.toSet());
-            for (DbSet set : setMapper.selectAll()) {
+            for (SetEntity set : setRepository.findAll()) {
                 refreshIndex(set);
                 currentKeys.removeIf(s -> s.getId().equals(set.getId()));
             }
@@ -72,11 +72,11 @@ public class SetCache {
             }
         } finally {
             stopWatch.stop();
-            log.info("Index finished in {} ms. Colletion size is {}", stopWatch.getLastTaskTimeMillis(), cache.size());
+            log.info("Index finished in {} ms. Colletion size is {}", stopWatch.lastTaskInfo().getTimeMillis(), cache.size());
         }
     }
 
-    public void refreshIndex(DbSet set) {
+    public void refreshIndex(SetEntity set) {
         try {
             Set oldSet = get(set.getId());
             Set newSet = setFactory.getSet(set);
@@ -84,7 +84,7 @@ public class SetCache {
                 cache.remove(oldSet);
             } else if (oldSet != null && !oldSet.equals(newSet)) {
                 cache.update(Lists.newArrayList(oldSet), Lists.newArrayList(newSet));
-            } else if (newSet != null) {
+            } else if (oldSet == null && newSet != null) {
                 cache.add(newSet);
             }
         } catch (Exception e) {

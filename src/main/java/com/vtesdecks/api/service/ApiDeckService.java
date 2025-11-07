@@ -6,7 +6,7 @@ import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.factory.DeckFactory;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.deck.card.Card;
-import com.vtesdecks.db.DeckMapper;
+import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckType;
 import com.vtesdecks.model.api.ApiDeck;
@@ -30,7 +30,7 @@ public class ApiDeckService {
     @Autowired
     private ApiDeckMapper mapper;
     @Autowired
-    private DeckMapper deckMapper;
+    private DeckRepository deckRepository;
     @Autowired
     private DeckFactory deckFactory;
     @Autowired
@@ -130,7 +130,7 @@ public class ApiDeckService {
                 .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap))
                 .toList());
         if (offset == 0 && userId != null && type == DeckType.USER) {
-            apiDecks.setRestorableDecks(deckMapper.selectUserDeleted(userId).stream()
+            apiDecks.setRestorableDecks(deckRepository.selectUserDeleted(userId).stream()
                     .map(dbDeck -> deckFactory.getDeck(dbDeck, new ArrayList<>(), new ArrayList<>()))
                     .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap))
                     .toList());
