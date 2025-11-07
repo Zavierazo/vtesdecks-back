@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AfterStartupService {
-    private static final String BASE_PATH = "D://Trabajo//Git//vtesdecks-front//src//assets//img//cards//";
+    private static final String BASE_PATH = "D://Trabajo//Git//vtesdecks-statics//public//img//cards//";
     private static final char CSV_SEPARATOR = ',';
     private static final String SETS_FILE = "data/vtessets.csv";
     private static final String CUSTOM_SETS_FILE = "data/vtessets_custom.csv";
