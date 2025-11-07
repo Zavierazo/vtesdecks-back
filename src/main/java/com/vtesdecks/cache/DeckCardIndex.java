@@ -7,8 +7,8 @@ import com.googlecode.cqengine.index.unique.UniqueIndex;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.indexable.DeckCard;
-import com.vtesdecks.db.DeckCardMapper;
-import com.vtesdecks.db.model.DbDeckCard;
+import com.vtesdecks.jpa.entity.DeckCardEntity;
+import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,7 @@ import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class DeckCardIndex {
     @Autowired
-    private DeckCardMapper deckCardMapper;
+    private DeckCardRepository deckCardRepository;
     private IndexedCollection<DeckCard> cache = new ConcurrentIndexedCollection<>();
 
     @PostConstruct
@@ -49,11 +49,11 @@ public class DeckCardIndex {
     public List<DeckCard> refreshIndex(String deckId) {
         List<DeckCard> deckCards = new ArrayList<>();
         try {
-            List<DbDeckCard> dbDeckCards = deckCardMapper.selectByDeck(deckId);
-            for (DbDeckCard dbDeckCard : dbDeckCards) {
+            List<DeckCardEntity> dbDeckCardEntities = deckCardRepository.findByIdDeckId(deckId);
+            for (DeckCardEntity dbDeckCard : dbDeckCardEntities) {
                 deckCards.add(DeckCard.builder()
-                        .deckId(dbDeckCard.getDeckId())
-                        .id(dbDeckCard.getId())
+                        .deckId(dbDeckCard.getId().getDeckId())
+                        .id(dbDeckCard.getId().getCardId())
                         .number(dbDeckCard.getNumber())
                         .build());
             }

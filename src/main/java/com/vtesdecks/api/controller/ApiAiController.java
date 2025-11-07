@@ -1,11 +1,11 @@
 package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.util.ApiUtils;
-import com.vtesdecks.db.UserAiAskMapper;
-import com.vtesdecks.db.UserMapper;
-import com.vtesdecks.db.model.DbUser;
-import com.vtesdecks.db.model.DbUserAiAsk;
 import com.vtesdecks.integration.VtesJudgeAiClient;
+import com.vtesdecks.jpa.entity.UserAiAskEntity;
+import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.repositories.UserAiAskRepository;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiAiAskRequest;
 import com.vtesdecks.model.api.ApiAiAskResponse;
 import com.vtesdecks.model.api.ApiAiMessage;
@@ -28,8 +28,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ApiAiController {
 
-    private final UserMapper userMapper;
-    private final UserAiAskMapper userAiAskMapper;
+    private final UserRepository userRepository;
+    private final UserAiAskRepository userAiAskRepository;
     private final VtesJudgeAiClient vtesJudgeAiClient;
 
 
@@ -38,10 +38,10 @@ public class ApiAiController {
     })
     public ApiAiAskResponse ask(@RequestBody ApiAiAskRequest request) {
         ApiAiAskResponse response = new ApiAiAskResponse();
-        DbUser user = userMapper.selectById(ApiUtils.extractUserId());
+        UserEntity user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
         final String userId = user != null ? String.valueOf(user.getId()) : null;
-        if (userId != null && user.isValidated()) {
-            if (!user.isAdmin() && userAiAskMapper.selectLastByUser(userId) > 10) {
+        if (userId != null && user.getValidated() != null && user.getValidated()) {
+            if ((user.getAdmin() == null || !user.getAdmin()) && userAiAskRepository.selectLastByUser(userId) > 10) {
                 response.setMessage("Quota exceeded. Please wait before asking another question.");
             } else {
                 AskRequest askRequest = new AskRequest();
@@ -62,12 +62,12 @@ public class ApiAiController {
     }
 
     private void saveUserAiAsk(String userId, String question, String answer) {
-        DbUserAiAsk userAiAsk = new DbUserAiAsk();
+        UserAiAskEntity userAiAsk = new UserAiAskEntity();
         userAiAsk.setUser(userId);
         userAiAsk.setQuestion(question.substring(0, Math.min(question.length(), 2000)));
         userAiAsk.setAnswer(answer);
-        userAiAskMapper.insert(userAiAsk);
-        //userAiAskMapper.deleteOld();
+        userAiAskRepository.save(userAiAsk);
+        //userAiAskRepository.deleteOld();
     }
 
     private List<ChatMessage> mapChatHistory(List<ApiAiMessage> chatHistory) {

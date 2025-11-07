@@ -9,14 +9,14 @@ import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.DeckType;
-import com.vtesdecks.db.DeckCardMapper;
-import com.vtesdecks.db.DeckMapper;
-import com.vtesdecks.db.UserMapper;
-import com.vtesdecks.db.model.DbDeck;
-import com.vtesdecks.db.model.DbDeckCard;
-import com.vtesdecks.db.model.DbUser;
 import com.vtesdecks.integration.KRCGClient;
+import com.vtesdecks.jpa.entity.DeckCardEntity;
+import com.vtesdecks.jpa.entity.DeckEntity;
+import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.repositories.DeckCardRepository;
+import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.LimitedFormatRepository;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.ImportType;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeckBuilder;
@@ -42,9 +42,9 @@ import java.util.function.Function;
 public class ApiDeckBuilderService {
 
     @Autowired
-    private DeckMapper deckMapper;
+    private DeckRepository deckRepository;
     @Autowired
-    private DeckCardMapper deckCardMapper;
+    private DeckCardRepository deckCardRepository;
     @Autowired
     private LibraryCache libraryCache;
     @Autowired
@@ -52,7 +52,7 @@ public class ApiDeckBuilderService {
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
-    private UserMapper userMapper;
+    private UserRepository userRepository;
     @Autowired
     private DeckIndex deckIndex;
     @Autowired
@@ -61,24 +61,24 @@ public class ApiDeckBuilderService {
 
     public ApiDeckBuilder getDeck(String deckId) {
         Integer userId = ApiUtils.extractUserId();
-        DbDeck deck = deckMapper.selectById(deckId);
-        if (deck == null || !isOwnerOrAdmin(deck, userId) || deck.isDeleted()) {
+        DeckEntity deck = deckRepository.findById(deckId).orElse(null);
+        if (deck == null || !isOwnerOrAdmin(deck, userId) || Boolean.TRUE.equals(deck.getDeleted())) {
             return null;
         }
         ApiDeckBuilder deckBuilder = new ApiDeckBuilder();
         deckBuilder.setId(deck.getId());
         deckBuilder.setName(deck.getName());
         deckBuilder.setDescription(deck.getDescription());
-        deckBuilder.setPublished(deck.isPublished());
-        deckBuilder.setCollection(deck.isCollection());
+        deckBuilder.setPublished(deck.getPublished());
+        deckBuilder.setCollection(deck.getCollection());
         deckBuilder.setCards(new ArrayList<>());
         deckBuilder.setExtra(deck.getExtra());
         if (deckBuilder.getExtra() != null && deckBuilder.getExtra().has("limitedFormat")) {
             updatePredefinedLimitedFormat(deckBuilder.getExtra());
         }
-        List<DbDeckCard> dbDeckCards = deckCardMapper.selectByDeck(deck.getId());
-        for (DbDeckCard deckCard : dbDeckCards) {
-            ApiCard apiCard = getApiCard(deckCard.getId(), deckCard.getNumber());
+        List<DeckCardEntity> dbDeckCards = deckCardRepository.findByIdDeckId(deck.getId());
+        for (DeckCardEntity deckCard : dbDeckCards) {
+            ApiCard apiCard = getApiCard(deckCard.getId().getCardId(), deckCard.getNumber());
             deckBuilder.getCards().add(apiCard);
         }
         return deckBuilder;
@@ -113,18 +113,18 @@ public class ApiDeckBuilderService {
 
     public ApiDeckBuilder storeDeck(ApiDeckBuilder apiDeckBuilder) {
         Integer userId = ApiUtils.extractUserId();
-        DbDeck deck = null;
+        DeckEntity deck = null;
         if (apiDeckBuilder.getId() != null) {
-            deck = deckMapper.selectById(apiDeckBuilder.getId());
+            deck = deckRepository.findById(apiDeckBuilder.getId()).orElse(null);
         }
         String deckId = apiDeckBuilder.getId();
         if (deckId == null) {
-            DbUser user = userMapper.selectById(userId);
+            UserEntity user = userRepository.findById(userId).orElse(null);
             deckId = "user-" + StringUtils.lowerCase(user.getUsername()) + "-" + UUID.randomUUID().toString().replace("-", "");
         }
         boolean exists = true;
         if (deck == null) {
-            deck = new DbDeck();
+            deck = new DeckEntity();
             deck.setId(deckId);
             deck.setType(DeckType.COMMUNITY);
             deck.setUser(userId);
@@ -142,36 +142,33 @@ public class ApiDeckBuilderService {
             deck.setExtra(apiDeckBuilder.getExtra());
             deck.setCollection(apiDeckBuilder.isCollection());
         }
-        if (!exists) {
-            deckMapper.insert(deck);
-        } else {
-            deckMapper.update(deck);
-        }
+        deckRepository.save(deck);
         //Deck cards
         List<ApiCard> deckCards = apiDeckBuilder.getCards();
         Iterables.removeIf(deckCards, Objects::isNull);
-        List<DbDeckCard> dbCards = deckCardMapper.selectByDeck(deck.getId());
+        List<DeckCardEntity> dbCards = deckCardRepository.findByIdDeckId(deck.getId());
         for (ApiCard card : deckCards) {
             if (card.getNumber() != null && card.getNumber() > 0) {
-                DbDeckCard dbCard = dbCards.stream().filter(db -> db.getId().equals(card.getId())).findFirst().orElse(null);
+                DeckCardEntity dbCard = dbCards.stream().filter(db -> db.getId().getCardId().equals(card.getId())).findFirst().orElse(null);
                 if (dbCard == null) {
-                    dbCard = new DbDeckCard();
-                    dbCard.setId(card.getId());
+                    dbCard = new DeckCardEntity();
+                    dbCard.setId(new DeckCardEntity.DeckCardId());
+                    dbCard.getId().setCardId(card.getId());
+                    dbCard.getId().setDeckId(deck.getId());
                     dbCard.setNumber(card.getNumber());
-                    dbCard.setDeckId(deck.getId());
-                    deckCardMapper.insert(dbCard);
+                    deckCardRepository.save(dbCard);
                 } else if (!dbCard.getNumber().equals(card.getNumber())) {
                     dbCard.setNumber(card.getNumber());
-                    deckCardMapper.update(dbCard);
+                    deckCardRepository.save(dbCard);
                 }
             }
         }
         //Delete removed cards
-        for (DbDeckCard card : dbCards) {
+        for (DeckCardEntity card : dbCards) {
             try {
-                Integer deckCard = deckCards.stream().map(ApiCard::getId).filter(id -> id.equals(card.getId())).findFirst().orElse(null);
+                Integer deckCard = deckCards.stream().map(ApiCard::getId).filter(id -> id.equals(card.getId().getCardId())).findFirst().orElse(null);
                 if (deckCard == null) {
-                    deckCardMapper.delete(card.getDeckId(), card.getId());
+                    deckCardRepository.delete(card);
                 }
             } catch (Exception e) {
                 log.error("Unable to delete card {}", card, e);
@@ -185,13 +182,13 @@ public class ApiDeckBuilderService {
 
     public boolean deleteDeck(String deckId) {
         Integer userId = ApiUtils.extractUserId();
-        DbDeck deck = deckMapper.selectById(deckId);
+        DeckEntity deck = deckRepository.findById(deckId).orElse(null);
         if (!isOwnerOrAdmin(deck, userId)) {
             log.warn("Deck delete invalid request for user {}, trying to delete {}", userId, deckId);
             return false;
         }
         deck.setDeleted(true);
-        deckMapper.update(deck);
+        deckRepository.save(deck);
         //Enqueue indexation of new deck
         deckIndex.enqueueRefreshIndex(deck.getId());
         return true;
@@ -199,7 +196,7 @@ public class ApiDeckBuilderService {
 
     public boolean restoreDeck(String deckId) {
         Integer userId = ApiUtils.extractUserId();
-        DbDeck deck = deckMapper.selectById(deckId);
+        DeckEntity deck = deckRepository.findById(deckId).orElse(null);
         if (deck == null) {
             return false;
         } else if (!isOwnerOrAdmin(deck, userId)) {
@@ -207,7 +204,7 @@ public class ApiDeckBuilderService {
             return false;
         }
         deck.setDeleted(false);
-        deckMapper.update(deck);
+        deckRepository.save(deck);
         //Enqueue indexation of new deck
         deckIndex.enqueueRefreshIndex(deck.getId());
         return true;
@@ -261,7 +258,7 @@ public class ApiDeckBuilderService {
 
     public boolean updateCollectionTracker(String deckId, Boolean collectionTracker) {
         Integer userId = ApiUtils.extractUserId();
-        DbDeck deck = deckMapper.selectById(deckId);
+        DeckEntity deck = deckRepository.findById(deckId).orElse(null);
         if (deck == null) {
             return false;
         } else if (!isOwnerOrAdmin(deck, userId) || deck.getType() != DeckType.COMMUNITY) {
@@ -269,18 +266,18 @@ public class ApiDeckBuilderService {
             return false;
         }
         deck.setCollection(collectionTracker);
-        deckMapper.update(deck);
+        deckRepository.save(deck);
         //Enqueue indexation of new deck
         deckIndex.enqueueRefreshIndex(deck.getId());
         return true;
     }
 
-    private boolean isOwnerOrAdmin(DbDeck deck, Integer userId) {
+    private boolean isOwnerOrAdmin(DeckEntity deck, Integer userId) {
         boolean isDeckOwner = deck.getUser() != null && deck.getUser().equals(userId);
         if (isDeckOwner) {
             return true;
         }
-        DbUser user = userMapper.selectById(userId);
-        return user != null && user.isAdmin();
+        UserEntity user = userRepository.findById(userId).orElse(null);
+        return user != null && user.getAdmin() != null && user.getAdmin();
     }
 }

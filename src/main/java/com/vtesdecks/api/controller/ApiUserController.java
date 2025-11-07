@@ -4,8 +4,8 @@ import com.vtesdecks.api.service.ApiCommentService;
 import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.api.service.ApiUserService;
 import com.vtesdecks.api.util.ApiUtils;
-import com.vtesdecks.db.UserMapper;
-import com.vtesdecks.db.model.DbUser;
+import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiComment;
 import com.vtesdecks.model.api.ApiFavoriteDeck;
 import com.vtesdecks.model.api.ApiRateDeck;
@@ -38,7 +38,7 @@ public class ApiUserController {
     @Autowired
     private ApiDeckService deckService;
     @Autowired
-    private UserMapper userMapper;
+    private UserRepository userRepository;
     @Autowired
     private ApiCommentService apiCommentService;
     @Autowired
@@ -59,8 +59,8 @@ public class ApiUserController {
     })
     @ResponseBody
     public ApiUser refreshUser() {
-        DbUser user = userMapper.selectById(ApiUtils.extractUserId());
-        List<String> roles = userMapper.selectRolesByUserId(user.getId());
+        UserEntity user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
+        List<String> roles = userRepository.selectRolesByUserId(user.getId());
         return userService.getAuthenticatedUser(user, roles);
     }
 
@@ -70,10 +70,10 @@ public class ApiUserController {
     @ResponseBody
     public Boolean verify() {
         log.info("Verify user {}", ApiUtils.extractUserId());
-        DbUser user = userMapper.selectById(ApiUtils.extractUserId());
+        UserEntity user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
         if (user != null) {
             user.setValidated(true);
-            userMapper.update(user);
+            userRepository.save(user);
             return true;
         } else {
             return false;
@@ -137,7 +137,7 @@ public class ApiUserController {
     public ApiResponse changeSettings(@RequestBody ApiUserSettings apiUserSettings) {
         log.info("Change settings user {} with displayName {}", ApiUtils.extractUserId(), apiUserSettings.getDisplayName());
         ApiResponse response = new ApiResponse();
-        DbUser user = userMapper.selectById(ApiUtils.extractUserId());
+        UserEntity user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
         if (user != null) {
             boolean requireDeckRefresh = false;
             if (StringUtils.isNotBlank(apiUserSettings.getDisplayName())) {
@@ -155,7 +155,7 @@ public class ApiUserController {
                 }
             }
             if (response.getSuccessful() != null && response.getSuccessful()) {
-                userMapper.update(user);
+                userRepository.save(user);
                 response.setMessage("Profile Settings changed!");
                 if (requireDeckRefresh) {
                     deckUserService.refreshUserDecks(user.getId());
@@ -173,14 +173,14 @@ public class ApiUserController {
         log.info("Change password for user {}", ApiUtils.extractUserId());
         ApiResponse response = new ApiResponse();
         response.setSuccessful(false);
-        DbUser user = userMapper.selectById(ApiUtils.extractUserId());
+        UserEntity user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
         if (user != null) {
             if (!apiUserPassword.getEmail().equalsIgnoreCase(user.getEmail())) {
                 log.warn("Invalid email when reset password");
                 response.setMessage("Invalid reset password link!");
             } else {
                 user.setPassword(passwordEncoder.encode(apiUserPassword.getPassword()));
-                userMapper.update(user);
+                userRepository.save(user);
                 response.setSuccessful(true);
                 response.setMessage("Your password has been successfully reset. You can now log in using your new password.");
             }

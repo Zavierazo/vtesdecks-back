@@ -6,8 +6,8 @@ import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Library;
-import com.vtesdecks.db.CardShopMapper;
-import com.vtesdecks.db.model.DbCardShop;
+import com.vtesdecks.jpa.entity.CardShopEntity;
+import com.vtesdecks.jpa.repositories.CardShopRepository;
 import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiShop;
@@ -25,7 +25,7 @@ public class ApiCardService {
     @Autowired
     private LibraryCache libraryCache;
     @Autowired
-    private CardShopMapper cardShopMapper;
+    private CardShopRepository cardShopRepository;
     @Autowired
     private ApiCardMapper apiCardMapper;
 
@@ -76,7 +76,7 @@ public class ApiCardService {
     }
 
     public List<ApiShop> getCardShops(Integer cardId) {
-        List<DbCardShop> cardShopList = cardShopMapper.selectByCardId(cardId);
+        List<CardShopEntity> cardShopList = cardShopRepository.findByCardId(cardId);
         return apiCardMapper.mapCardShop(cardShopList);
     }
 

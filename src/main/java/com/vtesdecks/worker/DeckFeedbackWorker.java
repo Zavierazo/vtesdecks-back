@@ -2,10 +2,9 @@ package com.vtesdecks.worker;
 
 import com.google.common.hash.Hashing;
 import com.vtesdecks.cache.DeckIndex;
-import com.vtesdecks.db.DeckMapper;
-import com.vtesdecks.db.DeckViewMapper;
-import com.vtesdecks.db.model.DbDeckView;
-import com.vtesdecks.db.model.DbUser;
+import com.vtesdecks.jpa.entity.DeckViewEntity;
+import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.repositories.DeckViewRepository;
 import com.vtesdecks.util.Utils;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,7 +12,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -27,11 +25,9 @@ public class DeckFeedbackWorker implements Runnable {
     private final BlockingQueue<DeckFeedback> operationLogQueue = new LinkedBlockingQueue<>();
     private boolean keepRunning = true;
     @Autowired
-    private DeckMapper deckMapper;
-    @Autowired
     private DeckIndex deckIndex;
     @Autowired
-    private DeckViewMapper deckViewMapper;
+    private DeckViewRepository deckViewRepository;
 
     @Data
     @Builder
@@ -63,19 +59,14 @@ public class DeckFeedbackWorker implements Runnable {
                 DeckFeedback deckFeedback = operationLogQueue.take();
                 if (deckFeedback.getType() == DeckFeedback.FeedbackType.VIEW) {
                     String voteId = deckFeedback.getIp() + (deckFeedback.getUserAgent() != null ? deckFeedback.getUserAgent() : "");
-                    DbDeckView deckView = new DbDeckView();
-                    deckView.setId(Hashing.sha256()
+                    DeckViewEntity deckView = new DeckViewEntity();
+                    deckView.setId(new DeckViewEntity.DeckViewId());
+                    deckView.getId().setId(Hashing.sha256()
                             .hashString(voteId, StandardCharsets.UTF_8)
                             .toString());
-                    deckView.setDeckId(deckFeedback.getDeck());
+                    deckView.getId().setDeckId(deckFeedback.getDeck());
                     deckView.setSource(deckFeedback.getSource());
-                    try {
-                        deckViewMapper.insert(deckView);
-                        log.debug("View for deck {} with {}:{}:{}", deckFeedback.getDeck(), deckFeedback.getUser(), voteId, deckView.getId());
-                    } catch (DuplicateKeyException duplicateKeyException) {
-                        log.debug("Duplicated view for deck {} with {}:{}:{}", deckFeedback.getDeck(), deckFeedback.getUser(), voteId,
-                                deckView.getId());
-                    }
+                    deckViewRepository.save(deckView);
                 }
                 deckIndex.enqueueRefreshIndex(deckFeedback.getDeck());
             } catch (final InterruptedException e) {
@@ -88,7 +79,7 @@ public class DeckFeedbackWorker implements Runnable {
         }
     }
 
-    public void enqueueView(String deck, DbUser user, String source, HttpServletRequest httpServletRequest) {
+    public void enqueueView(String deck, UserEntity user, String source, HttpServletRequest httpServletRequest) {
         operationLogQueue
                 .add(DeckFeedback.builder()
                         .deck(deck)

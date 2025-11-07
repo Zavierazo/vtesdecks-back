@@ -1,7 +1,7 @@
 package com.vtesdecks.api.util;
 
 import com.vtesdecks.configuration.ApiConstants;
-import com.vtesdecks.db.model.DbUser;
+import com.vtesdecks.jpa.entity.UserEntity;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,7 +18,7 @@ public class ApiUtils {
         return Integer.parseInt(userId);
     }
 
-    public static String getProfileImage(DbUser user) {
+    public static String getProfileImage(UserEntity user) {
         String hash = DigestUtils.md5Hex(StringUtils.lowerCase(StringUtils.trim(user.getEmail())));
         return user.getProfileImage() != null ? user.getProfileImage()
                 : "https://www.gravatar.com/avatar/" + hash + "?d=https://vtesdecks.com/assets/img/default_user.png";

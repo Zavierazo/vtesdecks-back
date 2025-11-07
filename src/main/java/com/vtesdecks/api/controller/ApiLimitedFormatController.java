@@ -1,6 +1,6 @@
 package com.vtesdecks.api.controller;
 
-import com.vtesdecks.jpa.entities.LimitedFormat;
+import com.vtesdecks.jpa.entity.LimitedFormatEntity;
 import com.vtesdecks.jpa.repositories.LimitedFormatRepository;
 import com.vtesdecks.model.limitedformat.LimitedFormatPayload;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ public class ApiLimitedFormatController {
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<LimitedFormatPayload>> limitedFormat() {
-        return new ResponseEntity<>(limitedFormatRepository.findAll().stream().map(LimitedFormat::getFormat).toList(), HttpStatus.OK);
+        return new ResponseEntity<>(limitedFormatRepository.findAll().stream().map(LimitedFormatEntity::getFormat).toList(), HttpStatus.OK);
     }
 
 

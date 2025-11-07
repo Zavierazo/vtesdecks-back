@@ -6,10 +6,10 @@ import com.googlecode.cqengine.index.hash.HashIndex;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.indexable.proxy.ProxyCardOption;
-import com.vtesdecks.db.CryptMapper;
-import com.vtesdecks.db.LibraryMapper;
-import com.vtesdecks.db.model.DbCrypt;
-import com.vtesdecks.db.model.DbLibrary;
+import com.vtesdecks.jpa.entity.CryptEntity;
+import com.vtesdecks.jpa.entity.LibraryEntity;
+import com.vtesdecks.jpa.repositories.CryptRepository;
+import com.vtesdecks.jpa.repositories.LibraryRepository;
 import com.vtesdecks.service.ProxyService;
 import com.vtesdecks.util.VtesUtils;
 import jakarta.annotation.PostConstruct;
@@ -32,10 +32,10 @@ public class ProxyCardOptionCache {
     private IndexedCollection<ProxyCardOption> cache = new ConcurrentIndexedCollection<>();
 
     @Autowired
-    private LibraryMapper libraryMapper;
+    private LibraryRepository libraryRepository;
 
     @Autowired
-    private CryptMapper cryptMapper;
+    private CryptRepository cryptRepository;
 
     @Autowired
     private ProxyService proxyService;
@@ -54,7 +54,7 @@ public class ProxyCardOptionCache {
             e.printStackTrace();
         } finally {
             stopWatch.stop();
-            log.info("Index finished in {} ms. Colletion size is {}", stopWatch.getLastTaskTimeMillis(), cache.size());
+            log.info("Index finished in {} ms. Colletion size is {}", stopWatch.lastTaskInfo().getTimeMillis(), cache.size());
         }
     }
 
@@ -77,18 +77,18 @@ public class ProxyCardOptionCache {
     }
 
     public Stream<ProxyCardOption> getAllPossibleOptions() {
-        Stream<ProxyCardOption> libraryStream = libraryMapper.selectAll().stream().flatMap(this::libraryToProxyOptions);
-        Stream<ProxyCardOption> cryptStream = cryptMapper.selectAll().stream().flatMap(this::cryptToProxyOptions);
+        Stream<ProxyCardOption> libraryStream = libraryRepository.findAll().stream().flatMap(this::libraryToProxyOptions);
+        Stream<ProxyCardOption> cryptStream = cryptRepository.findAll().stream().flatMap(this::cryptToProxyOptions);
 
         return Stream.concat(libraryStream, cryptStream);
     }
 
-    private Stream<ProxyCardOption> libraryToProxyOptions(DbLibrary dbLibrary) {
+    private Stream<ProxyCardOption> libraryToProxyOptions(LibraryEntity dbLibrary) {
         return getSetsAbbrev(dbLibrary.getSet())
                 .map(abbrev -> new ProxyCardOption(dbLibrary.getId(), dbLibrary.getName(), abbrev));
     }
 
-    private Stream<ProxyCardOption> cryptToProxyOptions(DbCrypt dbCrypt) {
+    private Stream<ProxyCardOption> cryptToProxyOptions(CryptEntity dbCrypt) {
         return getSetsAbbrev(dbCrypt.getSet())
                 .map(abbrev -> new ProxyCardOption(dbCrypt.getId(), dbCrypt.getName(), abbrev));
     }

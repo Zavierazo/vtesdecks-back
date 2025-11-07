@@ -4,10 +4,10 @@ import com.vtesdecks.api.mapper.ApiUserNotificationMapper;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.indexable.Deck;
-import com.vtesdecks.db.UserNotificationMapper;
-import com.vtesdecks.db.model.DbComment;
-import com.vtesdecks.db.model.DbUserNotification;
 import com.vtesdecks.enums.UserNotificationType;
+import com.vtesdecks.jpa.entity.CommentEntity;
+import com.vtesdecks.jpa.entity.UserNotificationEntity;
+import com.vtesdecks.jpa.repositories.UserNotificationRepository;
 import com.vtesdecks.model.api.ApiUserNotification;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +22,7 @@ public class ApiUserNotificationService {
     private static final int NOTIFICATION_MAX_LENGTH = 1000;
     public static final String NEW_LINE = "<br/>";
     @Autowired
-    private UserNotificationMapper userNotificationMapper;
+    private UserNotificationRepository userNotificationRepository;
     @Autowired
     private ApiUserNotificationMapper apiUserNotificationMapper;
     @Autowired
@@ -32,7 +32,7 @@ public class ApiUserNotificationService {
         if (userId == null) {
             return 0;
         } else {
-            return userNotificationMapper.countUnreadByUser(userId);
+            return userNotificationRepository.countUnreadByUser(userId);
         }
     }
 
@@ -41,7 +41,7 @@ public class ApiUserNotificationService {
         if (userId == null) {
             return Collections.emptyList();
         } else {
-            List<DbUserNotification> userNotifications = userNotificationMapper.selectByUser(userId);
+            List<UserNotificationEntity> userNotifications = userNotificationRepository.findByUserOrderByCreationDateDesc(userId);
             return apiUserNotificationMapper.map(userNotifications);
         }
     }
@@ -49,10 +49,10 @@ public class ApiUserNotificationService {
     public void markAsRead(Integer id) {
         Integer userId = ApiUtils.extractUserId();
         if (userId != null) {
-            DbUserNotification userNotification = userNotificationMapper.selectById(id);
+            UserNotificationEntity userNotification = userNotificationRepository.findById(id).orElse(null);
             if (userNotification != null && userId.equals(userNotification.getUser()) && Boolean.FALSE.equals(userNotification.getRead())) {
                 userNotification.setRead(true);
-                userNotificationMapper.update(userNotification);
+                userNotificationRepository.save(userNotification);
             }
         }
     }
@@ -60,11 +60,11 @@ public class ApiUserNotificationService {
     public void markAllAsRead() {
         Integer userId = ApiUtils.extractUserId();
         if (userId != null) {
-            userNotificationMapper.updateReadAllByUser(userId);
+            userNotificationRepository.updateReadAllByUser(userId);
         }
     }
 
-    public void processCommentNotification(String deckId, DbComment comment, List<DbComment> commentList) {
+    public void processCommentNotification(String deckId, CommentEntity comment, List<CommentEntity> commentList) {
         Deck deck = deckIndex.get(deckId);
         if (deck != null) {
             /* Case 1: Notify deck owner
@@ -88,21 +88,21 @@ public class ApiUserNotificationService {
         }
     }
 
-    private void addCommentNotification(DbComment comment, Deck deck, Integer notifyUserId) {
-        DbUserNotification userNotification = new DbUserNotification();
+    private void addCommentNotification(CommentEntity comment, Deck deck, Integer notifyUserId) {
+        UserNotificationEntity userNotification = new UserNotificationEntity();
         userNotification.setUser(notifyUserId);
         userNotification.setReferenceId(comment.getId());
         userNotification.setRead(false);
         userNotification.setType(UserNotificationType.COMMENT);
         userNotification.setNotification(fixLimit("<strong>New comment on \"" + deck.getName() + "\":</strong>" + NEW_LINE + comment.getContent()));
         userNotification.setLink("/deck/" + deck.getId());
-        userNotificationMapper.insert(userNotification);
+        userNotificationRepository.save(userNotification);
     }
 
 
     public void updateNotification(Integer referenceId, String notification) {
         try {
-            DbUserNotification userNotification = userNotificationMapper.selectByReferenceId(referenceId);
+            UserNotificationEntity userNotification = userNotificationRepository.findByReferenceId(referenceId);
             if (userNotification != null) {
                 int fixedPart = userNotification.getNotification().indexOf(NEW_LINE);
                 if (fixedPart > 0) {
@@ -114,7 +114,7 @@ public class ApiUserNotificationService {
                 } else {
                     userNotification.setNotification(fixLimit(notification));
                 }
-                userNotificationMapper.update(userNotification);
+                userNotificationRepository.save(userNotification);
             }
         } catch (Exception e) {
             log.error("Unexpected error editing comment notification with referenceId {} and new notification {}", referenceId, notification, e);
@@ -122,7 +122,7 @@ public class ApiUserNotificationService {
     }
 
     public void deleteNotification(Integer referenceId) {
-        userNotificationMapper.deleteByReferenceId(referenceId);
+        userNotificationRepository.deleteByReferenceId(referenceId);
     }
 
     private static String fixLimit(String notification) {
@@ -133,14 +133,14 @@ public class ApiUserNotificationService {
     }
 
     public void welcomeNotifications(Integer userId) {
-        DbUserNotification userNotification = new DbUserNotification();
+        UserNotificationEntity userNotification = new UserNotificationEntity();
         userNotification.setUser(userId);
         userNotification.setReferenceId(0);
         userNotification.setRead(false);
         userNotification.setType(UserNotificationType.LINK);
         userNotification.setNotification("<strong>Support VTESDecks on Patreon\uD83E\uDD87</strong><br/>Help us cover server costs and keep improving the site.");
         userNotification.setLink("https://www.patreon.com/bePatron?u=41542528");
-        userNotificationMapper.insert(userNotification);
+        userNotificationRepository.save(userNotification);
 
     }
 

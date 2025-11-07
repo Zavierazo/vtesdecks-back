@@ -48,7 +48,7 @@ public class ApiImageController {
     })
     @ResponseBody
     public byte[] pixelate(@PathVariable Integer id, @RequestParam(name = "sections", required = false) List<Section> sections) throws Exception {
-        URL imageUrl = new URL("https://raw.githubusercontent.com/Zavierazo/vtesdecks-front/main/src/assets/img/cards/" + id + ".jpg");
+        URL imageUrl = new URL("https://raw.githubusercontent.com/Zavierazo/vtesdecks-statics/main/public/img/cards/" + id + ".jpg");
         BufferedImage image = ImageIO.read(imageUrl);
         BufferedImage pixelateImage = pixelateImage(image, sections);
         return convertImageToByteArray(pixelateImage);

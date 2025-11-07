@@ -1,9 +1,9 @@
 package com.vtesdecks.util;
 
 import com.google.common.base.Splitter;
-import com.vtesdecks.db.model.DbCardShop;
-import com.vtesdecks.db.model.DbCrypt;
-import com.vtesdecks.db.model.DbLibrary;
+import com.vtesdecks.jpa.entity.CardShopEntity;
+import com.vtesdecks.jpa.entity.CryptEntity;
+import com.vtesdecks.jpa.entity.LibraryEntity;
 import com.vtesdecks.model.CardType;
 import com.vtesdecks.model.Clan;
 import com.vtesdecks.model.CryptTaint;
@@ -189,7 +189,7 @@ public class VtesUtils {
         return Sect.getFromLibraryText(text).stream().map(Sect::getName).collect(Collectors.toSet());
     }
 
-    public static List<CryptTaint> getCryptTaints(DbCrypt crypt) {
+    public static List<CryptTaint> getCryptTaints(CryptEntity crypt) {
         List<CryptTaint> taints = CryptTaint.getFromText(crypt.getText());
         if (StringUtils.isNotBlank(crypt.getTitle()) && !taints.contains(CryptTaint.TITLED)) {
             taints.add(CryptTaint.TITLED);
@@ -203,7 +203,7 @@ public class VtesUtils {
         return taints;
     }
 
-    public static List<LibraryTaint> getLibraryTaints(DbLibrary library) {
+    public static List<LibraryTaint> getLibraryTaints(LibraryEntity library) {
         List<LibraryTaint> taints = LibraryTaint.getFromText(library.getId(), library.getText());
         if (StringUtils.isNotBlank(library.getBanned()) && !taints.contains(CryptTaint.BANNED)) {
             taints.add(LibraryTaint.BANNED);
@@ -220,7 +220,7 @@ public class VtesUtils {
         return taints;
     }
 
-    public static List<LibraryTitle> getLibraryTitles(DbLibrary library) {
+    public static List<LibraryTitle> getLibraryTitles(LibraryEntity library) {
         List<LibraryTitle> titles = LibraryTitle.getFromLibraryText(library.getId(), library.getText());
         if (library.getId().equals(100431)) {
             titles.add(LibraryTitle.INNER_CIRCLE);
@@ -240,11 +240,11 @@ public class VtesUtils {
         }
     }
 
-    public static boolean isPrintOnDemand(List<DbCardShop> cardShopList) {
+    public static boolean isPrintOnDemand(List<CardShopEntity> cardShopList) {
         return !CollectionUtils.isEmpty(cardShopList);
     }
 
-    public static boolean isPrintOnDemand(List<DbCardShop> cardShopList, String platform) {
+    public static boolean isPrintOnDemand(List<CardShopEntity> cardShopList, String platform) {
         if (CollectionUtils.isEmpty(cardShopList)) {
             return false;
         }

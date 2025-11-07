@@ -10,9 +10,9 @@ import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.SetCache;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Library;
-import com.vtesdecks.jpa.entities.Collection;
-import com.vtesdecks.jpa.entities.CollectionBinder;
-import com.vtesdecks.jpa.entities.CollectionCard;
+import com.vtesdecks.jpa.entity.CollectionBinderEntity;
+import com.vtesdecks.jpa.entity.CollectionCardEntity;
+import com.vtesdecks.jpa.entity.CollectionEntity;
 import com.vtesdecks.jpa.repositories.CollectionBinderRepository;
 import com.vtesdecks.jpa.repositories.CollectionCardRepository;
 import com.vtesdecks.jpa.repositories.CollectionCardRepositoryCustom;
@@ -60,7 +60,7 @@ public class ApiCollectionImportService {
     private final CryptCache cryptCache;
     private final LibraryCache libraryCache;
 
-    public ApiCollectionImport importCardsVtesDecks(Collection collection, MultipartFile file, Integer binderId) {
+    public ApiCollectionImport importCardsVtesDecks(CollectionEntity collectionEntity, MultipartFile file, Integer binderId) {
         ApiCollectionImport apiCollectionImport = new ApiCollectionImport();
         apiCollectionImport.setSuccess(true);
         try {
@@ -84,7 +84,7 @@ public class ApiCollectionImportService {
                 if (binderId == 0) {
                     cards.forEach(card -> card.setBinder(null));
                 } else {
-                    Optional<CollectionBinder> binderOptional = collectionBinderRepository.findByCollectionIdAndId(collection.getId(), binderId);
+                    Optional<CollectionBinderEntity> binderOptional = collectionBinderRepository.findByCollectionIdAndId(collectionEntity.getId(), binderId);
                     if (binderOptional.isPresent()) {
                         cards.forEach(card -> card.setBinder(binderOptional.get().getName()));
                     } else {
@@ -100,7 +100,7 @@ public class ApiCollectionImportService {
                 apiCollectionImport.setErrors(validationError);
                 return apiCollectionImport;
             }
-            importCards(collection, cards);
+            importCards(collectionEntity, cards);
         } catch (Exception e) {
             log.warn("Error importing collection from VTESdecks file: {}", e.getMessage(), e);
             apiCollectionImport.setErrors(List.of("Error reading file: " + e.getMessage()));
@@ -110,7 +110,7 @@ public class ApiCollectionImportService {
     }
 
 
-    public ApiCollectionImport importCardsVDB(Collection collection, MultipartFile file, Integer binderId) {
+    public ApiCollectionImport importCardsVDB(CollectionEntity collectionEntity, MultipartFile file, Integer binderId) {
         ApiCollectionImport apiCollectionImport = new ApiCollectionImport();
         apiCollectionImport.setSuccess(true);
         List<ApiCollectionCardCsv> cards = new ArrayList<>();
@@ -119,7 +119,7 @@ public class ApiCollectionImportService {
                 readSheet(workbook.getSheetAt(i), cards);
             }
             if (binderId != null && binderId != 0) {
-                Optional<CollectionBinder> binderOptional = collectionBinderRepository.findByCollectionIdAndId(collection.getId(), binderId);
+                Optional<CollectionBinderEntity> binderOptional = collectionBinderRepository.findByCollectionIdAndId(collectionEntity.getId(), binderId);
                 if (binderOptional.isPresent()) {
                     cards.forEach(card -> card.setBinder(binderOptional.get().getName()));
                 } else {
@@ -134,7 +134,7 @@ public class ApiCollectionImportService {
                 apiCollectionImport.setErrors(validationError);
                 return apiCollectionImport;
             }
-            importCards(collection, cards);
+            importCards(collectionEntity, cards);
         } catch (Exception e) {
             log.warn("Error importing collection from VDB file: {}", e.getMessage(), e);
             apiCollectionImport.setErrors(List.of("Error reading file: " + e.getMessage()));
@@ -157,7 +157,7 @@ public class ApiCollectionImportService {
         }
     }
 
-    public ApiCollectionImport importCardsLackey(Collection collection, MultipartFile file, Integer binderId) {
+    public ApiCollectionImport importCardsLackey(CollectionEntity collectionEntity, MultipartFile file, Integer binderId) {
         ApiCollectionImport apiCollectionImport = new ApiCollectionImport();
         apiCollectionImport.setSuccess(true);
         List<ApiCollectionCardCsv> cards = new ArrayList<>();
@@ -175,7 +175,7 @@ public class ApiCollectionImportService {
                 cards.add(card);
             }
             if (binderId != null && binderId != 0) {
-                Optional<CollectionBinder> binderOptional = collectionBinderRepository.findByCollectionIdAndId(collection.getId(), binderId);
+                Optional<CollectionBinderEntity> binderOptional = collectionBinderRepository.findByCollectionIdAndId(collectionEntity.getId(), binderId);
                 if (binderOptional.isPresent()) {
                     cards.forEach(card -> card.setBinder(binderOptional.get().getName()));
                 } else {
@@ -190,7 +190,7 @@ public class ApiCollectionImportService {
                 apiCollectionImport.setErrors(validationError);
                 return apiCollectionImport;
             }
-            importCards(collection, cards);
+            importCards(collectionEntity, cards);
         } catch (Exception e) {
             log.warn("Error importing collection from VDB file: {}", e.getMessage(), e);
             apiCollectionImport.setErrors(List.of("Error reading file: " + e.getMessage()));
@@ -200,56 +200,56 @@ public class ApiCollectionImportService {
     }
 
 
-    private void importCards(Collection collection, List<ApiCollectionCardCsv> cards) {
-        List<CollectionCard> collectionCards = collectionCardRepository.findByCollectionId(collection.getId());
+    private void importCards(CollectionEntity collectionEntity, List<ApiCollectionCardCsv> cards) {
+        List<CollectionCardEntity> collectionCardEntities = collectionCardRepository.findByCollectionId(collectionEntity.getId());
         Map<String, Integer> binderMap = new HashMap<>();
         for (ApiCollectionCardCsv card : cards) {
             if (isNotBlank(card.getBinder()) && !binderMap.containsKey(card.getBinder())) {
-                Optional<CollectionBinder> binderOptional = collectionBinderRepository.findByCollectionIdAndNameIgnoreCase(collection.getId(), card.getBinder());
+                Optional<CollectionBinderEntity> binderOptional = collectionBinderRepository.findByCollectionIdAndNameIgnoreCase(collectionEntity.getId(), card.getBinder());
                 if (binderOptional.isPresent()) {
-                    CollectionBinder binder = binderOptional.get();
+                    CollectionBinderEntity binder = binderOptional.get();
                     binderMap.put(card.getBinder(), binder.getId());
                 } else {
-                    CollectionBinder newBinder = new CollectionBinder();
-                    newBinder.setCollectionId(collection.getId());
+                    CollectionBinderEntity newBinder = new CollectionBinderEntity();
+                    newBinder.setCollectionId(collectionEntity.getId());
                     newBinder.setName(card.getBinder());
                     newBinder.setPublicVisibility(false);
                     newBinder = collectionBinderRepository.save(newBinder);
                     binderMap.put(card.getBinder(), newBinder.getId());
                 }
             }
-            CollectionCard collectionCard = this.apiCollectionMapper.mapCsvToEntity(card);
+            CollectionCardEntity collectionCardEntity = this.apiCollectionMapper.mapCsvToEntity(card);
             // Normalize card attributes
-            if (isBlank(collectionCard.getSet())) {
-                collectionCard.setSet(null);
+            if (isBlank(collectionCardEntity.getSet())) {
+                collectionCardEntity.setSet(null);
             }
-            if (isBlank(collectionCard.getCondition())) {
-                collectionCard.setCondition(null);
+            if (isBlank(collectionCardEntity.getCondition())) {
+                collectionCardEntity.setCondition(null);
             }
-            if (isBlank(collectionCard.getLanguage())) {
-                collectionCard.setLanguage("EN"); // Default to English if no language is specified
+            if (isBlank(collectionCardEntity.getLanguage())) {
+                collectionCardEntity.setLanguage("EN"); // Default to English if no language is specified
             }
-            if (isBlank(collectionCard.getNotes())) {
-                collectionCard.setNotes(null);
+            if (isBlank(collectionCardEntity.getNotes())) {
+                collectionCardEntity.setNotes(null);
             }
-            collectionCard.setCollectionId(collection.getId());
-            collectionCard.setBinderId(binderMap.getOrDefault(card.getBinder(), null));
-            collectionCard.setCardId(getCardId(card));
-            Optional<CollectionCard> existingCardOptional = collectionCards.stream()
-                    .filter(c -> Objects.equals(c.getCardId(), collectionCard.getCardId())
-                            && StringUtils.equalsIgnoreCase(c.getSet(), collectionCard.getSet())
-                            && StringUtils.equalsIgnoreCase(c.getCondition(), collectionCard.getCondition())
-                            && StringUtils.equalsIgnoreCase(c.getLanguage(), collectionCard.getLanguage())
-                            && Objects.equals(c.getBinderId(), collectionCard.getBinderId())
-                            && StringUtils.equalsIgnoreCase(c.getNotes(), collectionCard.getNotes()))
+            collectionCardEntity.setCollectionId(collectionEntity.getId());
+            collectionCardEntity.setBinderId(binderMap.getOrDefault(card.getBinder(), null));
+            collectionCardEntity.setCardId(getCardId(card));
+            Optional<CollectionCardEntity> existingCardOptional = collectionCardEntities.stream()
+                    .filter(c -> Objects.equals(c.getCardId(), collectionCardEntity.getCardId())
+                            && StringUtils.equalsIgnoreCase(c.getSet(), collectionCardEntity.getSet())
+                            && StringUtils.equalsIgnoreCase(c.getCondition(), collectionCardEntity.getCondition())
+                            && StringUtils.equalsIgnoreCase(c.getLanguage(), collectionCardEntity.getLanguage())
+                            && Objects.equals(c.getBinderId(), collectionCardEntity.getBinderId())
+                            && StringUtils.equalsIgnoreCase(c.getNotes(), collectionCardEntity.getNotes()))
                     .findFirst();
             if (existingCardOptional.isPresent()) {
                 // If a card with the same attributes already exists, increase it instead of creating a new one
-                CollectionCard existingCard = existingCardOptional.get();
+                CollectionCardEntity existingCard = existingCardOptional.get();
                 existingCard.setNumber(existingCard.getNumber() + card.getNumber());
                 collectionCardRepository.save(existingCard);
             } else {
-                collectionCardRepository.save(collectionCard);
+                collectionCardRepository.save(collectionCardEntity);
             }
         }
     }

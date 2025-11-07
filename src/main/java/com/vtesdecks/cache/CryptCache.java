@@ -12,14 +12,14 @@ import com.googlecode.cqengine.query.option.Thresholds;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.factory.CryptFactory;
 import com.vtesdecks.cache.indexable.Crypt;
-import com.vtesdecks.db.CardShopMapper;
-import com.vtesdecks.db.CryptI18nMapper;
-import com.vtesdecks.db.CryptMapper;
-import com.vtesdecks.db.DeckCardMapper;
-import com.vtesdecks.db.model.DbCardCount;
-import com.vtesdecks.db.model.DbCardShop;
-import com.vtesdecks.db.model.DbCrypt;
-import com.vtesdecks.db.model.DbCryptI18n;
+import com.vtesdecks.jpa.entity.CardShopEntity;
+import com.vtesdecks.jpa.entity.CryptEntity;
+import com.vtesdecks.jpa.entity.CryptI18nEntity;
+import com.vtesdecks.jpa.entity.extra.DeckCardCount;
+import com.vtesdecks.jpa.repositories.CardShopRepository;
+import com.vtesdecks.jpa.repositories.CryptI18nRepository;
+import com.vtesdecks.jpa.repositories.CryptRepository;
+import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.model.CryptTaint;
 import com.vtesdecks.util.Utils;
 import jakarta.annotation.PostConstruct;
@@ -32,7 +32,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -55,13 +54,13 @@ import static com.googlecode.cqengine.query.option.EngineThresholds.INDEX_ORDERI
 public class CryptCache {
     private IndexedCollection<Crypt> cache = new ConcurrentIndexedCollection<Crypt>();
     @Autowired
-    private CryptMapper cryptMapper;
+    private CryptRepository cryptRepository;
     @Autowired
-    private CryptI18nMapper cryptI18nMapper;
+    private CryptI18nRepository cryptI18nRepository;
     @Autowired
-    private DeckCardMapper deckCardMapper;
+    private DeckCardRepository deckCardRepository;
     @Autowired
-    private CardShopMapper cardShopMapper;
+    private CardShopRepository cardShopRepository;
     @Autowired
     private CryptFactory cryptFactory;
 
@@ -84,17 +83,17 @@ public class CryptCache {
         StopWatch stopWatch = new StopWatch();
         try {
             stopWatch.start();
-            Set<Integer> currentKeys = new HashSet<>(cache.stream().map(Crypt::getId).collect(Collectors.toSet()));
-            List<DbCardCount> countByCard = deckCardMapper.selectCountByCard();
-            List<DbCardCount> deckCountByCard = deckCardMapper.selectDeckCountByCard();
-            List<DbCardShop> cardShopList = cardShopMapper.selectAll();
-            List<DbCryptI18n> cryptI18nList = cryptI18nMapper.selectAll();
-            for (DbCrypt crypt : cryptMapper.selectAll()) {
+            Set<Integer> currentKeys = cache.stream().map(Crypt::getId).collect(Collectors.toSet());
+            List<DeckCardCount> countByCard = deckCardRepository.selectCountByCard();
+            List<DeckCardCount> deckCountByCard = deckCardRepository.selectDeckCountByCard();
+            List<CardShopEntity> cardShopList = cardShopRepository.findAll();
+            List<CryptI18nEntity> cryptI18nList = cryptI18nRepository.findAll();
+            for (CryptEntity crypt : cryptRepository.findAll()) {
                 refreshIndex(crypt,
-                        cryptI18nList.stream().filter(cryptI18n -> cryptI18n.getId().equals(crypt.getId())).collect(Collectors.toList()),
-                        cardShopList.stream().filter(cardShop -> cardShop.getCardId().equals(crypt.getId())).collect(Collectors.toList()),
-                        deckCountByCard.stream().filter(count -> count.getId().equals(crypt.getId())).mapToLong(DbCardCount::getNumber).sum(),
-                        countByCard.stream().filter(count -> count.getId().equals(crypt.getId())).mapToLong(DbCardCount::getNumber).sum());
+                        cryptI18nList.stream().filter(cryptI18n -> cryptI18n.getId().getCardId().equals(crypt.getId())).toList(),
+                        cardShopList.stream().filter(cardShop -> cardShop.getCardId().equals(crypt.getId())).toList(),
+                        deckCountByCard.stream().filter(count -> count.getId().equals(crypt.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum(),
+                        countByCard.stream().filter(count -> count.getId().equals(crypt.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum());
                 currentKeys.remove(crypt.getId());
             }
             if (!currentKeys.isEmpty()) {
@@ -105,11 +104,11 @@ public class CryptCache {
             }
         } finally {
             stopWatch.stop();
-            log.info("Index finished in {} ms. Colletion size is {}", stopWatch.getLastTaskTimeMillis(), cache.size());
+            log.info("Index finished in {} ms. Colletion size is {}", stopWatch.lastTaskInfo().getTimeMillis(), cache.size());
         }
     }
 
-    private void refreshIndex(DbCrypt crypt, List<DbCryptI18n> cryptI18nList, List<DbCardShop> cardShopList, long deckCount, long count) {
+    private void refreshIndex(CryptEntity crypt, List<CryptI18nEntity> cryptI18nList, List<CardShopEntity> cardShopList, long deckCount, long count) {
         try {
             Crypt oldDeck = get(crypt.getId());
             Crypt newDeck = cryptFactory.getCrypt(crypt, cryptI18nList, cardShopList);
@@ -150,7 +149,7 @@ public class CryptCache {
         }
         return cache.retrieve(query, queryOptions);
     }
-    
+
     public ResultSet<Crypt> selectAll(List<String> types, List<String> clans, List<String> disciplines) {
         Thresholds threshold = QueryFactory.applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
         QueryOptions queryOptions = queryOptions(orderBy(ascending(Crypt.NAME_ATTRIBUTE)), threshold);

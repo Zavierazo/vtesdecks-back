@@ -1,12 +1,6 @@
 package com.vtesdecks.configuration;
 
-import com.vtesdecks.db.CryptMapper;
-import com.vtesdecks.db.handlers.JsonNodeHandler;
-import com.vtesdecks.db.handlers.LocalDateHandler;
-import com.vtesdecks.db.handlers.LocalDateTimeHandler;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.ibatis.type.TypeHandler;
-import org.mybatis.spring.SqlSessionFactoryBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.flyway.FlywayDataSource;
 import org.springframework.context.annotation.Bean;
@@ -15,7 +9,6 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 import javax.sql.DataSource;
-import java.net.UnknownHostException;
 
 @Configuration
 public class DatabaseConfiguration {
@@ -43,24 +36,7 @@ public class DatabaseConfiguration {
     }
 
     @Bean
-    public DataSourceTransactionManager transactionManager() throws UnknownHostException {
+    public DataSourceTransactionManager transactionManager() {
         return new DataSourceTransactionManager(dataSource());
     }
-
-    @Bean
-    public SqlSessionFactoryBean sqlSessionFactory() throws Exception {
-        SqlSessionFactoryBean sessionFactory = new SqlSessionFactoryBean();
-        sessionFactory.setDataSource(dataSource());
-        sessionFactory.setTypeAliasesPackage(CryptMapper.class.getPackage().getName());
-        sessionFactory.setTypeHandlers(new TypeHandler[]{
-                new LocalDateTimeHandler(),
-                new LocalDateHandler(),
-                new JsonNodeHandler(),
-        });
-        org.apache.ibatis.session.Configuration configuration = new org.apache.ibatis.session.Configuration();
-        configuration.setMapUnderscoreToCamelCase(true);
-        sessionFactory.setConfiguration(configuration);
-        return sessionFactory;
-    }
-
 }

@@ -8,10 +8,10 @@ import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.CollectionTracker;
 import com.vtesdecks.cache.indexable.deck.card.Card;
-import com.vtesdecks.db.DeckUserMapper;
-import com.vtesdecks.db.model.DbDeckUser;
+import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.repositories.CollectionCardRepository;
 import com.vtesdecks.jpa.repositories.CollectionRepository;
+import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.model.Errata;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeck;
@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import static com.vtesdecks.util.VtesUtils.isCrypt;
 
@@ -37,7 +38,7 @@ import static com.vtesdecks.util.VtesUtils.isCrypt;
 public abstract class ApiDeckMapper {
 
     @Autowired
-    private DeckUserMapper deckUserMapper;
+    private DeckUserRepository deckUserRepository;
     @Autowired
     private LibraryCache libraryCache;
     @Autowired
@@ -77,10 +78,8 @@ public abstract class ApiDeckMapper {
         }
         if (userId != null) {
             afterMappingUser(api, userId, deck);
-            DbDeckUser deckUser = deckUserMapper.selectById(userId, deck.getId());
-            if (deckUser != null) {
-                api.setRated(deckUser.getRate() != null);
-            }
+            Optional<DeckUserEntity> deckUser = deckUserRepository.findById(new DeckUserEntity.DeckUserId(userId, deck.getId()));
+            deckUser.ifPresent(deckUserEntity -> api.setRated(deckUserEntity.getRate() != null));
         }
         if (collectionTracker || (Boolean.TRUE.equals(api.getOwner()) && Boolean.TRUE.equals(api.getCollection()))) {
             Map<Integer, Integer> collectionMap = apiCollectionService.getCollectionCardsMap();

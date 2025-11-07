@@ -6,7 +6,6 @@ import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.card.Card;
-import com.vtesdecks.db.CryptMapper;
 import com.vtesdecks.model.DeckExportType;
 import com.vtesdecks.model.Discipline;
 import com.vtesdecks.service.DeckExportService;
@@ -34,8 +33,6 @@ public class DeckExportServiceImpl implements DeckExportService {
     private LibraryCache libraryCache;
     @Autowired
     private CryptCache cryptCache;
-    @Autowired
-    private CryptMapper cryptMapper;
 
     @Override
     public String export(DeckExportType type, String deckId) {

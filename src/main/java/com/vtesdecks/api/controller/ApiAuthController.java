@@ -2,8 +2,8 @@ package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.ApiUserNotificationService;
 import com.vtesdecks.api.service.ApiUserService;
-import com.vtesdecks.db.UserMapper;
-import com.vtesdecks.db.model.DbUser;
+import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiResponse;
 import com.vtesdecks.model.api.ApiUser;
 import com.vtesdecks.model.api.ApiUserCountry;
@@ -41,7 +41,7 @@ public class ApiAuthController {
     private static final String FORM_DATA_CONFIRM_PASSWORD = "confirmPassword";
     private static final String FORM_DATA_RECAPTCHA = "g-recaptcha-response";
     @Autowired
-    private UserMapper userMapper;
+    private UserRepository userRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
@@ -63,15 +63,15 @@ public class ApiAuthController {
         ApiUser user = new ApiUser();
         user.setUser(username);
         if (username != null) {
-            DbUser dbUser = userMapper.selectByUserName(username);
+            UserEntity dbUser = userRepository.findByUsername(username);
             if (dbUser == null) {
-                dbUser = userMapper.selectByEmail(username);
+                dbUser = userRepository.findByEmail(username);
             }
             if (dbUser != null) {
                 String password = data.get(FORM_DATA_PASSWORD);
                 if (password != null && passwordEncoder.matches(password, dbUser.getPassword())) {
-                    List<String> roles = userMapper.selectRolesByUserId(dbUser.getId());
-                    if (!dbUser.isValidated()) {
+                    List<String> roles = userRepository.selectRolesByUserId(dbUser.getId());
+                    if (Boolean.FALSE.equals(dbUser.getValidated())) {
                         if (recaptchaService.isResponseValid(Utils.getIp(httpServletRequest), data.get(FORM_DATA_RECAPTCHA))
                                 && (dbUser.getModificationDate() == null
                                 || dbUser.getModificationDate().isBefore(LocalDateTime.now().minusMinutes(30)))) {
@@ -126,12 +126,12 @@ public class ApiAuthController {
                 log.warn("Invalid password register for user{}", username);
             } else {
                 log.info("Register request for {} with email {}", username, email);
-                DbUser actual = userMapper.selectByEmail(email);
+                UserEntity actual = userRepository.findByEmail(email);
                 if (actual == null) {
-                    actual = userMapper.selectByUserName(username);
+                    actual = userRepository.findByUsername(username);
                 }
                 if (actual == null) {
-                    DbUser user = new DbUser();
+                    UserEntity user = new UserEntity();
                     user.setUsername(username);
                     user.setEmail(email);
                     user.setPassword(passwordEncoder.encode(password));
@@ -139,8 +139,7 @@ public class ApiAuthController {
                     user.setAdmin(false);
                     user.setLoginHash(getRandomLoginHash());
                     user.setDisplayName(data.get(FORM_DATA_USERNAME));
-                    userMapper.insert(user);
-                    DbUser dbUser = userMapper.selectByUserName(username);
+                    UserEntity dbUser = userRepository.save(user);
                     mailService.sendConfirmationMail(dbUser.getEmail(), userService.getJWTToken(dbUser, new ArrayList<>(), true));
                     try {
                         userNotificationService.welcomeNotifications(dbUser.getId());
@@ -175,13 +174,13 @@ public class ApiAuthController {
                 log.warn("Invalid email forgot password {}", email);
             } else {
                 log.info("Forgot password request with email {}", email);
-                DbUser user = userMapper.selectByEmail(email);
+                UserEntity user = userRepository.findByEmail(email);
                 if (user != null) {
                     if (user.getForgotPasswordDate() == null || user.getForgotPasswordDate().isBefore(LocalDateTime.now().minusMinutes(30))) {
-                        List<String> roles = userMapper.selectRolesByUserId(user.getId());
+                        List<String> roles = userRepository.selectRolesByUserId(user.getId());
                         mailService.sendForgotPasswordMail(user.getEmail(), userService.getJWTToken(user, roles, true));
                         user.setForgotPasswordDate(LocalDateTime.now());
-                        userMapper.update(user);
+                        userRepository.save(user);
                         log.info("Forgot password request for {} success", email);
                     } else {
                         log.info("Forgot password request for {} duplicated", email);

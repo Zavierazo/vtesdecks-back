@@ -2,11 +2,11 @@ package com.vtesdecks.scheduler;
 
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
-import com.vtesdecks.db.CardShopMapper;
-import com.vtesdecks.db.TextSearchMapper;
-import com.vtesdecks.db.model.DbCardShop;
-import com.vtesdecks.db.model.DbTextSearch;
 import com.vtesdecks.integration.GamePodClient;
+import com.vtesdecks.jpa.entity.CardShopEntity;
+import com.vtesdecks.jpa.entity.extra.TextSearch;
+import com.vtesdecks.jpa.repositories.CardShopRepository;
+import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.model.shopify.Product;
 import com.vtesdecks.model.shopify.ProductsResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -32,10 +32,10 @@ public class GamePodScheduler {
     private static final String SPECIAL_CHARACTERS = "[_,:\"'”\\s]";
 
     @Autowired
-    private TextSearchMapper textSearchMapper;
+    private DeckCardRepository deckCardRepository;
 
     @Autowired
-    private CardShopMapper cardShopMapper;
+    private CardShopRepository cardShopRepository;
 
     @Autowired
     private GamePodClient gamePodClient;
@@ -43,7 +43,7 @@ public class GamePodScheduler {
     @Scheduled(cron = "0 0 0 * * 0")
     public void scrapCards() {
         log.info("Starting GP scrapping...");
-        List<DbCardShop> currentCards = cardShopMapper.selectByPlatform(PLATFORM);
+        List<CardShopEntity> currentCards = cardShopRepository.findByPlatform(PLATFORM);
         for (int pageIndex = 1; pageIndex <= 50; pageIndex++) {
             try {
                 ProductsResponse productsResponse = gamePodClient.getProducts(250, pageIndex);
@@ -58,16 +58,16 @@ public class GamePodScheduler {
         log.info("GP scrap finished!");
     }
 
-    private void cleanOutdatedCards(List<DbCardShop> currentCards) {
+    private void cleanOutdatedCards(List<CardShopEntity> currentCards) {
         WebClient client = configureClient();
-        for (DbCardShop cardShop : currentCards) {
+        for (CardShopEntity cardShop : currentCards) {
             try {
                 client.getPage(cardShop.getLink());
                 log.warn("Card {} still exists in shop {}", cardShop.getCardId(), cardShop.getLink());
             } catch (FailingHttpStatusCodeException e) {
                 if (e.getStatusCode() == 404) {
                     log.warn("Card {} no longer exists in shop {}", cardShop.getCardId(), cardShop.getLink());
-                    cardShopMapper.delete(cardShop.getId());
+                    cardShopRepository.delete(cardShop);
                 } else {
                     log.error("Error scrapping GP page {}", cardShop.getLink(), e);
                 }
@@ -86,7 +86,7 @@ public class GamePodScheduler {
         return client;
     }
 
-    private void parsePage(List<Product> products, List<DbCardShop> currentCards) {
+    private void parsePage(List<Product> products, List<CardShopEntity> currentCards) {
         for (Product product : products) {
             try {
                 if (product.getTags() != null && (!product.getTags().contains("Vampire") || product.getTags().contains("Tapete") || product.getTags().contains("Accesorios") || product.getTags().contains("Tokens"))) {
@@ -127,23 +127,23 @@ public class GamePodScheduler {
             cardNameRaw = cardNameRaw.substring(0, typeAltIndex);
         }
 
-        List<DbTextSearch> cards = textSearchMapper.search(cardNameRaw.replace("_", ":"), advanced);
+        List<TextSearch> cards = deckCardRepository.search(cardNameRaw.replace("_", ":"), advanced);
         if (CollectionUtils.isEmpty(cards)) {
             log.warn("Unable to found card with name '{}'", cardNameRaw);
             return null;
         }
 
-        final DbTextSearch card;
+        final TextSearch card;
         if (cards.size() > 1) {
             final String cardName = cardNameRaw.replaceAll(SPECIAL_CHARACTERS, "").trim();
-            Optional<DbTextSearch> exactCard = cards.stream()
+            Optional<TextSearch> exactCard = cards.stream()
                     .filter(cardSearch -> cardSearch.getName().replaceAll(SPECIAL_CHARACTERS, "")
                             .equalsIgnoreCase(cardName))
                     .findFirst();
             if (exactCard.isPresent()) {
                 card = exactCard.get();
             } else {
-                log.warn("Multiple finds for '{}' with raw '{}': {}", cardName, cardNameRaw, cards.stream().map(DbTextSearch::getName).toList());
+                log.warn("Multiple finds for '{}' with raw '{}': {}", cardName, cardNameRaw, cards.stream().map(TextSearch::getName).toList());
                 return null;
             }
         } else {
@@ -157,7 +157,7 @@ public class GamePodScheduler {
             return null;
         }
 
-        DbCardShop cardShop = DbCardShop.builder()
+        CardShopEntity cardShop = CardShopEntity.builder()
                 .cardId(card.getId())
                 .link(link)
                 .platform(PLATFORM)
@@ -166,14 +166,14 @@ public class GamePodScheduler {
                 .currency(EURO)
                 .build();
         log.trace("Scrapped card {}", cardShop);
-        List<DbCardShop> cardShopList = cardShopMapper.selectByCardIdAndPlatform(cardShop.getCardId(), PLATFORM);
+        List<CardShopEntity> cardShopList = cardShopRepository.findByCardIdAndPlatform(cardShop.getCardId(), PLATFORM);
         if (CollectionUtils.isEmpty(cardShopList)) {
-            cardShopMapper.insert(cardShop);
+            cardShopRepository.save(cardShop);
         } else {
-            DbCardShop current = cardShopList.getFirst();
+            CardShopEntity current = cardShopList.getFirst();
             cardShop.setId(current.getId());
             if (!cardShop.equals(current)) {
-                cardShopMapper.update(cardShop);
+                cardShopRepository.save(cardShop);
             }
         }
         return cardShop.getCardId();
