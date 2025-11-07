@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -127,9 +128,10 @@ public class ApiCommentService {
     }
 
     private List<CommentEntity> getActiveComments(String pageIdentifier) {
-        return commentRepository.findByPageIdentifierOrderByCreationDate(pageIdentifier)
+        return commentRepository.findByPageIdentifier(pageIdentifier)
                 .stream()
                 .filter(comment -> Boolean.FALSE.equals(comment.getDeleted()))
+                .sorted(Comparator.comparing(CommentEntity::getCreationDate))
                 .toList();
     }
 

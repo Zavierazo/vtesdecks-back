@@ -9,5 +9,5 @@ public interface CommentRepository extends JpaRepository<CommentEntity, Integer>
 
     Long countByPageIdentifierAndDeletedFalse(String pageIdentifier);
 
-    List<CommentEntity> findByPageIdentifierOrderByCreationDate(String pageIdentifier);
+    List<CommentEntity> findByPageIdentifier(String pageIdentifier);
 }
