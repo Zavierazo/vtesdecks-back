@@ -44,6 +44,7 @@ public class ApiCommentService {
             //commentEntity.setParent(comment.getParent());
             commentEntity.setPageIdentifier(getPageIdentifier(comment.getDeckId()));
             commentEntity.setContent(comment.getContent());
+            commentEntity.setDeleted(false);
             commentRepository.save(commentEntity);
             sendNotifications(comment, commentEntity);
             return getComment(user, commentRepository.findById(commentEntity.getId()));
