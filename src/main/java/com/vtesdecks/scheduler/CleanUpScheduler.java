@@ -2,6 +2,7 @@ package com.vtesdecks.scheduler;
 
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.DeckViewEntity;
+import com.vtesdecks.jpa.repositories.DeckCardHistoryRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
@@ -28,6 +29,8 @@ public class CleanUpScheduler {
     private DeckCardRepository deckCardRepository;
     @Autowired
     private DeckUserRepository deckUserRepository;
+    @Autowired
+    private DeckCardHistoryRepository deckCardHistoryRepository;
 
     @Scheduled(cron = "${jobs.deckViewCleanCron:0 0 2 * * *}")
     public void deckViewCleanScheduler() {
@@ -65,6 +68,7 @@ public class CleanUpScheduler {
                 deckViewRepository.deleteByIdDeckId(deck.getId());
                 deckCardRepository.deleteByIdDeckId(deck.getId());
                 deckUserRepository.deleteByIdDeckId(deck.getId());
+                deckCardHistoryRepository.deleteByDeckId(deck.getId());
                 deckRepository.delete(deck);
             }
         }
