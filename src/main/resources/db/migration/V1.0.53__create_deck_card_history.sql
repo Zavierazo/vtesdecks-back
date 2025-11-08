@@ -16,37 +16,45 @@ CREATE TABLE `deck_card_history` (
 
 -- Initialize history with current deck_card content
 INSERT INTO `deck_card_history` (`action`, `deck_id`, `card_id`, `number`, `creation_date`)
-SELECT 0, `deck_id`, `id` as `card_id`, `number`, NOW()
-FROM `deck_card`;
+SELECT 0, dc.`deck_id`, dc.`id` as `card_id`, dc.`number`, NOW()
+FROM `deck_card` dc
+JOIN `deck` d ON dc.deck_id = d.id
+WHERE d.`type` = 'COMMUNITY';
 
--- Create triggers for automatic history tracking
+-- Crear triggers para seguimiento automático solo si el deck es COMMUNITY
 DELIMITER $$
 
--- Trigger for INSERT operations
+-- Trigger para INSERT en deck_card
 CREATE TRIGGER `deck_card_insert_history`
     AFTER INSERT ON `deck_card`
     FOR EACH ROW
 BEGIN
-    INSERT INTO `deck_card_history` (`deck_id`, `card_id`, `number`, `action`)
-    VALUES (NEW.deck_id, NEW.id, NEW.number, 0);
+    IF (SELECT `type` FROM `deck` WHERE `id` = NEW.deck_id) = 'COMMUNITY' THEN
+        INSERT INTO `deck_card_history` (`deck_id`, `card_id`, `number`, `action`)
+        VALUES (NEW.deck_id, NEW.id, NEW.number, 0);
+END IF;
 END$$
 
--- Trigger for UPDATE operations
+-- Trigger para UPDATE en deck_card
 CREATE TRIGGER `deck_card_update_history`
     AFTER UPDATE ON `deck_card`
     FOR EACH ROW
 BEGIN
-    INSERT INTO `deck_card_history` (`deck_id`, `card_id`, `number`, `action`)
-    VALUES (NEW.deck_id, NEW.id, NEW.number, 1);
+    IF (SELECT `type` FROM `deck` WHERE `id` = NEW.deck_id) = 'COMMUNITY' THEN
+        INSERT INTO `deck_card_history` (`deck_id`, `card_id`, `number`, `action`)
+        VALUES (NEW.deck_id, NEW.id, NEW.number, 1);
+END IF;
 END$$
 
--- Trigger for DELETE operations
+-- Trigger para DELETE en deck_card
 CREATE TRIGGER `deck_card_delete_history`
     AFTER DELETE ON `deck_card`
     FOR EACH ROW
 BEGIN
-    INSERT INTO `deck_card_history` (`deck_id`, `card_id`, `number`, `action`)
-    VALUES (OLD.deck_id, OLD.id, OLD.number, 2);
+    IF (SELECT `type` FROM `deck` WHERE `id` = OLD.deck_id) = 'COMMUNITY' THEN
+        INSERT INTO `deck_card_history` (`deck_id`, `card_id`, `number`, `action`)
+        VALUES (OLD.deck_id, OLD.id, OLD.number, 2);
+END IF;
 END$$
 
 DELIMITER ;
