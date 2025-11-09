@@ -48,13 +48,12 @@ public class CleanUpScheduler {
                 if (optionalDeck.isPresent()) {
                     DeckEntity deck = optionalDeck.get();
                     deck.setViews(deck.getViews() + deckViewEntry.getValue());
-                    deckRepository.save(deck);
+                    deckRepository.saveAndFlush(deck);
                 }
             }
             //Remove old views
-            for (DeckViewEntity view : views) {
-                deckViewRepository.delete(view);
-            }
+            deckViewRepository.deleteAll(views);
+            deckViewRepository.flush();
             log.info("Cleaned {} deck views!", views.size());
         }
     }
@@ -66,10 +65,15 @@ public class CleanUpScheduler {
             for (DeckEntity deck : decksToDelete) {
                 log.warn("Deleting deck forever: {}", deck);
                 deckViewRepository.deleteByIdDeckId(deck.getId());
+                deckViewRepository.flush();
                 deckCardRepository.deleteByIdDeckId(deck.getId());
+                deckCardRepository.flush();
                 deckUserRepository.deleteByIdDeckId(deck.getId());
+                deckUserRepository.flush();
                 deckCardHistoryRepository.deleteByDeckId(deck.getId());
+                deckCardHistoryRepository.flush();
                 deckRepository.delete(deck);
+                deckRepository.flush();
             }
         }
 

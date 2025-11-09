@@ -66,7 +66,7 @@ public class DeckFeedbackWorker implements Runnable {
                             .toString());
                     deckView.getId().setDeckId(deckFeedback.getDeck());
                     deckView.setSource(deckFeedback.getSource());
-                    deckViewRepository.save(deckView);
+                    deckViewRepository.saveAndFlush(deckView);
                 }
                 deckIndex.enqueueRefreshIndex(deckFeedback.getDeck());
             } catch (final InterruptedException e) {

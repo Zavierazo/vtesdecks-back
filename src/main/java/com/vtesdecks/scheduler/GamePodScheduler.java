@@ -74,8 +74,8 @@ public class GamePodScheduler {
             } catch (IOException e) {
                 log.error("Error scrapping GP page {}", cardShop.getLink(), e);
             }
-
         }
+        cardShopRepository.flush();
     }
 
     private WebClient configureClient() {
@@ -105,6 +105,7 @@ public class GamePodScheduler {
                 log.error("Error scrapping GP element {}", product, e);
             }
         }
+        cardShopRepository.flush();
     }
 
     private Integer scrapCard(Product productCard) {

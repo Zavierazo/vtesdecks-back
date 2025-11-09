@@ -44,7 +44,7 @@ public class VtesdleTodayScheduler {
             VtesdleDayEntity vtesdleDay = new VtesdleDayEntity();
             vtesdleDay.setDay(today);
             vtesdleDay.setCardId(selectedCard);
-            vtesdleDayRepository.save(vtesdleDay);
+            vtesdleDayRepository.saveAndFlush(vtesdleDay);
         }
     }
 }

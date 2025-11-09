@@ -24,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -59,10 +58,6 @@ public class TournamentDeckScheduler {
     private static final Pattern CARD_ALT = Pattern.compile("(?<name>.*)\\s+[xX](?<number>\\d+)", Pattern.CASE_INSENSITIVE);
     private static final Set<String> DISCARDED_NAMES = Sets.newHashSet("Equipment:", "Reactions:", "Masters", "Actions", "Reactions", "REActions:", "MODIFIERS:", "Other:", "Masters:", "actions", "Disciplineless cards:", "Events:", "Actions:", "Modifiers:", "Combo:", "Mods", "Cards", "Fortitude Cards:", "REActions", "Fortitude Cards:", "Allies:", "Equipment", "Combo", "Modifiers", "Event");
     private static final Map<String, String> TYPO_FIXES = ImmutableMap.<String, String>builder().put("Denys", "Deny").put("Powerbase: Tshuane", "Powerbase: Tshwane").put("Mr Wintrop", "Mr. Winthrop").put("Mr. Wintrop", "Mr. Winthrop").put("AK-", "AK-47").put("Skin of Stell", "Skin of Steel").put("Rejuvenation", "Rejuvenate").put("Bonespour", "Bone Spur").put("Papillion", "Papillon").put("Diversiom", "Diversion").put("WWEF", "Wake with Evening's Freshness").put("WwEF", "Wake with Evening's Freshness").put("Precogntion", "Precognition").put("Sidestrike", "Side Strike").put("Thaumatugy", "Thaumaturgy").put("Perfectionnist", "Perfectionist").put("Acad. HG", "Academic Hunting Ground").put("Univ. HG", "University Hunting Ground").put("The Phartenon", "Parthenon, The").put("Antelios", "Anthelios, The Red Star").put("Deflections", "Deflection").put("Perfeccionist", "Perfectionist").put("Path of Paradoxx", "Path of Paradox, The").put("Nightmoves", "Night Moves").put("Info Superhighway", "Information Highway").put("deflections", "Deflection").put("Laptops", "Laptop Computer").put("Revalations", "Revelations").put("Ecoterrorist", "Ecoterrorists").put("Institutional Hunting Grounds", "Institution Hunting Ground").put("Personnal Involvment", "Personal Involvement").put("Obediance", "Obedience").put("Jack \"Hannibal", "Jack \"Hannibal137\" Harmon").put("Confusion Dementation", "Confusion").put("Restructure Dementation", "Restructure").put("Deny Dementation", "Deny").put("Reality Chimerstry", "Reality").put("Brujah Justcar", "Brujah Justicar").put("Kine Dominance", "Dominate Kine").put("Improvised Flame Thrower", "Improvised Flamethrower").put("Dogde", "Dodge").put("The Labyrinth", "Labyrinth, The").put("Recuitment", "Recruitment").put("Votercaptivation", "Voter Captivation").put("Golgonda", "Golconda: Inner Peace").put("Infohighway", "Information Highway").put("J.S. Simons", "J. S. Simmons, Esq.").put("Misderection", "Misdirection").put("Sportbike", "Sport Bike").put("Domiante", "Dominate").put("The barren", "Barrens, The").put("rats warning", "Rat's Warning").put("Rats' Warning", "Rat's Warning").put("Homonculus", "Homunculus").put("Decapitiate", "Decapitate").put("Humunculus", "Homunculus").put("sidestrike", "Side Strike").put("Univ HG", "University Hunting Ground").put("mindnumb", "Mind Numb").put("arsons", "Arson").put("Info Hwy", "Information Highway").put("Obliette", "Oubliette").put("GtU", "Govern the Unaligned").put("Indominability", "Indomitability").put("Wakeys", "Wake with Evening's Freshness").put("PTO", "Protect Thine Own").put("Anathelios", "Anthelios, The Red Star").put("Ravenspy", "Raven Spy").put("WWStick", "Weighted Walking Stick").put("Ecstacy", "Ecstasy").put("Earthmeld", "Earth Meld").put("Freakdrive", "Freak Drive").put("Roling with the Punshes", "Rolling with the Punches").put("Indomnability", "Indomitability").put("Revenent", "Revenant").put("Revealations", "Revelations").put("Misdirections", "Misdirection").put("ANARCHTROUBLEMAKER", "Anarch Troublemaker").put("KRC", "Kine Resources Contested").put("Mashochism", "Masochism").put("Vissitude", "Vicissitude").put("Villain", "Villein").put("Soul Gems", "Soul Gem of Etrius").put("mr wintrop", "Mr. Winthrop").put("Entice", "Enticement").put("Mirrorwalk", "Mirror Walk").put("GOLGONDA", "Golconda: Inner Peace").put("wwef", "Wake with Evening's Freshness").put("Perfeccionista", "Perfectionist").put("2nd Tradition", "Second Tradition: Domain").put("5th Tradition", "Fifth Tradition: Hospitality").put("ZipGun", "Zip Gun").put("Anna \"Dictatrix", "Anna \"Dictatrix11\" Suljic").put("Béatrice \"Oracle", "Béatrice \"Oracle171\" Tremblay").put("Earl \"Shaka", "Earl \"Shaka74\" Deams").put("Erick \"Shophet", "Erick \"Shophet125\" Franco").put("Inez \"Nurse", "Inez \"Nurse216\" Villagrande").put("Jennie \"Cassie", "Jennie \"Cassie247\" Orne").put("Jennifer \"Flame", "Jennifer \"Flame61\" Vidisania").put("John \"Cop", "John \"Cop90\" O'Malley").put("Leaf \"Potter", "Leaf \"Potter116\" Pankowski").put("Liz \"Ticket", "Liz \"Ticket312\" Thornton").put("Lupe \"Cabbie", "Lupe \"Cabbie22\" Droin").put("Marion \"Teacher", "Marion \"Teacher193\" Perks").put("Paul \"Sixofswords", "Paul \"Sixofswords29\" Moreton").put("Peter \"Outback", "Peter \"Outback295\" Rophail").put("Travis \"Traveler", "Travis \"Traveler72\" Miller").put("Xian \"DziDzat", "Xian \"DziDzat155\" Quan").build();
-
-
-    @Autowired
-    private CacheManager cacheManager;
 
     @Autowired
     private DeckRepository deckRepository;
@@ -272,7 +267,7 @@ public class TournamentDeckScheduler {
                 boolean updated = false;
                 boolean insert = false;
                 if (actual == null) {
-                    deckRepository.save(deck);
+                    deckRepository.saveAndFlush(deck);
                     updated = true;
                     insert = true;
                     log.debug("Insert deck {}", deck.getId());
@@ -308,6 +303,7 @@ public class TournamentDeckScheduler {
                     }
                 }
                 if (updated) {
+                    deckCardRepository.flush();
                     deckIndex.enqueueRefreshIndex(deck.getId());
                 }
             }

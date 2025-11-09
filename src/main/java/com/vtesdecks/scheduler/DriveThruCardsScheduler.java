@@ -85,6 +85,7 @@ public class DriveThruCardsScheduler {
                 log.error("Error scrapping DTC page {}", cardShop.getLink(), e);
             }
         }
+        cardShopRepository.flush();
     }
 
     private int getNumPages(String session) {
@@ -110,6 +111,7 @@ public class DriveThruCardsScheduler {
                 log.error("Error scrapping DTC element {}", productCard, e);
             }
         }
+        cardShopRepository.flush();
     }
 
     private Integer scrapCard(Element productCard) {

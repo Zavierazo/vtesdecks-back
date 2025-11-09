@@ -4,6 +4,7 @@ import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DriveThruCardsScheduler;
 import com.vtesdecks.scheduler.GamePodScheduler;
 import com.vtesdecks.scheduler.TournamentDeckScheduler;
+import com.vtesdecks.scheduler.VtesdleTodayScheduler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -24,6 +25,8 @@ public class AdminEndpoint {
     private DriveThruCardsScheduler driveThruCardsScheduler;
     @Autowired
     private GamePodScheduler gamePodScheduler;
+    @Autowired
+    private VtesdleTodayScheduler vtesdleTodayScheduler;
 
     @RequestMapping(method = RequestMethod.GET, value = "/scheduler/deck_views_clean", produces = {
             MediaType.TEXT_PLAIN_VALUE
@@ -67,6 +70,15 @@ public class AdminEndpoint {
     @ResponseBody
     public String gamePodScheduler() {
         gamePodScheduler.scrapCards();
+        return "OK";
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/scheduler/vtesdle_today", produces = {
+            MediaType.TEXT_PLAIN_VALUE
+    })
+    @ResponseBody
+    public String vtesdleTodayScheduler() {
+        vtesdleTodayScheduler.selectTodayVtesdle();
         return "OK";
     }
 
