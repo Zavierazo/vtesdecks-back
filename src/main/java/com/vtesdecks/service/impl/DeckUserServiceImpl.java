@@ -37,6 +37,7 @@ public class DeckUserServiceImpl implements DeckUserService {
                 deckUser.getId().setUser(userId);
                 deckUser.getId().setDeckId(deckId);
                 deckUser.setRate(rate);
+                deckUser.setFavorite(false);
                 deckUserRepository.save(deckUser);
                 updated = true;
             } else if (!rate.equals(deckUser.getRate())) {
