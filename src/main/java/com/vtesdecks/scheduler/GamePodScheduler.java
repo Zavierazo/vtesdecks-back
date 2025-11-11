@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.apache.commons.lang3.ObjectUtils.isEmpty;
@@ -28,8 +29,13 @@ public class GamePodScheduler {
     private static final String PLATFORM = "GP";
     private static final String SET = "POD:GP";
     private static final String EURO = "EUR";
-    private static final List<String> IGNORED_TITLES = List.of(" mazo de ", " mazos de ", "Pack de ", "PROMO PACK", "(Harmen)", "starter deck");
+    private static final List<String> IGNORED_TITLES = List.of(" mazo de ", " mazos de ", "Pack de ", "PROMO PACK", "(Harmen)", "starter deck", "Tapete VAMPIRE",
+            "Pack Fifth Edition", "Fifth Edition -", "Pack New Blood -", "Pack Lost Kindred", "Pack Keepers of Tradition", "Pack Anthology", "Pack 25th Anniversary", "IKE!");
     private static final String SPECIAL_CHARACTERS = "[_,:\"'”\\s]";
+    private static final List<String> BLACKLIST_TAGS = List.of("Tapete", "Accesorios", "Tokens");
+    private static final Map<String, String> CARD_NAME_FIXES = Map.of(
+            "Nu - The Pillar [2] - True Brujah", "Nu, The Pillar"
+    );
 
     @Autowired
     private DeckCardRepository deckCardRepository;
@@ -89,12 +95,17 @@ public class GamePodScheduler {
     private void parsePage(List<Product> products, List<CardShopEntity> currentCards) {
         for (Product product : products) {
             try {
-                if (product.getTags() != null && (!product.getTags().contains("Vampire") || product.getTags().contains("Tapete") || product.getTags().contains("Accesorios") || product.getTags().contains("Tokens"))) {
-                    log.trace("Ignoring product {}", product.getHandle());
+                if (!isEmpty(product.getTags()) &&
+                        BLACKLIST_TAGS.stream().anyMatch(tag -> product.getTags().contains(tag))) {
+                    log.debug("Ignoring product {}", product.getHandle());
                     continue;
                 }
-                if (product.getTitle() != null && IGNORED_TITLES.stream().anyMatch(title -> product.getTitle().contains(title))) {
-                    log.trace("Ignoring product {}", product.getHandle());
+                if (product.getTitle() != null && (IGNORED_TITLES.stream().anyMatch(title -> product.getTitle().contains(title)))) {
+                    log.debug("Ignoring product {}", product.getHandle());
+                    continue;
+                }
+                if (product.getProductType() != null && product.getProductType().equalsIgnoreCase("Juego")) {
+                    log.debug("Ignoring product {}", product.getHandle());
                     continue;
                 }
                 Integer cardId = scrapCard(product);
@@ -115,22 +126,27 @@ public class GamePodScheduler {
         if (advanced) {
             cardNameRaw = cardNameRaw.substring(0, advancedIndex);
         }
-        int groupIndex = cardNameRaw.toLowerCase().indexOf("[");
-        if (groupIndex > 0) {
-            cardNameRaw = cardNameRaw.substring(0, groupIndex);
+        if (CARD_NAME_FIXES.containsKey(productCard.getTitle())) {
+            cardNameRaw = CARD_NAME_FIXES.get(cardNameRaw);
+        } else {
+            int groupIndex = cardNameRaw.toLowerCase().indexOf("[");
+            if (groupIndex > 0) {
+                cardNameRaw = cardNameRaw.substring(0, groupIndex);
+            }
+            int typeIndex = cardNameRaw.toLowerCase().indexOf(" - ");
+            if (typeIndex > 0) {
+                cardNameRaw = cardNameRaw.substring(0, typeIndex);
+            }
+            int typeAltIndex = cardNameRaw.toLowerCase().indexOf(" – ");
+            if (typeAltIndex > 0) {
+                cardNameRaw = cardNameRaw.substring(0, typeAltIndex);
+            }
         }
-        int typeIndex = cardNameRaw.toLowerCase().indexOf(" - ");
-        if (typeIndex > 0) {
-            cardNameRaw = cardNameRaw.substring(0, typeIndex);
-        }
-        int typeAltIndex = cardNameRaw.toLowerCase().indexOf(" – ");
-        if (typeAltIndex > 0) {
-            cardNameRaw = cardNameRaw.substring(0, typeAltIndex);
-        }
+
 
         List<TextSearch> cards = deckCardRepository.search(cardNameRaw.replace("_", ":"), advanced);
         if (CollectionUtils.isEmpty(cards)) {
-            log.warn("Unable to found card with name '{}'", cardNameRaw);
+            log.warn("Unable to found card with name '{}' with handle {}", cardNameRaw, productCard.getHandle());
             return null;
         }
 
@@ -144,7 +160,7 @@ public class GamePodScheduler {
             if (exactCard.isPresent()) {
                 card = exactCard.get();
             } else {
-                log.warn("Multiple finds for '{}' with raw '{}': {}", cardName, cardNameRaw, cards.stream().map(TextSearch::getName).toList());
+                log.warn("Multiple finds for '{}' with raw '{}': {} with handle {}", cardName, productCard.getTitle(), cards.stream().map(TextSearch::getName).toList(), productCard.getHandle());
                 return null;
             }
         } else {
@@ -154,7 +170,7 @@ public class GamePodScheduler {
         String link = getLink(productCard);
         BigDecimal price = getPrice(productCard);
         if (price != null && price.compareTo(BigDecimal.TEN) >= 0) {
-            log.warn("Price too high for '{}': {}", cardNameRaw, price);
+            log.warn("Price too high for '{}': {} for  {}", cardNameRaw, price, productCard.getHandle());
             return null;
         }
 
