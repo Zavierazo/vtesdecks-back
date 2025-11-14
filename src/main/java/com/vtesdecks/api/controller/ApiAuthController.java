@@ -40,6 +40,7 @@ public class ApiAuthController {
     private static final String FORM_DATA_PASSWORD = "password";
     private static final String FORM_DATA_CONFIRM_PASSWORD = "confirmPassword";
     private static final String FORM_DATA_RECAPTCHA = "g-recaptcha-response";
+    public static final String EXPOSED_CREDENTIAL_CHECK = "Exposed-Credential-Check";
     @Autowired
     private UserRepository userRepository;
     @Autowired
@@ -89,6 +90,10 @@ public class ApiAuthController {
                     } else {
                         user = userService.getAuthenticatedUser(dbUser, roles);
                         log.info("Login request for {} success. Jwt token: {}", username, user.getToken());
+                        String exposedCredentialCheck = httpServletRequest.getHeader(EXPOSED_CREDENTIAL_CHECK);
+                        if (exposedCredentialCheck != null) {
+                            log.info("User {} has leaked credentials with flag {}.", username, exposedCredentialCheck);
+                        }
                     }
                 }
             }
@@ -99,6 +104,7 @@ public class ApiAuthController {
         }
         return user;
     }
+
 
     @RequestMapping(method = RequestMethod.POST, value = "/create", produces = {
             MediaType.APPLICATION_JSON_VALUE
@@ -164,7 +170,8 @@ public class ApiAuthController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ApiResponse forgotPassword(HttpServletRequest httpServletRequest, @RequestParam Map<String, String> data) {
+    public ApiResponse forgotPassword(HttpServletRequest
+                                              httpServletRequest, @RequestParam Map<String, String> data) {
         ApiResponse response = new ApiResponse();
         response.setSuccessful(false);
         if (recaptchaService.isResponseValid(Utils.getIp(httpServletRequest), data.get(FORM_DATA_RECAPTCHA))) {
