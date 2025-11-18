@@ -1,5 +1,6 @@
 package com.vtesdecks.jpa.repositories;
 
+import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -7,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface DeckRepository extends JpaRepository<DeckEntity, String> {
+
+    List<DeckEntity> findByTypeAndNameContainingIgnoreCase(DeckType type, String name);
 
     @Query(value = "SELECT * FROM deck WHERE type ='COMMUNITY' AND deleted = true AND modification_date < (NOW() - INTERVAL 60 DAY)", nativeQuery = true)
     List<DeckEntity> selectOldDeleted();
