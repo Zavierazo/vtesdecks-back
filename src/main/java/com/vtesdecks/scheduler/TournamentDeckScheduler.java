@@ -173,7 +173,8 @@ public class TournamentDeckScheduler {
                     for (DeckEntity existingDeck : existingDecks) {
                         if (!existingDeck.getId().equals(deck.getId())
                                 && existingDeck.getTournament() != null && existingDeck.getTournament().equalsIgnoreCase(deck.getTournament())
-                                && existingDeck.getCreationDate().toLocalDate().equals(deck.getCreationDate().toLocalDate())) {
+                                && existingDeck.getCreationDate().toLocalDate().equals(deck.getCreationDate().toLocalDate())
+                                && Boolean.FALSE.equals(existingDeck.getDeleted())) {
                             log.warn("Possible duplicate deck found: {} with id {}", deck.getName(), existingDeck.getId());
                             return;
                         }
