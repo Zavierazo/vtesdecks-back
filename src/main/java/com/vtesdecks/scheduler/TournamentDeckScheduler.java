@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.Set;
@@ -115,7 +116,7 @@ public class TournamentDeckScheduler {
         Optional<DeckEntity> optionalDeck = deckRepository.findById(id);
         DeckEntity actual = optionalDeck.orElse(null);
         if (actual == null || Boolean.FALSE.equals(actual.getVerified())) {
-            DeckEntity deck = actual != null ? actual : new DeckEntity();
+            DeckEntity deck = actual != null ? actual.toBuilder().build() : new DeckEntity();
             deck.setId(id);
             deck.setType(DeckType.TOURNAMENT);
             deck.setSource("http://www.vekn.fr/decks/twd.htm#" + deckId);
@@ -283,10 +284,10 @@ public class TournamentDeckScheduler {
                     updated = true;
                     insert = true;
                     log.debug("Insert deck {}", deck.getId());
-                } else if (!actual.equals(deck)) {
+                } else if (!actual.equals(deck) || !Objects.equals(actual.getCreationDate(), deck.getCreationDate())) {
                     log.warn("Deck {} updated metadata", deck.getId());
-//                    deckMapper.update(deck);
-//                    updated = true;
+                    deckRepository.saveAndFlush(deck);
+                    updated = true;
                 }
                 List<DeckCardEntity> dbCards = deckCardRepository.findByIdDeckId(deck.getId());
                 for (Map.Entry<Integer, DeckCardEntity> card : deckCards.entrySet()) {

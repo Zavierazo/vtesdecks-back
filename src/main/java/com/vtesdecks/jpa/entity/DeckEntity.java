@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "deck")
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(exclude = {"creationDate", "modificationDate"})
@@ -90,9 +90,9 @@ public class DeckEntity {
     private Boolean collection = false;
 
     @CreationTimestamp
-    @Column(name = "creation_date", nullable = false, insertable = false, updatable = false)
+    @Column(name = "creation_date", nullable = false)
     private LocalDateTime creationDate;
     @UpdateTimestamp
-    @Column(name = "modification_date", nullable = false, insertable = false)
+    @Column(name = "modification_date", nullable = false)
     private LocalDateTime modificationDate;
 }
