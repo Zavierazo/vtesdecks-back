@@ -167,6 +167,18 @@ public class TournamentDeckScheduler {
                         }
                     }
                 }
+                if (deck.getTournament() != null && deck.getName() != null) {
+                    List<DeckEntity> existingDecks = deckRepository.findByTypeAndNameContainingIgnoreCase(DeckType.TOURNAMENT, deck.getName());
+                    for (DeckEntity existingDeck : existingDecks) {
+                        if (!existingDeck.getId().equals(deck.getId())
+                                && existingDeck.getTournament() != null && existingDeck.getTournament().equalsIgnoreCase(deck.getTournament())
+                                && existingDeck.getCreationDate().toLocalDate().equals(deck.getCreationDate().toLocalDate())) {
+                            log.warn("Possible duplicate deck found: {} with id {}", deck.getName(), existingDeck.getId());
+                            return;
+                        }
+                    }
+                }
+
                 StringBuilder description = new StringBuilder();
                 boolean descriptionFound = false;
                 for (int i = 0; i < nameDescriptionPart.size() - 1; i++) {
@@ -281,11 +293,13 @@ public class TournamentDeckScheduler {
                     DeckCardEntity dbCard = dbCards.stream().filter(db -> db.getId().getCardId().equals(card.getKey()) && db.getId().getDeckId().equals(deck.getId())).findFirst().orElse(null);
                     if (dbCard == null) {
                         if (insert) {
+                            log.debug("Insert deck card {}", card.getValue());
                             deckCardRepository.save(card.getValue());
                             updated = true;
-                            log.debug("Insert deck card {}", card.getValue());
                         } else {
                             log.warn("New card detected for card {} of deck {}", card.getValue(), id);
+                            deckCardRepository.save(card.getValue());
+                            updated = true;
                         }
                     } else if (!dbCard.equals(card.getValue())) {
                         log.warn("Found new card count for card {} of deck {}", card.getValue(), id);
