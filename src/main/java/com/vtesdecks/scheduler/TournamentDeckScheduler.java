@@ -76,11 +76,8 @@ public class TournamentDeckScheduler {
     @Autowired
     private DeckIndex deckIndex;
 
-    //To run immediately after startup 
-    //@Scheduled(fixedDelay = 86400000L)
     //Update tournament decks once a day at 00:00
-//    @Scheduled(cron = "${jobs.scrappingDecksCron:0 0 0 * * *}")
-    @Scheduled(initialDelay = 0L, fixedDelay = 86400000L)
+    @Scheduled(cron = "${jobs.scrappingDecksCron:0 0 0 * * *}")
     @Transactional
     public void scrappingDecks() {
         log.info("Starting tournament decks scrapping...");
