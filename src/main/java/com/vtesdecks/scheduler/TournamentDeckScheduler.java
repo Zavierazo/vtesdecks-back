@@ -26,6 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.ParsePosition;
 import java.time.LocalDate;
@@ -78,7 +79,9 @@ public class TournamentDeckScheduler {
     //To run immediately after startup 
     //@Scheduled(fixedDelay = 86400000L)
     //Update tournament decks once a day at 00:00
-    @Scheduled(cron = "${jobs.scrappingDecksCron:0 0 0 * * *}")
+//    @Scheduled(cron = "${jobs.scrappingDecksCron:0 0 0 * * *}")
+    @Scheduled(initialDelay = 0L, fixedDelay = 86400000L)
+    @Transactional
     public void scrappingDecks() {
         log.info("Starting tournament decks scrapping...");
         WebClient client = new WebClient();
@@ -139,7 +142,8 @@ public class TournamentDeckScheduler {
                 deck.setCreationDate(getCreationDate(headers));
                 //Nunca entra pero por si las moscas xD
                 if (deck.getCreationDate() == null && deck.getYear() != null) {
-                    deck.setCreationDate(LocalDate.of(deck.getYear(), 1, 1).atStartOfDay());
+                    log.warn("Date not found for {}", deck.getId());
+                    return;
                 }
                 deck.setAuthor(getAuthor(headers));
                 deck.setUrl(getUrl(headers));
@@ -296,16 +300,16 @@ public class TournamentDeckScheduler {
                     if (dbCard == null) {
                         if (insert) {
                             log.debug("Insert deck card {}", card.getValue());
-                            deckCardRepository.save(card.getValue());
+                            deckCardRepository.saveAndFlush(card.getValue());
                             updated = true;
                         } else {
                             log.warn("New card detected for card {} of deck {}", card.getValue(), id);
-                            deckCardRepository.save(card.getValue());
+                            deckCardRepository.saveAndFlush(card.getValue());
                             updated = true;
                         }
                     } else if (!dbCard.equals(card.getValue())) {
                         log.warn("Found new card count for card {} of deck {}", card.getValue(), id);
-                        deckCardRepository.save(card.getValue());
+                        deckCardRepository.saveAndFlush(card.getValue());
                         updated = true;
                     }
                 }
@@ -314,7 +318,7 @@ public class TournamentDeckScheduler {
                     DeckCardEntity deckCardEntity = deckCards.get(card.getId().getCardId());
                     if (deckCardEntity == null) {
                         log.warn("Missing card {} of deck {}", card, id);
-                        deckCardRepository.delete(card);
+                        deckCardRepository.deleteById(card.getId());
                         updated = true;
                     }
                 }

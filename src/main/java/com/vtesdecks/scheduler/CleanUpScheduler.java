@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.util.HashMap;
@@ -33,6 +34,7 @@ public class CleanUpScheduler {
     private DeckCardHistoryRepository deckCardHistoryRepository;
 
     @Scheduled(cron = "${jobs.deckViewCleanCron:0 0 2 * * *}")
+    @Transactional
     public void deckViewCleanScheduler() {
         List<DeckViewEntity> views = deckViewRepository.findOld();
         if (!CollectionUtils.isEmpty(views)) {
@@ -59,6 +61,7 @@ public class CleanUpScheduler {
     }
 
     @Scheduled(cron = "${jobs.deckCleanCron:0 0 1 * * *}")
+    @Transactional
     public void deckCleanScheduler() {
         List<DeckEntity> decksToDelete = deckRepository.selectOldDeleted();
         if (!CollectionUtils.isEmpty(decksToDelete)) {
@@ -72,7 +75,7 @@ public class CleanUpScheduler {
                 deckUserRepository.flush();
                 deckCardHistoryRepository.deleteByDeckId(deck.getId());
                 deckCardHistoryRepository.flush();
-                deckRepository.delete(deck);
+                deckRepository.deleteById(deck.getId());
                 deckRepository.flush();
             }
         }

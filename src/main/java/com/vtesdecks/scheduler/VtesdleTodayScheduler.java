@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,6 +26,7 @@ public class VtesdleTodayScheduler {
     private CryptCache cryptCache;
 
     @Scheduled(cron = "${jobs.selectTodayVtesdle:1 0 0 * * *}")
+    @Transactional
     public void selectTodayVtesdle() {
         LocalDate today = LocalDate.now();
         if (vtesdleDayRepository.findById(today).isEmpty()) {

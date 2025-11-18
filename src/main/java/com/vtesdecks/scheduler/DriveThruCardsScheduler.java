@@ -13,6 +13,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -42,6 +43,7 @@ public class DriveThruCardsScheduler {
     private CardShopRepository cardShopRepository;
 
     @Scheduled(cron = "0 0 0 * * *")
+    @Transactional
     public void scrapCards() {
         log.info("Starting DTC scrapping...");
         List<CardShopEntity> currentCards = cardShopRepository.findByPlatform(PLATFORM);
@@ -73,7 +75,7 @@ public class DriveThruCardsScheduler {
                     Product product = getProduct(productId);
                     if (product == null) {
                         log.warn("Card {} no longer exists in shop {}", cardShop.getCardId(), cardShop.getLink());
-                        cardShopRepository.delete(cardShop);
+                        cardShopRepository.deleteById(cardShop.getId());
                     } else {
                         log.debug("Card {} still exists in shop {}", cardShop.getCardId(), cardShop.getLink());
                     }
@@ -164,12 +166,12 @@ public class DriveThruCardsScheduler {
         log.trace("Scrapped card {}", cardShop);
         List<CardShopEntity> cardShopList = cardShopRepository.findByCardIdAndPlatform(cardShop.getCardId(), PLATFORM);
         if (CollectionUtils.isEmpty(cardShopList)) {
-            cardShopRepository.save(cardShop);
+            cardShopRepository.saveAndFlush(cardShop);
         } else {
             CardShopEntity current = cardShopList.getFirst();
             cardShop.setId(current.getId());
             if (!cardShop.equals(current)) {
-                cardShopRepository.save(cardShop);
+                cardShopRepository.saveAndFlush(cardShop);
             }
         }
         return cardShop.getCardId();
