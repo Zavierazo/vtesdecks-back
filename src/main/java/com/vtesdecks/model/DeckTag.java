@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 public enum DeckTag {
     TWO_PLAYER("2player", 0, crypt -> true, library -> false, deck -> deck.getLimitedFormat() != null && deck.getLimitedFormat().startsWith("Two-player") && !deck.getLimitedFormat().endsWith("(Custom)")),
     V5("v5", 0, crypt -> true, library -> false, deck -> deck.getLimitedFormat() != null && deck.getLimitedFormat().startsWith("V5") && !deck.getLimitedFormat().endsWith("(Custom)")),
+    ADVENT_2025("advent2025", 0, crypt -> true, library -> false, deck -> deck.getExtra() != null && deck.getExtra().has("adventYear") && deck.getExtra().get("adventYear").asInt() == 2025),
     BLEED("bleed", 15, crypt -> hasTaint(crypt, CryptTaint.BLEED), library -> hasTaint(library, LibraryTaint.BLEED), deck -> true),
     STEALTH("stealth", 15, crypt -> hasTaint(crypt, CryptTaint.STEALTH), library -> hasTaint(library, LibraryTaint.NEGATIVE_INTERCEPT), deck -> true),
     BLOCK("block", 12, crypt -> hasTaint(crypt, CryptTaint.INTERCEPT), DeckTag::isBlockLibrary, deck -> true),
