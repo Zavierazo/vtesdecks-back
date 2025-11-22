@@ -11,7 +11,7 @@ public enum CryptTaint {
     STEALTH("+Stealth", "\\+\\d stealth"),
     BLEED("+Bleed", "\\+\\d bleed"),
     STRENGTH("+Strength", "\\+\\d strength"),
-    HAND_SIZE("+Hand Size", "\\+\\d hand size"),
+    HAND_SIZE("+Hand Size", "(\\+(\\d|x) hand size)|(hand size is.*(increased|larger))"),
     TITLED("Titled"),
     STERILE("Sterile"),
     SCARCE("Scarce"),
