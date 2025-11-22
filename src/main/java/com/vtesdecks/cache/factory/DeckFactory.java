@@ -137,6 +137,10 @@ public class DeckFactory {
                 value.setLimitedFormat(deck.getExtra().get("limitedFormat").get("name").asText() + " (Custom)");
             }
         }
+        if (deck.getExtra() != null && deck.getExtra().has("adventYear") && deck.getExtra().has("adventDay")) {
+            value.setLimitedFormat("Advent " + deck.getExtra().get("adventYear").asInt() + " - Day " + deck.getExtra().get("adventDay").asInt());
+        }
+
         List<Card> cards = new ArrayList<>();
         for (DeckCard deckCard : deckCards) {
             Card card = null;
@@ -485,7 +489,7 @@ public class DeckFactory {
                 .map(DeckTag::getTag)
                 .collect(Collectors.toSet());
         for (LimitedFormatPayload limitedFormat : limitedFormats) {
-            if (isValidForLimitedFormat(deck, limitedFormat)) {
+            if (limitedFormat.getTag() != null && isValidForLimitedFormat(deck, limitedFormat)) {
                 tags.add(limitedFormat.getTag());
             }
         }
