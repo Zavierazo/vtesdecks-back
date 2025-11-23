@@ -6,15 +6,19 @@ import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.Library;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 @AllArgsConstructor
+@RequiredArgsConstructor
 public enum DeckTag {
     TWO_PLAYER("2player", 0, crypt -> true, library -> false, deck -> deck.getLimitedFormat() != null && deck.getLimitedFormat().startsWith("Two-player") && !deck.getLimitedFormat().endsWith("(Custom)")),
     V5("v5", 0, crypt -> true, library -> false, deck -> deck.getLimitedFormat() != null && deck.getLimitedFormat().startsWith("V5") && !deck.getLimitedFormat().endsWith("(Custom)")),
+    ADVENT_2025("advent2025", 0, crypt -> true, library -> false, deck -> deck.getExtra() != null && deck.getExtra().has("advent") && deck.getExtra().get("advent").has("year") && deck.getExtra().get("advent").get("year").asInt() == 2025, LocalDate.of(2025, 12, 1)),
     BLEED("bleed", 15, crypt -> hasTaint(crypt, CryptTaint.BLEED), library -> hasTaint(library, LibraryTaint.BLEED), deck -> true),
     STEALTH("stealth", 15, crypt -> hasTaint(crypt, CryptTaint.STEALTH), library -> hasTaint(library, LibraryTaint.NEGATIVE_INTERCEPT), deck -> true),
     BLOCK("block", 12, crypt -> hasTaint(crypt, CryptTaint.INTERCEPT), DeckTag::isBlockLibrary, deck -> true),
@@ -37,6 +41,8 @@ public enum DeckTag {
     private final Predicate<Library> libraryTest;
     @Getter
     private final Predicate<Deck> deckTest;
+    @Getter
+    private LocalDate fromDate;
 
 
     private static boolean hasTaint(Crypt crypt, CryptTaint... taints) {
