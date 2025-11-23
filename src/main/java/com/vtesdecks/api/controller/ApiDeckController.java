@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 
@@ -166,6 +167,11 @@ public class ApiDeckController {
     })
     @ResponseBody
     public ResponseEntity<List<String>> deckTags() {
-        return new ResponseEntity<>(Arrays.stream(DeckTag.values()).map(DeckTag::getTag).toList(), HttpStatus.OK);
+        return new ResponseEntity<>(
+                Arrays.stream(DeckTag.values())
+                        .filter(deckTag -> deckTag.getFromDate() == null || !deckTag.getFromDate().isAfter(LocalDate.now()))
+                        .map(DeckTag::getTag).toList(),
+                HttpStatus.OK
+        );
     }
 }

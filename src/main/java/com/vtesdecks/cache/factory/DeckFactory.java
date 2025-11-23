@@ -1,5 +1,6 @@
 package com.vtesdecks.cache.factory;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.vtesdecks.cache.CryptCache;
@@ -137,10 +138,10 @@ public class DeckFactory {
                 value.setLimitedFormat(deck.getExtra().get("limitedFormat").get("name").asText() + " (Custom)");
             }
         }
-        if (deck.getExtra() != null && deck.getExtra().has("adventYear") && deck.getExtra().has("adventDay")) {
-            value.setLimitedFormat("Advent " + deck.getExtra().get("adventYear").asInt() + " - Day " + deck.getExtra().get("adventDay").asInt());
+        if (deck.getExtra() != null && deck.getExtra().has("advent")) {
+            JsonNode advent = deck.getExtra().get("advent");
+            value.setLimitedFormat("Advent " + advent.get("year") + " - Day " + advent.get("day"));
         }
-
         List<Card> cards = new ArrayList<>();
         for (DeckCard deckCard : deckCards) {
             Card card = null;
