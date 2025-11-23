@@ -111,6 +111,9 @@ public abstract class ApiDeckMapper {
         if (userId != null) {
             afterMappingUser(api, userId, deck);
         }
+        if (deck.getExtra() != null && deck.getExtra().has("advent")) {
+            api.setExtra(deck.getExtra());
+        }
         if (cardsFilter != null && !cardsFilter.isEmpty()) {
             // Add number of cards for filtered cards
             api.setFilterCards(cardsFilter.entrySet().stream()
