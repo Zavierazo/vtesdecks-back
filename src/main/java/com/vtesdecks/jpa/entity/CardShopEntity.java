@@ -1,7 +1,13 @@
 package com.vtesdecks.jpa.entity;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.vtesdecks.jpa.entity.converter.JsonNodeConverter;
+import com.vtesdecks.model.ShopPlatform;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -33,7 +39,8 @@ public class CardShopEntity {
     private Integer cardId;
 
     @Column(name = "platform", nullable = false)
-    private String platform;
+    @Enumerated(EnumType.STRING)
+    private ShopPlatform platform;
 
     @Column(name = "`set`", nullable = false)
     private String set;
@@ -46,6 +53,16 @@ public class CardShopEntity {
 
     @Column(name = "currency")
     private String currency;
+
+    @Column(name = "in_stock", nullable = false)
+    private boolean inStock;
+
+    @Column(name = "stock_quantity")
+    private Integer stockQuantity;
+
+    @Convert(converter = JsonNodeConverter.class)
+    @Column(name = "data", columnDefinition = "json")
+    private JsonNode data;
 
     @CreationTimestamp
     @Column(name = "creation_date", nullable = false, insertable = false, updatable = false)

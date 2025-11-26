@@ -61,8 +61,9 @@ public abstract class LibraryFactory {
                 }
             }
             //Force lastUpdate when new shop find
-            if (library.isPrintOnDemand() && !CollectionUtils.isEmpty(cardShopList)) {
+            if (!CollectionUtils.isEmpty(cardShopList)) {
                 LocalDateTime cardShopCreationDate = cardShopList.stream()
+                        .filter(cardShop -> cardShop.getPlatform().isPrintOnDemand())
                         .map(CardShopEntity::getCreationDate)
                         .findAny()
                         .orElse(null);

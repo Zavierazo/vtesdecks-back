@@ -12,6 +12,7 @@ import com.vtesdecks.model.LibraryTaint;
 import com.vtesdecks.model.LibraryTitle;
 import com.vtesdecks.model.Path;
 import com.vtesdecks.model.Sect;
+import com.vtesdecks.model.ShopPlatform;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -241,11 +242,14 @@ public class VtesUtils {
     }
 
     public static boolean isPrintOnDemand(List<CardShopEntity> cardShopList) {
-        return !CollectionUtils.isEmpty(cardShopList);
+        return !CollectionUtils.isEmpty(cardShopList) && cardShopList.stream().anyMatch(cardShop -> cardShop.getPlatform().isPrintOnDemand());
     }
 
-    public static boolean isPrintOnDemand(List<CardShopEntity> cardShopList, String platform) {
+    public static boolean isPrintOnDemand(List<CardShopEntity> cardShopList, ShopPlatform platform) {
         if (CollectionUtils.isEmpty(cardShopList)) {
+            return false;
+        }
+        if (!platform.isPrintOnDemand()) {
             return false;
         }
         return cardShopList.stream().anyMatch(cardShop -> cardShop.getPlatform().equals(platform));

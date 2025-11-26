@@ -5,6 +5,7 @@ import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.extra.TextSearch;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
+import com.vtesdecks.model.ShopPlatform;
 import com.vtesdecks.model.dtc.Product;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
@@ -26,7 +27,7 @@ import static org.apache.commons.lang3.ObjectUtils.isEmpty;
 @Slf4j
 @Component
 public class DriveThruCardsScheduler {
-    private static final String PLATFORM = "DTC";
+    private static final ShopPlatform PLATFORM = ShopPlatform.DTC;
     private static final String SET = "POD:DTC";
     private static final String DOLLAR = "USD";
     private static final String SPECIAL_CHARACTERS = "[_,:\"'”\\s]";
@@ -162,7 +163,15 @@ public class DriveThruCardsScheduler {
             return null;
         }
 
-        CardShopEntity cardShop = CardShopEntity.builder().cardId(card.getId()).link(link).platform(PLATFORM).set(SET).price(price).currency(DOLLAR).build();
+        CardShopEntity cardShop = CardShopEntity.builder()
+                .cardId(card.getId())
+                .link(link)
+                .platform(PLATFORM)
+                .set(SET)
+                .price(price)
+                .currency(DOLLAR)
+                .inStock(true)
+                .build();
         log.trace("Scrapped card {}", cardShop);
         List<CardShopEntity> cardShopList = cardShopRepository.findByCardIdAndPlatform(cardShop.getCardId(), PLATFORM);
         if (CollectionUtils.isEmpty(cardShopList)) {

@@ -7,6 +7,7 @@ import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.extra.TextSearch;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
+import com.vtesdecks.model.ShopPlatform;
 import com.vtesdecks.model.shopify.Product;
 import com.vtesdecks.model.shopify.ProductsResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +28,7 @@ import static org.apache.commons.lang3.ObjectUtils.isEmpty;
 @Slf4j
 @Component
 public class GamePodScheduler {
-    private static final String PLATFORM = "GP";
+    private static final ShopPlatform PLATFORM = ShopPlatform.GP;
     private static final String SET = "POD:GP";
     private static final String EURO = "EUR";
     private static final List<String> IGNORED_TITLES = List.of(" mazo de ", " mazos de ", "Pack de ", "PROMO PACK", "(Harmen)", "starter deck", "Tapete VAMPIRE",
@@ -183,6 +184,7 @@ public class GamePodScheduler {
                 .set(SET)
                 .price(price)
                 .currency(EURO)
+                .inStock(true)
                 .build();
         log.trace("Scrapped card {}", cardShop);
         List<CardShopEntity> cardShopList = cardShopRepository.findByCardIdAndPlatform(cardShop.getCardId(), PLATFORM);

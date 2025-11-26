@@ -52,8 +52,9 @@ public abstract class CryptFactory {
                 }
             }
             //Force lastUpdate when new shop find
-            if (crypt.isPrintOnDemand() && !CollectionUtils.isEmpty(cardShopList)) {
+            if (!CollectionUtils.isEmpty(cardShopList)) {
                 LocalDateTime cardShopCreationDate = cardShopList.stream()
+                        .filter(cardShop -> cardShop.getPlatform().isPrintOnDemand())
                         .map(CardShopEntity::getCreationDate)
                         .findAny()
                         .orElse(null);

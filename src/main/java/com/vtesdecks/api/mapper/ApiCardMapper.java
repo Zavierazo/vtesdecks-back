@@ -4,10 +4,12 @@ import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.I18n;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.jpa.entity.CardShopEntity;
+import com.vtesdecks.model.ShopPlatform;
 import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiI18n;
 import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiShop;
+import com.vtesdecks.model.api.ApiShopInfo;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Context;
 import org.mapstruct.Mapper;
@@ -42,6 +44,13 @@ public abstract class ApiCardMapper {
     public abstract ApiI18n mapI18n(I18n entity);
 
     public abstract List<ApiShop> mapCardShop(List<CardShopEntity> entity);
+
+    @Mapping(target = "platform", source = "platform")
+    @Mapping(target = "shopInfo", source = "platform")
+    public abstract ApiShop mapCardShop(CardShopEntity entity);
+
+    @Mapping(target = "name", source = "platform")
+    public abstract ApiShopInfo mapShopInfo(ShopPlatform platform);
 
 
 }
