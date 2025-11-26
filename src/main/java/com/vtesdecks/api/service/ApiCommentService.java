@@ -22,6 +22,7 @@ import static com.vtesdecks.api.util.ApiUtils.getProfileImage;
 @Service
 @RequiredArgsConstructor
 public class ApiCommentService {
+    private static final String SUPPORTER_ROLE = "supporter";
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final ApiUserNotificationService userNotificationService;
@@ -119,9 +120,11 @@ public class ApiCommentService {
         comment.setContent(commentEntity.getContent());
         UserEntity commentUser = userRepository.findById(commentEntity.getUser()).orElse(null);
         if (commentUser != null) {
+            List<String> roles = userRepository.selectRolesByUserId(commentUser.getId());
             comment.setFullName(commentUser.getDisplayName());
             comment.setProfileImage(getProfileImage(commentUser));
             comment.setCreatedByAdmin(commentUser.getAdmin() != null && commentUser.getAdmin());
+            comment.setCreatedBySupporter(roles.contains(SUPPORTER_ROLE));
             comment.setCreatedByCurrentUser(user != null && user.getId().equals(commentUser.getId()));
         }
         return comment;

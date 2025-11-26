@@ -16,5 +16,6 @@ public class ApiComment {
     private String fullName;
     private String profileImage;
     private boolean createdByAdmin = false;
+    private boolean createdBySupporter = false;
     private boolean createdByCurrentUser = false;
 }
