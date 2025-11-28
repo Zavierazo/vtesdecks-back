@@ -22,23 +22,25 @@ import java.util.List;
 public abstract class ApiCardMapper {
 
     @Mapping(target = "i18n", ignore = true)
-    public abstract ApiCrypt mapCrypt(Crypt entity, @Context String locale);
+    public abstract ApiCrypt mapCrypt(Crypt entity, @Context String locale, @Context Double score);
 
     @AfterMapping
-    protected void afterMapping(@MappingTarget ApiCrypt apiCrypt, Crypt entity, @Context String locale) {
+    protected void afterMapping(@MappingTarget ApiCrypt apiCrypt, Crypt entity, @Context String locale, @Context Double score) {
         if (locale != null && entity.getI18n() != null && entity.getI18n().containsKey(locale)) {
             apiCrypt.setI18n(mapI18n(entity.getI18n().get(locale)));
         }
+        apiCrypt.setScore(score);
     }
 
     @Mapping(target = "i18n", ignore = true)
-    public abstract ApiLibrary mapLibrary(Library entity, @Context String locale);
+    public abstract ApiLibrary mapLibrary(Library entity, @Context String locale, @Context Double score);
 
     @AfterMapping
-    protected void afterMapping(@MappingTarget ApiLibrary apiLibrary, Library entity, @Context String locale) {
+    protected void afterMapping(@MappingTarget ApiLibrary apiLibrary, Library entity, @Context String locale, @Context Double score) {
         if (locale != null && entity.getI18n() != null && entity.getI18n().containsKey(locale)) {
             apiLibrary.setI18n(mapI18n(entity.getI18n().get(locale)));
         }
+        apiLibrary.setScore(score);
     }
 
     public abstract ApiI18n mapI18n(I18n entity);

@@ -43,5 +43,6 @@ public class ApiLibrary {
     private Long cardPopularity;
     private ApiI18n i18n;
     private boolean printOnDemand;
+    private Double score;
     private LocalDateTime lastUpdate;
 }

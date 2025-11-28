@@ -25,6 +25,17 @@ public class ApiCardController {
     @Autowired
     private ApiCardService apiCardService;
 
+
+    @GetMapping(value = "/search", produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public ResponseEntity<List<Object>> searchCards(@RequestParam String query) {
+        List<Object> results = apiCardService.searchCards(query);
+        return new ResponseEntity<>(results, HttpStatus.OK);
+    }
+
+
     @GetMapping(value = "/crypt/{id}", produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
