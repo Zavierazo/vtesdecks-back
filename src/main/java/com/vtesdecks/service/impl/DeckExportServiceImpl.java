@@ -170,9 +170,10 @@ public class DeckExportServiceImpl implements DeckExportService {
                     disciplines = new StringBuilder("-none-");
                 }
                 result.append(disciplines).append(" ".repeat(Math.max(0, disciplinesSpaces - disciplines.length()))).append(SPACE);
-                result.append(crypt.getTitle() != null ? StringUtils.lowerCase(crypt.getTitle()) : "");
+                String title = crypt.getTitle() != null ? StringUtils.lowerCase(crypt.getTitle()) : "";
+                result.append(title);
                 if (titleSpaces > 2) {
-                    result.append(" ".repeat(Math.max(0, titleSpaces - crypt.getTitle().length())));
+                    result.append(" ".repeat(Math.max(0, titleSpaces - title.length())));
                 }
                 result.append(crypt.getClan()).append(":").append(crypt.getGroup() < 0 ? "ANY" : crypt.getGroup());
                 result.append(NEW_LINE);
