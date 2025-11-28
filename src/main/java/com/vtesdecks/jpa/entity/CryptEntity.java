@@ -37,7 +37,7 @@ public class CryptEntity {
     @Column(name = "adv")
     private Boolean adv;
 
-    @Column(name = "group", nullable = false)
+    @Column(name = "`group`", nullable = false)
     private Integer group;
 
     @Column(name = "capacity", nullable = false)

@@ -3,6 +3,7 @@ package com.vtesdecks.service;
 import com.google.common.base.Splitter;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
+import com.opencsv.enums.CSVReaderNullFieldIndicator;
 import com.opencsv.exceptions.CsvException;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.DeckIndex;
@@ -163,9 +164,10 @@ public class AfterStartupService {
                         cryptRepository.save(crypt);
                     }
                     //cropImage(crypt.getId());
-                    currentEntities.removeIf(c -> c.getId().equals(crypt.getId()));
                 } catch (Exception e) {
                     log.error("Unable to load crypt {}", crypt, e);
+                } finally {
+                    currentEntities.removeIf(c -> c.getId().equals(crypt.getId()));
                 }
             }
             log.info("Crypt to be deleted {}", currentEntities);
@@ -256,9 +258,10 @@ public class AfterStartupService {
                         libraryRepository.save(library);
                     }
                     //cropImage(library.getId());
-                    currentEntities.removeIf(l -> l.getId().equals(library.getId()));
                 } catch (Exception e) {
                     log.error("Unable to load library {}", library, e);
+                } finally {
+                    currentEntities.removeIf(l -> l.getId().equals(library.getId()));
                 }
             }
             log.info("Library to be deleted {}", currentEntities);
@@ -277,6 +280,9 @@ public class AfterStartupService {
 
 
     private String mapClan(String rawClans) {
+        if (rawClans == null) {
+            return null;
+        }
         return Splitter.on('/')
                 .trimResults()
                 .omitEmptyStrings()
@@ -447,9 +453,6 @@ public class AfterStartupService {
                     LibraryI18nEntity actual = currentEntities.stream().
                             filter(e -> e.getId().equals(libraryI18n.getId()) && e.getId().getLocale().equals(libraryI18n.getId().getLocale()))
                             .findFirst().orElse(null);
-                    if (libraryI18n.getImage().isEmpty()) {
-                        libraryI18n.setImage(null);
-                    }
                     if (actual == null) {
                         log.debug("Insert library i18n {}", libraryI18n.getId());
                         libraryI18nRepository.save(libraryI18n);
@@ -490,9 +493,6 @@ public class AfterStartupService {
                     CryptI18nEntity actual = currentEntities.stream().
                             filter(e -> e.getId().equals(cryptI18n.getId()) && e.getId().getLocale().equals(cryptI18n.getId().getLocale()))
                             .findFirst().orElse(null);
-                    if (cryptI18n.getImage().isEmpty()) {
-                        cryptI18n.setImage(null);
-                    }
                     if (actual == null) {
                         log.debug("Insert crypt i18n {}", cryptI18n.getId());
                         cryptI18nRepository.save(cryptI18n);
@@ -542,6 +542,7 @@ public class AfterStartupService {
                 .withSeparator(CSV_SEPARATOR)
                 .withType(type)
                 .withThrowExceptions(true)
+                .withFieldAsNull(CSVReaderNullFieldIndicator.BOTH)
                 .build();
         List<CsvException> exceptions = build.getCapturedExceptions();
         for (CsvException csvException : exceptions) {

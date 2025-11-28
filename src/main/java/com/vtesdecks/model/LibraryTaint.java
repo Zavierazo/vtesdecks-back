@@ -39,7 +39,20 @@ public enum LibraryTaint {
     ADD_BLOOD("Add Blood", "add .* blood (from the blood bank )?to .* in your uncontrolled region|move .* blood (from the blood bank )?to .* in your uncontrolled region|draw .* from your crypt .* add .* blood .* to it"),
     MULTI_TYPE("Multi-Type"),
     MULTI_DISCIPLINE("Multi-Discipline"),
-    CANNOT_BLOCK("Cannot Block", "cannot (attempt to )?block");
+    CANNOT_BLOCK("Cannot Block", "cannot (attempt to )?block"),
+    ANIMAL("Animal", "animal with"),
+    MORTAL("Mortal", "mortal with"),
+    DEMON("Demon", "demon with"),
+    ZOMBIE("Zombie", "zombie with"),
+    MUMMY("Mummy", "mummy with"),
+    DHAMPIR("Dhampir", "dhampir with"),
+    WRAITH("Wraith", "wraith with"),
+    WEREWOLF("Werewolf", "werewolf with"),
+    GHOUL("Ghoul", "ghoul with"),
+    CHANGELING("Changeling", "changeling with"),
+    DEMONSTRATE("Demon", "demon with"),
+    MAGE("Mage", "mage with"),
+    GARGOYLE("Gargoyle", "gargoyle (creature )?with");
 
     @Getter
     private final String name;

@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -106,6 +107,9 @@ public class VtesUtils {
     }
 
     public static Set<String> getLibraryDisciplines(String disciplineValue) {
+        if (disciplineValue == null) {
+            return Collections.emptySet();
+        }
         Set<String> disciplines = new HashSet<>();
         for (String cardDiscipline : getLibraryDisciplineNames(disciplineValue)) {
             String discipline = VtesUtils.getDisciplineIcon(cardDiscipline, false);
@@ -117,6 +121,9 @@ public class VtesUtils {
     }
 
     public static Set<String> getLibraryDisciplineNames(String disciplineValue) {
+        if (disciplineValue == null) {
+            return Collections.emptySet();
+        }
         Set<String> disciplineNames = new HashSet<>();
         if (StringUtils.isNoneBlank(disciplineValue)) {
             if (disciplineValue.contains("&")) {
@@ -132,6 +139,9 @@ public class VtesUtils {
     }
 
     public static Set<String> getCryptDisciplines(String type, String disciplineValue) {
+        if (disciplineValue == null) {
+            return Collections.emptySet();
+        }
         Set<String> disciplines = new HashSet<>();
         if (disciplineValue != null) {
             List<String> cardDisciplines = Splitter.on(' ').trimResults().omitEmptyStrings().splitToList(disciplineValue);
@@ -230,6 +240,9 @@ public class VtesUtils {
     }
 
     public static Set<String> getLibraryClans(String clan) {
+        if (clan == null) {
+            return Collections.emptySet();
+        }
         return new HashSet<>(Splitter.on('/').trimResults().omitEmptyStrings().splitToList(clan));
     }
 
