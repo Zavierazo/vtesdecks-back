@@ -299,6 +299,6 @@ public class ApiCollectionImportService {
     }
 
     private static boolean compareExactName(String cardNameA, String cardNameB) {
-        return Utils.normalizeLackeyName(cardNameA).equalsIgnoreCase(Utils.normalizeLackeyName(cardNameB));
+        return Utils.normalizeName(cardNameA).equalsIgnoreCase(Utils.normalizeName(cardNameB));
     }
 }

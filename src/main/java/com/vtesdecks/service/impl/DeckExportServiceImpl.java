@@ -59,7 +59,7 @@ public class DeckExportServiceImpl implements DeckExportService {
                     result
                             .append(card.getNumber())
                             .append(TAB)
-                            .append(Utils.normalizeLackeyName(library.getName()))
+                            .append(Utils.normalizeName(library.getName()))
                             .append(NEW_LINE);
                 }
             }
@@ -71,7 +71,7 @@ public class DeckExportServiceImpl implements DeckExportService {
                 result
                         .append(card.getNumber())
                         .append(TAB)
-                        .append(Utils.normalizeLackeyName(getCryptName(crypt)))
+                        .append(Utils.normalizeName(getCryptName(crypt)))
                         .append(NEW_LINE);
             }
         }

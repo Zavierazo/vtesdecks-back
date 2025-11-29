@@ -134,15 +134,26 @@ public class CryptCache {
         return (result.size() >= 1) ? result.uniqueResult() : null;
     }
 
+    public ResultSet<Crypt> selectByExactName(String name) {
+        Thresholds threshold = QueryFactory.applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
+        QueryOptions queryOptions = queryOptions(orderBy(ascending(Crypt.NAME_ATTRIBUTE)), threshold);
+        Query<Crypt> query = equal(Crypt.NAME_ATTRIBUTE, Utils.normalizeName(StringUtils.lowerCase(name)));
+
+        if (log.isDebugEnabled()) {
+            log.debug("Query {} with options {}", query, queryOptions);
+        }
+        return cache.retrieve(query, queryOptions);
+    }
+
     public ResultSet<Crypt> selectAll(String name, String text) {
         Thresholds threshold = QueryFactory.applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
         QueryOptions queryOptions = queryOptions(orderBy(ascending(Crypt.NAME_ATTRIBUTE)), threshold);
         Query<Crypt> query = all(Crypt.class);
         if (name != null) {
-            query = and(query, contains(Crypt.NAME_ATTRIBUTE, Utils.normalizeLackeyName(StringUtils.lowerCase(name))));
+            query = and(query, contains(Crypt.NAME_ATTRIBUTE, Utils.normalizeName(StringUtils.lowerCase(name))));
         }
         if (text != null) {
-            query = and(query, contains(Crypt.TEXT_ATTRIBUTE, Utils.normalizeLackeyName(StringUtils.lowerCase(text))));
+            query = and(query, contains(Crypt.TEXT_ATTRIBUTE, Utils.normalizeName(StringUtils.lowerCase(text))));
         }
         if (log.isDebugEnabled()) {
             log.debug("Query {} with options {}", query, queryOptions);

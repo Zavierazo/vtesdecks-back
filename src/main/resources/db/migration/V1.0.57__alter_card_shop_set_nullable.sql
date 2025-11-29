@@ -1,0 +1,1 @@
+ALTER TABLE card_shop MODIFY COLUMN `set` varchar(64) NULL;

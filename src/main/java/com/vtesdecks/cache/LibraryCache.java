@@ -136,16 +136,25 @@ public class LibraryCache {
         return (result.size() >= 1) ? result.uniqueResult() : null;
     }
 
+    public ResultSet<Library> selectByExactName(String name) {
+        Thresholds threshold = QueryFactory.applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
+        QueryOptions queryOptions = queryOptions(orderBy(ascending(Library.NAME_ATTRIBUTE)), threshold);
+        Query<Library> query = equal(Library.NAME_ATTRIBUTE, Utils.normalizeName(StringUtils.lowerCase(name)));
+        if (log.isDebugEnabled()) {
+            log.debug("Query {} with options {}", query, queryOptions);
+        }
+        return cache.retrieve(query, queryOptions);
+    }
 
     public ResultSet<Library> selectAll(String name, String text) {
         Thresholds threshold = QueryFactory.applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
         QueryOptions queryOptions = queryOptions(orderBy(ascending(Library.NAME_ATTRIBUTE)), threshold);
         Query<Library> query = all(Library.class);
         if (name != null) {
-            query = and(query, contains(Library.NAME_ATTRIBUTE, Utils.normalizeLackeyName(StringUtils.lowerCase(name))));
+            query = and(query, contains(Library.NAME_ATTRIBUTE, Utils.normalizeName(StringUtils.lowerCase(name))));
         }
         if (text != null) {
-            query = and(query, contains(Library.TEXT_ATTRIBUTE, Utils.normalizeLackeyName(StringUtils.lowerCase(text))));
+            query = and(query, contains(Library.TEXT_ATTRIBUTE, Utils.normalizeName(StringUtils.lowerCase(text))));
         }
         if (log.isDebugEnabled()) {
             log.debug("Query {} with options {}", query, queryOptions);

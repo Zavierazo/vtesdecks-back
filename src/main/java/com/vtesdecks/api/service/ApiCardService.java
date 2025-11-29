@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -72,7 +73,7 @@ public class ApiCardService {
         }
         return result.stream()
                 .map(card -> apiCardMapper.mapLibrary(card, locale, null))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public ApiLibrary getLibraryLastUpdate() {
@@ -80,9 +81,24 @@ public class ApiCardService {
         return apiCardMapper.mapLibrary(library, null, null);
     }
 
-    public List<ApiShop> getCardShops(Integer cardId) {
+    public List<ApiShop> getCardShops(Integer cardId, Boolean showAll) {
         List<CardShopEntity> cardShopList = cardShopRepository.findByCardId(cardId);
-        return apiCardMapper.mapCardShop(cardShopList);
+        if (Boolean.TRUE.equals(showAll)) {
+            return apiCardMapper.mapCardShop(cardShopList);
+        }
+        return apiCardMapper.mapCardShop(cardShopList.stream()
+                .collect(Collectors.groupingBy(CardShopEntity::getPlatform))
+                .values()
+                .stream()
+                .map(shops -> shops.stream()
+                        .filter(shop -> shop.getSet() == null)
+                        .findFirst()
+                        .orElseGet(() -> shops.stream()
+                                .min(Comparator.comparing(CardShopEntity::getPrice))
+                                .orElseGet(shops::getFirst))
+                )
+                .sorted(Comparator.comparing(CardShopEntity::getPrice))
+                .toList());
     }
 
     public List<Object> searchCards(String query) {

@@ -99,8 +99,8 @@ public class ApiCardController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<List<ApiShop>> getCardShops(@PathVariable Integer id) {
-        return new ResponseEntity<>(apiCardService.getCardShops(id), HttpStatus.OK);
+    public ResponseEntity<List<ApiShop>> getCardShops(@PathVariable Integer id, @RequestParam(required = false) Boolean showAll) {
+        return new ResponseEntity<>(apiCardService.getCardShops(id, showAll), HttpStatus.OK);
     }
 
 
