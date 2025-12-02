@@ -125,7 +125,7 @@ public class Utils {
         }
     }
 
-    public static String normalizeLackeyName(String name) {
+    public static String normalizeName(String name) {
         return AnyAscii.transliterate(StringUtils.trim(name)).replaceAll("[/\\\\]", "");
     }
 }

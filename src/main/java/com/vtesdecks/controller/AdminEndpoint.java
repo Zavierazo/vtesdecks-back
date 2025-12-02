@@ -1,5 +1,6 @@
 package com.vtesdecks.controller;
 
+import com.vtesdecks.scheduler.CardGameGeekScheduler;
 import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DriveThruCardsScheduler;
 import com.vtesdecks.scheduler.GamePodScheduler;
@@ -27,6 +28,8 @@ public class AdminEndpoint {
     private GamePodScheduler gamePodScheduler;
     @Autowired
     private VtesdleTodayScheduler vtesdleTodayScheduler;
+    @Autowired
+    private CardGameGeekScheduler cardGameGeekScheduler;
 
     @RequestMapping(method = RequestMethod.GET, value = "/scheduler/deck_views_clean", produces = {
             MediaType.TEXT_PLAIN_VALUE
@@ -70,6 +73,15 @@ public class AdminEndpoint {
     @ResponseBody
     public String gamePodScheduler() {
         gamePodScheduler.scrapCards();
+        return "OK";
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/scheduler/cgg", produces = {
+            MediaType.TEXT_PLAIN_VALUE
+    })
+    @ResponseBody
+    public String cardGameGeekScheduler() {
+        cardGameGeekScheduler.scrapCards();
         return "OK";
     }
 

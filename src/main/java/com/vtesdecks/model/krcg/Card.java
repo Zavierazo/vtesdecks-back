@@ -24,4 +24,5 @@ public class Card {
     private List<Card> cards;
     @JsonProperty("_i18n")
     private Map<String, Card> i18n;
+    private List<Ruling> rulings;
 }

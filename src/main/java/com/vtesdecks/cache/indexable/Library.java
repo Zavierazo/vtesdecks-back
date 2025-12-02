@@ -8,6 +8,7 @@ import com.vtesdecks.util.Utils;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -16,8 +17,8 @@ import java.util.Set;
 @Data
 public class Library {
     public static final Attribute<Library, Integer> ID_ATTRIBUTE = QueryFactory.attribute(Library.class, Integer.class, "id", Library::getId);
-    public static final Attribute<Library, String> NAME_ATTRIBUTE = QueryFactory.attribute(Library.class, String.class, "name", (Library library) -> Utils.normalizeLackeyName(StringUtils.lowerCase(library.getName())));
-    public static final Attribute<Library, String> TEXT_ATTRIBUTE = QueryFactory.attribute(Library.class, String.class, "text", (Library library) -> Utils.normalizeLackeyName(StringUtils.lowerCase(library.getText())));
+    public static final Attribute<Library, String> NAME_ATTRIBUTE = QueryFactory.attribute(Library.class, String.class, "name", (Library library) -> Utils.normalizeName(StringUtils.lowerCase(library.getName())));
+    public static final Attribute<Library, String> TEXT_ATTRIBUTE = QueryFactory.attribute(Library.class, String.class, "text", (Library library) -> Utils.normalizeName(StringUtils.lowerCase(library.getText())));
     public static final Attribute<Library, Integer> TYPE_NUMBER_ATTRIBUTE = QueryFactory.nullableAttribute(Library.class, Integer.class, "typeNumber", (Library library) -> library.getTypes().size());
     public static final Attribute<Library, String> TYPE_MULTI_ATTRIBUTE = new MultiValueNullableAttribute<Library, String>(true) {
         public Iterable<String> getNullableValues(Library library, QueryOptions queryOptions) {
@@ -72,5 +73,7 @@ public class Library {
     private Long deckPopularity;
     private Long cardPopularity;
     private boolean printOnDemand;
+    private BigDecimal minPrice;
+    private BigDecimal maxPrice;
     private LocalDateTime lastUpdate;
 }

@@ -8,6 +8,7 @@ import com.vtesdecks.util.Utils;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -17,9 +18,9 @@ import java.util.Set;
 public class Crypt {
     public static final Attribute<Crypt, Integer> ID_ATTRIBUTE = QueryFactory.attribute(Crypt.class, Integer.class, "id", Crypt::getId);
     public static final Attribute<Crypt, String> NAME_ATTRIBUTE =
-            QueryFactory.attribute(Crypt.class, String.class, "name", (Crypt crypt) -> Utils.normalizeLackeyName(StringUtils.lowerCase(crypt.getName())));
+            QueryFactory.attribute(Crypt.class, String.class, "name", (Crypt crypt) -> Utils.normalizeName(StringUtils.lowerCase(crypt.getName())));
     public static final Attribute<Crypt, String> TEXT_ATTRIBUTE =
-            QueryFactory.attribute(Crypt.class, String.class, "text", (Crypt crypt) -> Utils.normalizeLackeyName(StringUtils.lowerCase(crypt.getText())));
+            QueryFactory.attribute(Crypt.class, String.class, "text", (Crypt crypt) -> Utils.normalizeName(StringUtils.lowerCase(crypt.getText())));
     public static final Attribute<Crypt, String> TYPE_ATTRIBUTE = QueryFactory.nullableAttribute(Crypt.class, String.class, "type", Crypt::getType);
     public static final Attribute<Crypt, String> CLAN_ATTRIBUTE = QueryFactory.nullableAttribute(Crypt.class, String.class, "clan", Crypt::getClan);
     public static final Attribute<Crypt, Integer> DISCIPLINE_NUMBER_ATTRIBUTE = QueryFactory.nullableAttribute(Crypt.class, Integer.class, "disciplineNumber", (Crypt crypt) -> crypt.getDisciplines().size());
@@ -58,5 +59,7 @@ public class Crypt {
     private Long deckPopularity;
     private Long cardPopularity;
     private boolean printOnDemand;
+    private BigDecimal minPrice;
+    private BigDecimal maxPrice;
     private LocalDateTime lastUpdate;
 }

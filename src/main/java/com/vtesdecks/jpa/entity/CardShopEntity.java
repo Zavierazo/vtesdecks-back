@@ -42,7 +42,7 @@ public class CardShopEntity {
     @Enumerated(EnumType.STRING)
     private ShopPlatform platform;
 
-    @Column(name = "`set`", nullable = false)
+    @Column(name = "`set`")
     private String set;
 
     @Column(name = "link", nullable = false)

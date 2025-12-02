@@ -17,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -266,5 +268,16 @@ public class VtesUtils {
             return false;
         }
         return cardShopList.stream().anyMatch(cardShop -> cardShop.getPlatform().equals(platform));
+    }
+
+    public static BigDecimal getEurPrice(BigDecimal price, String currency, BigDecimal eurToUsdRate) {
+        if (currency.equalsIgnoreCase("EUR")) {
+            return price;
+        } else if (currency.equalsIgnoreCase("USD")) {
+            return price.divide(eurToUsdRate, 2, RoundingMode.HALF_UP);
+        } else {
+            log.warn("Unknown currency '{}', cannot convert to EUR", currency);
+            return price;
+        }
     }
 }

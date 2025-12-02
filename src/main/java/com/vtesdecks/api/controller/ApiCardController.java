@@ -1,6 +1,8 @@
 package com.vtesdecks.api.controller;
 
+import com.vtesdecks.api.service.ApiCardInfoService;
 import com.vtesdecks.api.service.ApiCardService;
+import com.vtesdecks.model.api.ApiCardInfo;
 import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiShop;
@@ -24,6 +26,8 @@ import java.util.List;
 public class ApiCardController {
     @Autowired
     private ApiCardService apiCardService;
+    @Autowired
+    private ApiCardInfoService apiCardInfoService;
 
 
     @GetMapping(value = "/search", produces = {
@@ -94,13 +98,22 @@ public class ApiCardController {
         return new ResponseEntity<>(apiCardService.getLibraryLastUpdate(), HttpStatus.OK);
     }
 
+    @GetMapping(value = "/{id}/info", produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public ResponseEntity<ApiCardInfo> getCardInfo(@PathVariable Integer id) {
+        return new ResponseEntity<>(apiCardInfoService.getCardInfo(id), HttpStatus.OK);
+    }
 
+
+    @Deprecated(since = "Use cards/{id}/info endpoint instead")
     @GetMapping(value = "/{id}/shops", produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<List<ApiShop>> getCardShops(@PathVariable Integer id) {
-        return new ResponseEntity<>(apiCardService.getCardShops(id), HttpStatus.OK);
+    public ResponseEntity<List<ApiShop>> getCardShops(@PathVariable Integer id, @RequestParam(required = false) Boolean showAll) {
+        return new ResponseEntity<>(apiCardService.getCardShops(id, showAll), HttpStatus.OK);
     }
 
 

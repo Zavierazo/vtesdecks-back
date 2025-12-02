@@ -20,6 +20,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,10 +35,10 @@ public abstract class LibraryFactory {
 
     @Mapping(target = "types", ignore = true)
     @Mapping(target = "path", source = "dbLibrary.path", qualifiedByName = "mapNonEmpty")
-    public abstract Library getLibrary(LibraryEntity dbLibrary, @Context List<LibraryI18nEntity> libraryI18nList, @Context List<CardShopEntity> cardShopList);
+    public abstract Library getLibrary(LibraryEntity dbLibrary, @Context List<LibraryI18nEntity> libraryI18nList, @Context List<CardShopEntity> cardShopList, @Context BigDecimal eurToUsdRate);
 
     @AfterMapping
-    protected void afterMapping(@MappingTarget Library library, LibraryEntity dbLibrary, @Context List<LibraryI18nEntity> libraryI18nList, @Context List<CardShopEntity> cardShopList) {
+    protected void afterMapping(@MappingTarget Library library, LibraryEntity dbLibrary, @Context List<LibraryI18nEntity> libraryI18nList, @Context List<CardShopEntity> cardShopList, @Context BigDecimal eurToUsdRate) {
         library.setImage("/img/cards/" + +dbLibrary.getId() + ".jpg");
         library.setCropImage("/img/cards/crop/" + +dbLibrary.getId() + ".jpg");
         library.setTypes(getTypes(dbLibrary));
@@ -54,12 +55,31 @@ public abstract class LibraryFactory {
         library.setSets(VtesUtils.getSets(dbLibrary.getSet()));
         library.setLastUpdate(dbLibrary.getModificationDate() != null ? dbLibrary.getModificationDate() : dbLibrary.getCreationDate());
         library.setPrintOnDemand(VtesUtils.isPrintOnDemand(cardShopList));
-        if (library.isPrintOnDemand()) {
-            for (CardShopEntity cardShop : cardShopList) {
-                if (VtesUtils.isPrintOnDemand(cardShopList, cardShop.getPlatform()) && !library.getSets().contains(cardShop.getSet())) {
-                    library.setSets(new ImmutableList.Builder<String>().addAll(library.getSets()).add(cardShop.getSet()).build());
+        if (!CollectionUtils.isEmpty(cardShopList)) {
+            // Add all sets from print on demand shops
+            if (library.isPrintOnDemand()) {
+                for (CardShopEntity cardShop : cardShopList) {
+                    if (VtesUtils.isPrintOnDemand(cardShopList, cardShop.getPlatform()) && !library.getSets().contains(cardShop.getSet())) {
+                        library.setSets(new ImmutableList.Builder<String>().addAll(library.getSets()).add(cardShop.getSet()).build());
+                    }
                 }
             }
+            // Find min and max price in EUR
+            BigDecimal lowestEurPrice = null;
+            BigDecimal biggestEurPrice = null;
+            for (CardShopEntity cardShop : cardShopList) {
+                if (cardShop.getPrice() != null) {
+                    BigDecimal eurPrice = VtesUtils.getEurPrice(cardShop.getPrice(), cardShop.getCurrency(), eurToUsdRate);
+                    if (lowestEurPrice == null || eurPrice.compareTo(lowestEurPrice) < 0) {
+                        lowestEurPrice = eurPrice;
+                    }
+                    if (biggestEurPrice == null || eurPrice.compareTo(biggestEurPrice) > 0) {
+                        biggestEurPrice = eurPrice;
+                    }
+                }
+            }
+            library.setMinPrice(lowestEurPrice);
+            library.setMaxPrice(biggestEurPrice);
             //Force lastUpdate when new shop find
             if (!CollectionUtils.isEmpty(cardShopList)) {
                 LocalDateTime cardShopCreationDate = cardShopList.stream()
@@ -72,6 +92,7 @@ public abstract class LibraryFactory {
                 }
             }
         }
+
         //Library i18n
         if (!CollectionUtils.isEmpty(libraryI18nList)) {
             Map<String, I18n> i18nMap = new HashMap<>();

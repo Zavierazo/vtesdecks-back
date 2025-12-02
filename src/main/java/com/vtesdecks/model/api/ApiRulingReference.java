@@ -1,4 +1,4 @@
-package com.vtesdecks.model.flaresolverr;
+package com.vtesdecks.model.api;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,9 +9,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FlareRequest {
-    private String cmd;
-    private String session;
+public class ApiRulingReference {
+    private String text;
+    private String label;
     private String url;
-    private Integer maxTimeout;
 }

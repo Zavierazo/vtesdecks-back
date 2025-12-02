@@ -50,6 +50,7 @@ public class SetCache {
     public void setUp() {
         cache.addIndex(UniqueIndex.onAttribute(Set.ID_ATTRIBUTE));
         cache.addIndex(UniqueIndex.onAttribute(Set.ABBREV_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Set.FULL_NAME_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Set.RELEASE_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Set.LAST_UPDATE_ATTRIBUTE));
     }
@@ -107,6 +108,12 @@ public class SetCache {
 
     public Set get(String key) {
         Query<Set> findByKeyQuery = equal(Set.ABBREV_ATTRIBUTE, key);
+        ResultSet<Set> result = cache.retrieve(findByKeyQuery);
+        return (result.size() >= 1) ? result.uniqueResult() : null;
+    }
+
+    public Set getByFullName(String key) {
+        Query<Set> findByKeyQuery = equal(Set.FULL_NAME_ATTRIBUTE, key);
         ResultSet<Set> result = cache.retrieve(findByKeyQuery);
         return (result.size() >= 1) ? result.uniqueResult() : null;
     }
