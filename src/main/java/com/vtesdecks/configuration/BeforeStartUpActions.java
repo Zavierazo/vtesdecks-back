@@ -50,7 +50,7 @@ public class BeforeStartUpActions implements InitializingBean {
             log.info("Finish concurrent indexing...");
         }
         log.info("Starting serial indexing...");
-//        deckIndex.refreshIndex();
+        deckIndex.refreshIndex();
         log.info("Finish serial indexing...");
     }
 }

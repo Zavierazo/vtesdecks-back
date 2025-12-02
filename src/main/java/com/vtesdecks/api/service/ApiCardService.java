@@ -14,7 +14,7 @@ import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiShop;
 import com.vtesdecks.util.VtesUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -23,17 +23,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class ApiCardService {
-    @Autowired
-    private CryptCache cryptCache;
-    @Autowired
-    private LibraryCache libraryCache;
-    @Autowired
-    private CardShopRepository cardShopRepository;
-    @Autowired
-    private DeckCardRepository deckCardRepository;
-    @Autowired
-    private ApiCardMapper apiCardMapper;
+    private final CryptCache cryptCache;
+    private final LibraryCache libraryCache;
+    private final CardShopRepository cardShopRepository;
+    private final DeckCardRepository deckCardRepository;
+    private final ApiCardMapper apiCardMapper;
 
     public ApiCrypt getCrypt(Integer id, String locale) {
         Crypt crypt = cryptCache.get(id);
@@ -84,9 +80,12 @@ public class ApiCardService {
     public List<ApiShop> getCardShops(Integer cardId, Boolean showAll) {
         List<CardShopEntity> cardShopList = cardShopRepository.findByCardId(cardId);
         if (Boolean.TRUE.equals(showAll)) {
-            return apiCardMapper.mapCardShop(cardShopList);
+            return apiCardMapper.mapCardShop(cardShopList.stream()
+                    .filter(cardShop -> cardShop.getPlatform().isEnabled())
+                    .toList());
         }
         return apiCardMapper.mapCardShop(cardShopList.stream()
+                .filter(cardShop -> cardShop.getPlatform().isEnabled())
                 .collect(Collectors.groupingBy(CardShopEntity::getPlatform))
                 .values()
                 .stream()

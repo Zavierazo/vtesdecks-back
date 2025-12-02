@@ -8,6 +8,7 @@ import com.vtesdecks.util.Utils;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -58,5 +59,7 @@ public class Crypt {
     private Long deckPopularity;
     private Long cardPopularity;
     private boolean printOnDemand;
+    private BigDecimal minPrice;
+    private BigDecimal maxPrice;
     private LocalDateTime lastUpdate;
 }

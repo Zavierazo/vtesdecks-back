@@ -18,6 +18,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -29,10 +30,10 @@ public abstract class CryptFactory {
 
     @Mapping(target = "disciplines", ignore = true)
     @Mapping(target = "path", source = "dbCrypt.path", qualifiedByName = "mapNonEmpty")
-    public abstract Crypt getCrypt(CryptEntity dbCrypt, @Context List<CryptI18nEntity> cryptI18nList, @Context List<CardShopEntity> cardShopList);
+    public abstract Crypt getCrypt(CryptEntity dbCrypt, @Context List<CryptI18nEntity> cryptI18nList, @Context List<CardShopEntity> cardShopList, @Context BigDecimal eurToUsdRate);
 
     @AfterMapping
-    protected void afterMapping(@MappingTarget Crypt crypt, CryptEntity dbCrypt, @Context List<CryptI18nEntity> cryptI18nList, @Context List<CardShopEntity> cardShopList) {
+    protected void afterMapping(@MappingTarget Crypt crypt, CryptEntity dbCrypt, @Context List<CryptI18nEntity> cryptI18nList, @Context List<CardShopEntity> cardShopList, @Context BigDecimal eurToUsdRate) {
         crypt.setImage("/img/cards/" + dbCrypt.getId() + ".jpg");
         crypt.setCropImage("/img/cards/crop/" + dbCrypt.getId() + ".jpg");
         crypt.setClanIcon(VtesUtils.getClanIcon(dbCrypt.getClan()));
@@ -45,22 +46,39 @@ public abstract class CryptFactory {
         crypt.setSets(VtesUtils.getSets(dbCrypt.getSet()));
         crypt.setLastUpdate(dbCrypt.getModificationDate() != null ? dbCrypt.getModificationDate() : dbCrypt.getCreationDate());
         crypt.setPrintOnDemand(VtesUtils.isPrintOnDemand(cardShopList));
-        if (crypt.isPrintOnDemand()) {
-            for (CardShopEntity cardShop : cardShopList) {
-                if (VtesUtils.isPrintOnDemand(cardShopList, cardShop.getPlatform()) && !crypt.getSets().contains(cardShop.getSet())) {
-                    crypt.setSets(new ImmutableList.Builder<String>().addAll(crypt.getSets()).add(cardShop.getSet()).build());
+        if (!CollectionUtils.isEmpty(cardShopList)) {
+            // Add all sets from print on demand shops
+            if (crypt.isPrintOnDemand()) {
+                for (CardShopEntity cardShop : cardShopList) {
+                    if (VtesUtils.isPrintOnDemand(cardShopList, cardShop.getPlatform()) && !crypt.getSets().contains(cardShop.getSet())) {
+                        crypt.setSets(new ImmutableList.Builder<String>().addAll(crypt.getSets()).add(cardShop.getSet()).build());
+                    }
                 }
             }
-            //Force lastUpdate when new shop find
-            if (!CollectionUtils.isEmpty(cardShopList)) {
-                LocalDateTime cardShopCreationDate = cardShopList.stream()
-                        .filter(cardShop -> cardShop.getPlatform().isPrintOnDemand())
-                        .map(CardShopEntity::getCreationDate)
-                        .findAny()
-                        .orElse(null);
-                if (cardShopCreationDate != null && cardShopCreationDate.isAfter(crypt.getLastUpdate())) {
-                    crypt.setLastUpdate(cardShopCreationDate);
+            // Find min and max price in EUR
+            BigDecimal lowestEurPrice = null;
+            BigDecimal biggestEurPrice = null;
+            for (CardShopEntity cardShop : cardShopList) {
+                if (cardShop.getPrice() != null) {
+                    BigDecimal eurPrice = VtesUtils.getEurPrice(cardShop.getPrice(), cardShop.getCurrency(), eurToUsdRate);
+                    if (lowestEurPrice == null || eurPrice.compareTo(lowestEurPrice) < 0) {
+                        lowestEurPrice = eurPrice;
+                    }
+                    if (biggestEurPrice == null || eurPrice.compareTo(biggestEurPrice) > 0) {
+                        biggestEurPrice = eurPrice;
+                    }
                 }
+            }
+            crypt.setMinPrice(lowestEurPrice);
+            crypt.setMaxPrice(biggestEurPrice);
+            // Force lastUpdate when new shop find
+            LocalDateTime cardShopCreationDate = cardShopList.stream()
+                    .filter(cardShop -> cardShop.getPlatform().isPrintOnDemand())
+                    .map(CardShopEntity::getCreationDate)
+                    .findAny()
+                    .orElse(null);
+            if (cardShopCreationDate != null && cardShopCreationDate.isAfter(crypt.getLastUpdate())) {
+                crypt.setLastUpdate(cardShopCreationDate);
             }
         }
         //Crypt i18n

@@ -12,6 +12,7 @@ import com.googlecode.cqengine.query.option.Thresholds;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.factory.CryptFactory;
 import com.vtesdecks.cache.indexable.Crypt;
+import com.vtesdecks.integration.CurrencyExchangeClient;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.CryptEntity;
 import com.vtesdecks.jpa.entity.CryptI18nEntity;
@@ -32,6 +33,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -63,6 +65,8 @@ public class CryptCache {
     private CardShopRepository cardShopRepository;
     @Autowired
     private CryptFactory cryptFactory;
+    @Autowired
+    private CurrencyExchangeClient currencyExchangeClient;
 
     @PostConstruct
     public void setUp() {
@@ -88,10 +92,12 @@ public class CryptCache {
             List<DeckCardCount> deckCountByCard = deckCardRepository.selectDeckCountByCard();
             List<CardShopEntity> cardShopList = cardShopRepository.findAll();
             List<CryptI18nEntity> cryptI18nList = cryptI18nRepository.findAll();
+            BigDecimal eurToUsdRate = getExchangeRate();
             for (CryptEntity crypt : cryptRepository.findAll()) {
                 refreshIndex(crypt,
                         cryptI18nList.stream().filter(cryptI18n -> cryptI18n.getId().getCardId().equals(crypt.getId())).toList(),
                         cardShopList.stream().filter(cardShop -> cardShop.getCardId().equals(crypt.getId())).toList(),
+                        eurToUsdRate,
                         deckCountByCard.stream().filter(count -> count.getId().equals(crypt.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum(),
                         countByCard.stream().filter(count -> count.getId().equals(crypt.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum());
                 currentKeys.remove(crypt.getId());
@@ -108,10 +114,24 @@ public class CryptCache {
         }
     }
 
-    private void refreshIndex(CryptEntity crypt, List<CryptI18nEntity> cryptI18nList, List<CardShopEntity> cardShopList, long deckCount, long count) {
+    private BigDecimal getExchangeRate() {
+        try {
+            String exchangeRate = currencyExchangeClient.getLatest("EUR", "USD");
+            if (StringUtils.isNotBlank(exchangeRate)) {
+                return new BigDecimal(exchangeRate);
+            } else {
+                log.warn("Exchange rate is empty");
+            }
+        } catch (Exception e) {
+            log.warn("Could not get latest EUR usd rate for EUR", e);
+        }
+        return BigDecimal.ONE;
+    }
+
+    private void refreshIndex(CryptEntity crypt, List<CryptI18nEntity> cryptI18nList, List<CardShopEntity> cardShopList, BigDecimal eurToUsdRate, long deckCount, long count) {
         try {
             Crypt oldDeck = get(crypt.getId());
-            Crypt newDeck = cryptFactory.getCrypt(crypt, cryptI18nList, cardShopList);
+            Crypt newDeck = cryptFactory.getCrypt(crypt, cryptI18nList, cardShopList, eurToUsdRate);
             newDeck.setDeckPopularity(deckCount);
             newDeck.setCardPopularity(count);
             if (deckCount > 0) {

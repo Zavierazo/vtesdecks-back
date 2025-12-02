@@ -1,4 +1,4 @@
-package com.vtesdecks.model.flaresolverr;
+package com.vtesdecks.model.krcg;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,8 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FlareSolution {
-    private String url;
-    private String userAgent;
-    private String response;
+public class RulingSymbol {
+    private String text;
+    private String symbol;
 }
