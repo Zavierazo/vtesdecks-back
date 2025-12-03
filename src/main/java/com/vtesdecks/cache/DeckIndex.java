@@ -166,7 +166,7 @@ public class DeckIndex implements Runnable {
         try {
             stopWatch.start();
             Set<String> currentKeys = decks.stream().map(Deck::getId).collect(Collectors.toSet());
-            executor = Executors.newFixedThreadPool(20);
+            executor = Executors.newFixedThreadPool(50);
             List<LimitedFormatPayload> limitedFormats = getLimitedFormats();
             for (DeckEntity deck : deckRepository.findAll()) {
                 if (Boolean.FALSE.equals(deck.getDeleted())) {
@@ -212,18 +212,22 @@ public class DeckIndex implements Runnable {
         }
     }
 
-    private synchronized void refreshDeck(DeckEntity deck, List<LimitedFormatPayload> limitedFormats) {
+    private void refreshDeck(DeckEntity deck, List<LimitedFormatPayload> limitedFormats) {
         try {
-            Deck oldDeck = get(deck.getId());
             List<DeckCard> deckCards = deckCardIndex.refreshIndex(deck.getId());
             Deck newDeck = deckFactory.getDeck(deck, deckCards, limitedFormats);
-            if (oldDeck != null && !oldDeck.equals(newDeck)) {
-                decks.update(Lists.newArrayList(oldDeck), Lists.newArrayList(newDeck));
-            } else if (oldDeck == null) {
-                decks.add(newDeck);
-            }
+            syncDeck(deck, newDeck);
         } catch (Exception e) {
             log.error("Error when refresh deck {}", deck.getId(), e);
+        }
+    }
+
+    private synchronized void syncDeck(DeckEntity deck, Deck newDeck) {
+        Deck oldDeck = get(deck.getId());
+        if (oldDeck != null && !oldDeck.equals(newDeck)) {
+            decks.update(Lists.newArrayList(oldDeck), Lists.newArrayList(newDeck));
+        } else if (oldDeck == null) {
+            decks.add(newDeck);
         }
     }
 
