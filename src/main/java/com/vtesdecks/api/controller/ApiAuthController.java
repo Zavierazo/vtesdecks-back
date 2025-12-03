@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.vtesdecks.util.Constants.USER_COUNTRY_HEADER;
+
 @Controller
 @RequestMapping("/api/1.0/auth")
 @Slf4j
@@ -209,7 +211,7 @@ public class ApiAuthController {
     @ResponseBody
     public ApiUserCountry getUserCountry(HttpServletRequest request) {
         ApiUserCountry userCountry = new ApiUserCountry();
-        userCountry.setCountryCode(request.getHeader("CF-IPCountry"));
+        userCountry.setCountryCode(request.getHeader(USER_COUNTRY_HEADER));
         return userCountry;
     }
 

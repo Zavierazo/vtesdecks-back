@@ -12,7 +12,6 @@ import com.googlecode.cqengine.query.option.Thresholds;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.factory.LibraryFactory;
 import com.vtesdecks.cache.indexable.Library;
-import com.vtesdecks.integration.CurrencyExchangeClient;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.LibraryEntity;
 import com.vtesdecks.jpa.entity.LibraryI18nEntity;
@@ -33,7 +32,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -65,8 +63,6 @@ public class LibraryCache {
     private CardShopRepository cardShopRepository;
     @Autowired
     private LibraryFactory libraryFactory;
-    @Autowired
-    private CurrencyExchangeClient currencyExchangeClient;
 
 
     @PostConstruct
@@ -95,12 +91,10 @@ public class LibraryCache {
             List<DeckCardCount> deckCountByCard = deckCardRepository.selectDeckCountByCard();
             List<CardShopEntity> cardShopList = cardShopRepository.findAll();
             List<LibraryI18nEntity> libraryI18nList = libraryI18nRepository.findAll();
-            BigDecimal eurToUsdRate = getExchangeRate();
             for (LibraryEntity library : libraryRepository.findAll()) {
                 refreshIndex(library,
                         libraryI18nList.stream().filter(libraryI18n -> libraryI18n.getId().getCardId().equals(library.getId())).toList(),
                         cardShopList.stream().filter(cardShop -> cardShop.getCardId().equals(library.getId())).toList(),
-                        eurToUsdRate,
                         deckCountByCard.stream().filter(count -> count.getId().equals(library.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum(),
                         countByCard.stream().filter(count -> count.getId().equals(library.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum());
                 currentKeys.remove(library.getId());
@@ -117,24 +111,10 @@ public class LibraryCache {
         }
     }
 
-    private BigDecimal getExchangeRate() {
-        try {
-            String exchangeRate = currencyExchangeClient.getLatest("EUR", "USD");
-            if (StringUtils.isNotBlank(exchangeRate)) {
-                return new BigDecimal(exchangeRate);
-            } else {
-                log.warn("Exchange rate is empty");
-            }
-        } catch (Exception e) {
-            log.warn("Could not get latest EUR usd rate for EUR", e);
-        }
-        return BigDecimal.ONE;
-    }
-
-    private void refreshIndex(LibraryEntity library, List<LibraryI18nEntity> libraryI18nList, List<CardShopEntity> cardShopList, BigDecimal eurToUsdRate, Long deckCount, Long count) {
+    private void refreshIndex(LibraryEntity library, List<LibraryI18nEntity> libraryI18nList, List<CardShopEntity> cardShopList, Long deckCount, Long count) {
         try {
             Library oldLibrary = get(library.getId());
-            Library newLibrary = libraryFactory.getLibrary(library, libraryI18nList, cardShopList, eurToUsdRate);
+            Library newLibrary = libraryFactory.getLibrary(library, libraryI18nList, cardShopList);
             newLibrary.setDeckPopularity(deckCount);
             newLibrary.setCardPopularity(count);
             if (deckCount > 0) {

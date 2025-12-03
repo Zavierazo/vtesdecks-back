@@ -1,10 +1,10 @@
 package com.vtesdecks.model.api;
 
-import java.math.BigDecimal;
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -27,6 +27,8 @@ public class ApiDeckStats {
     private BigDecimal avgCrypt;
     private Integer minCrypt;
     private Integer maxCrypt;
+    private BigDecimal price;
+    private String currency;
     private List<ApiDisciplineStat> cryptDisciplines;
     private List<ApiDisciplineStat> libraryDisciplines;
     private List<ApiClanStat> libraryClans;

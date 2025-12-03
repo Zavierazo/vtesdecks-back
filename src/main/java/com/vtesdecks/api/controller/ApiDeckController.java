@@ -53,40 +53,42 @@ public class ApiDeckController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<ApiDeckHome> home() {
+    public ResponseEntity<ApiDeckHome> home(HttpServletRequest request) {
+        String currencyCode = Utils.getCurrencyCode(request);
         ApiDeckHome apiDeckHome = new ApiDeckHome();
-        apiDeckHome.setPreConstructedTotal(decks(0, DeckType.PRECONSTRUCTED, DeckSort.NEWEST, null).getTotal());
+        apiDeckHome.setPreConstructedTotal(decks(0, DeckType.PRECONSTRUCTED, DeckSort.NEWEST, null, currencyCode).getTotal());
         if (ApiUtils.extractUserId() != null) {
-            apiDeckHome.setUserTotal(decks(0, DeckType.USER, DeckSort.NEWEST, null).getTotal());
-            apiDeckHome.setFavoriteTotal(decks(0, DeckType.ALL, DeckSort.NEWEST, Boolean.TRUE).getTotal());
+            apiDeckHome.setUserTotal(decks(0, DeckType.USER, DeckSort.NEWEST, null, currencyCode).getTotal());
+            apiDeckHome.setFavoriteTotal(decks(0, DeckType.ALL, DeckSort.NEWEST, Boolean.TRUE, currencyCode).getTotal());
         }
-        ApiDecks tournamentPopular = decks(6, DeckType.TOURNAMENT, DeckSort.POPULAR, null);
+        ApiDecks tournamentPopular = decks(6, DeckType.TOURNAMENT, DeckSort.POPULAR, null, currencyCode);
         apiDeckHome.setTournamentPopular(tournamentPopular.getDecks());
-        ApiDecks tournamentNewest = decks(6, DeckType.TOURNAMENT, DeckSort.NEWEST, null);
+        ApiDecks tournamentNewest = decks(6, DeckType.TOURNAMENT, DeckSort.NEWEST, null, currencyCode);
         apiDeckHome.setTournamentNewest(tournamentNewest.getDecks());
-        ApiDecks communityPopular = decks(6, DeckType.COMMUNITY, DeckSort.POPULAR, null);
+        ApiDecks communityPopular = decks(6, DeckType.COMMUNITY, DeckSort.POPULAR, null, currencyCode);
         apiDeckHome.setCommunityPopular(communityPopular.getDecks());
-        ApiDecks communityNewest = decks(6, DeckType.COMMUNITY, DeckSort.NEWEST, null);
+        ApiDecks communityNewest = decks(6, DeckType.COMMUNITY, DeckSort.NEWEST, null, currencyCode);
         apiDeckHome.setCommunityNewest(communityNewest.getDecks());
         apiDeckHome.setTournamentTotal(tournamentPopular.getTotal());
         apiDeckHome.setCommunityTotal(communityPopular.getTotal());
         return new ResponseEntity<>(apiDeckHome, HttpStatus.OK);
     }
 
-    private ApiDecks decks(Integer limit, DeckType type, DeckSort order, Boolean favorite) {
+    private ApiDecks decks(Integer limit, DeckType type, DeckSort order, Boolean favorite, String currencyCode) {
         return deckService.getDecks(type, order, ApiUtils.extractUserId(), null, null, null,
                 null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
-                null, null, null, null, null, null, favorite, 0, limit);
+                null, null, null, null, null, null,
+                favorite, currencyCode, 0, limit);
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/{id}", produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<ApiDeck> deck(@PathVariable String id, @RequestParam(required = false, defaultValue = "false") boolean collectionTracker) {
-        ApiDeck deck = deckService.getDeck(id, true, collectionTracker);
+    public ResponseEntity<ApiDeck> deck(HttpServletRequest request, @PathVariable String id, @RequestParam(required = false, defaultValue = "false") boolean collectionTracker) {
+        ApiDeck deck = deckService.getDeck(id, true, collectionTracker, Utils.getCurrencyCode(request));
         if (deck == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {
@@ -99,7 +101,8 @@ public class ApiDeckController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<ApiDecks> decks(@RequestParam(name = "type", required = false, defaultValue = "ALL") DeckType type,
+    public ResponseEntity<ApiDecks> decks(HttpServletRequest request,
+                                          @RequestParam(name = "type", required = false, defaultValue = "ALL") DeckType type,
                                           @RequestParam(name = "order", required = false, defaultValue = "NEWEST") DeckSort order,
                                           @RequestParam(name = "name", required = false) String name,
                                           @RequestParam(name = "author", required = false) String author,
@@ -136,7 +139,8 @@ public class ApiDeckController {
                                           @RequestParam(name = "limit", required = false) Integer limit) {
         ApiDecks decks = deckService.getDecks(type, order, ApiUtils.extractUserId(), name, author, cardText, clans, disciplines, cards, cryptSize,
                 librarySize, group, starVampire, singleClan, singleDiscipline, year, players, master, action, political, retainer, equipment, ally,
-                modifier, combat, reaction, event, absoluteProportion, tags, limitedFormat, paths, bySimilarity, collectionPercentage, favorite, offset != null ? offset : 0, limit != null ? limit : 20);
+                modifier, combat, reaction, event, absoluteProportion, tags, limitedFormat, paths, bySimilarity, collectionPercentage, favorite,
+                Utils.getCurrencyCode(request), offset != null ? offset : 0, limit != null ? limit : 20);
         return new ResponseEntity<>(decks, HttpStatus.OK);
     }
 

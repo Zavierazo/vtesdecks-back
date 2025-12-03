@@ -6,16 +6,16 @@ import com.googlecode.cqengine.query.QueryFactory;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.vtesdecks.util.Utils;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.StringUtils;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 @Data
-public class Crypt {
+@EqualsAndHashCode(callSuper = true)
+public class Crypt extends Card {
     public static final Attribute<Crypt, Integer> ID_ATTRIBUTE = QueryFactory.attribute(Crypt.class, Integer.class, "id", Crypt::getId);
     public static final Attribute<Crypt, String> NAME_ATTRIBUTE =
             QueryFactory.attribute(Crypt.class, String.class, "name", (Crypt crypt) -> Utils.normalizeName(StringUtils.lowerCase(crypt.getName())));
@@ -46,20 +46,10 @@ public class Crypt {
     private String banned;
     private String artist;
     //Extra
-    private Map<String, I18n> i18n;
-    private String image;
-    private String cropImage;
     private String clanIcon;
     private String pathIcon;
     private Set<String> disciplines;
     private Set<String> superiorDisciplines;
     private Set<String> disciplineIcons;
     private String sect;
-    private Set<String> taints;
-    private Long deckPopularity;
-    private Long cardPopularity;
-    private boolean printOnDemand;
-    private BigDecimal minPrice;
-    private BigDecimal maxPrice;
-    private LocalDateTime lastUpdate;
 }

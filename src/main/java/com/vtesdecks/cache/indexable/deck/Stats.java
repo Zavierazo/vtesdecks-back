@@ -1,12 +1,12 @@
 package com.vtesdecks.cache.indexable.deck;
 
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
-
-import lombok.Data;
 
 @Data
 public class Stats {
@@ -29,6 +29,8 @@ public class Stats {
     private BigDecimal avgCrypt;
     private int minCrypt;
     private int maxCrypt;
+    private BigDecimal price;
+    private String currency;
     private List<DisciplineStat> cryptDisciplines = new ArrayList<>();
     private List<DisciplineStat> libraryDisciplines = new ArrayList<>();
     private List<ClanStat> libraryClans = new ArrayList<>();

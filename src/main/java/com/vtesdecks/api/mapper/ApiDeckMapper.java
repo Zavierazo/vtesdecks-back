@@ -15,7 +15,9 @@ import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.model.Errata;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeck;
+import com.vtesdecks.model.api.ApiDeckStats;
 import com.vtesdecks.model.api.ApiErrata;
+import com.vtesdecks.service.CurrencyExchangeService;
 import com.vtesdecks.util.VtesUtils;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.BeanMapping;
@@ -32,6 +34,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 import static com.vtesdecks.util.VtesUtils.isCrypt;
 
 @Mapper(componentModel = "spring")
@@ -49,10 +52,12 @@ public abstract class ApiDeckMapper {
     private CollectionCardRepository collectionCardRepository;
     @Autowired
     private ApiCollectionService apiCollectionService;
+    @Autowired
+    private CurrencyExchangeService currencyExchangeService;
 
 
     @BeanMapping(qualifiedByName = "map")
-    public abstract ApiDeck map(Deck deck, @Context Integer userId, @Context boolean collectionTracker);
+    public abstract ApiDeck map(Deck deck, @Context Integer userId, @Context boolean collectionTracker, @Context String currencyCode);
 
     @BeanMapping(qualifiedByName = "mapSummary")
     @Mapping(target = "url", ignore = true)
@@ -64,11 +69,11 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "stats.libraryClans", ignore = true)
     @Mapping(target = "erratas", ignore = true)
     @Mapping(target = "extra", ignore = true)
-    public abstract ApiDeck mapSummary(Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter);
+    public abstract ApiDeck mapSummary(Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode);
 
     @Named("map")
     @AfterMapping
-    protected void afterMapping(@MappingTarget ApiDeck api, Deck deck, @Context Integer userId, @Context boolean collectionTracker) {
+    protected void afterMapping(@MappingTarget ApiDeck api, Deck deck, @Context Integer userId, @Context boolean collectionTracker, @Context String currencyCode) {
         if (deck.getLibraryByType() != null) {
             List<ApiCard> cardList = new ArrayList<>();
             for (Map.Entry<String, List<Card>> deckEntry : deck.getLibraryByType().entrySet()) {
@@ -90,6 +95,7 @@ public abstract class ApiDeckMapper {
                 fillCollectionTracker(apiCard, collectionMap);
             }
         }
+        convertPriceCurrency(api.getStats(), currencyCode);
     }
 
     private static void fillCollectionTracker(ApiCard apiCard, Map<Integer, Integer> collectionMap) {
@@ -107,7 +113,7 @@ public abstract class ApiDeckMapper {
 
     @Named("mapSummary")
     @AfterMapping
-    protected void afterMappingSummary(@MappingTarget ApiDeck api, Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter) {
+    protected void afterMappingSummary(@MappingTarget ApiDeck api, Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode) {
         if (userId != null) {
             afterMappingUser(api, userId, deck);
         }
@@ -137,6 +143,7 @@ public abstract class ApiDeckMapper {
                         return apiCard;
                     }).toList());
         }
+        convertPriceCurrency(api.getStats(), currencyCode);
     }
 
     private void afterMappingUser(ApiDeck api, Integer userId, Deck deck) {
@@ -168,6 +175,13 @@ public abstract class ApiDeckMapper {
         } else {
             Crypt crypt = cryptCache.get(api.getId());
             api.setName(crypt.getName());
+        }
+    }
+
+    private void convertPriceCurrency(ApiDeckStats stats, String currencyCode) {
+        if (stats.getPrice() != null && currencyCode != null && !currencyCode.equalsIgnoreCase(DEFAULT_CURRENCY)) {
+            stats.setPrice(currencyExchangeService.convert(stats.getPrice(), DEFAULT_CURRENCY, currencyCode));
+            stats.setCurrency(currencyCode);
         }
     }
 }

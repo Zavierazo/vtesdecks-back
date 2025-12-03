@@ -10,6 +10,7 @@ import com.vtesdecks.jpa.entity.LibraryEntity;
 import com.vtesdecks.jpa.entity.LibraryI18nEntity;
 import com.vtesdecks.model.LibraryTaint;
 import com.vtesdecks.model.LibraryTitle;
+import com.vtesdecks.service.CurrencyExchangeService;
 import com.vtesdecks.util.VtesUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +20,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -30,15 +32,19 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
+
 @Mapper(componentModel = "spring")
 public abstract class LibraryFactory {
+    @Autowired
+    private CurrencyExchangeService currencyExchangeService;
 
     @Mapping(target = "types", ignore = true)
     @Mapping(target = "path", source = "dbLibrary.path", qualifiedByName = "mapNonEmpty")
-    public abstract Library getLibrary(LibraryEntity dbLibrary, @Context List<LibraryI18nEntity> libraryI18nList, @Context List<CardShopEntity> cardShopList, @Context BigDecimal eurToUsdRate);
+    public abstract Library getLibrary(LibraryEntity dbLibrary, @Context List<LibraryI18nEntity> libraryI18nList, @Context List<CardShopEntity> cardShopList);
 
     @AfterMapping
-    protected void afterMapping(@MappingTarget Library library, LibraryEntity dbLibrary, @Context List<LibraryI18nEntity> libraryI18nList, @Context List<CardShopEntity> cardShopList, @Context BigDecimal eurToUsdRate) {
+    protected void afterMapping(@MappingTarget Library library, LibraryEntity dbLibrary, @Context List<LibraryI18nEntity> libraryI18nList, @Context List<CardShopEntity> cardShopList) {
         library.setImage("/img/cards/" + +dbLibrary.getId() + ".jpg");
         library.setCropImage("/img/cards/crop/" + +dbLibrary.getId() + ".jpg");
         library.setTypes(getTypes(dbLibrary));
@@ -65,21 +71,12 @@ public abstract class LibraryFactory {
                 }
             }
             // Find min and max price in EUR
-            BigDecimal lowestEurPrice = null;
-            BigDecimal biggestEurPrice = null;
-            for (CardShopEntity cardShop : cardShopList) {
-                if (cardShop.getPrice() != null) {
-                    BigDecimal eurPrice = VtesUtils.getEurPrice(cardShop.getPrice(), cardShop.getCurrency(), eurToUsdRate);
-                    if (lowestEurPrice == null || eurPrice.compareTo(lowestEurPrice) < 0) {
-                        lowestEurPrice = eurPrice;
-                    }
-                    if (biggestEurPrice == null || eurPrice.compareTo(biggestEurPrice) > 0) {
-                        biggestEurPrice = eurPrice;
-                    }
-                }
-            }
-            library.setMinPrice(lowestEurPrice);
-            library.setMaxPrice(biggestEurPrice);
+            List<BigDecimal> priceList = cardShopList.stream()
+                    .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
+                    .map(cardShop -> currencyExchangeService.convert(cardShop.getPrice(), cardShop.getCurrency(), DEFAULT_CURRENCY))
+                    .toList();
+            library.setMinPrice(priceList.stream().min(BigDecimal::compareTo).orElse(null));
+            library.setMaxPrice(priceList.stream().max(BigDecimal::compareTo).orElse(null));
             //Force lastUpdate when new shop find
             if (!CollectionUtils.isEmpty(cardShopList)) {
                 LocalDateTime cardShopCreationDate = cardShopList.stream()

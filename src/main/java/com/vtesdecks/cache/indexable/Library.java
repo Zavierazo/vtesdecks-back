@@ -8,14 +8,12 @@ import com.vtesdecks.util.Utils;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 @Data
-public class Library {
+public class Library extends Card {
     public static final Attribute<Library, Integer> ID_ATTRIBUTE = QueryFactory.attribute(Library.class, Integer.class, "id", Library::getId);
     public static final Attribute<Library, String> NAME_ATTRIBUTE = QueryFactory.attribute(Library.class, String.class, "name", (Library library) -> Utils.normalizeName(StringUtils.lowerCase(library.getName())));
     public static final Attribute<Library, String> TEXT_ATTRIBUTE = QueryFactory.attribute(Library.class, String.class, "text", (Library library) -> Utils.normalizeName(StringUtils.lowerCase(library.getText())));
@@ -57,9 +55,6 @@ public class Library {
     private String artist;
     private String capacity;
     //Extra
-    private Map<String, I18n> i18n;
-    private String image;
-    private String cropImage;
     private boolean trifle;
     private Set<String> disciplines;
     private Set<String> types;
@@ -69,11 +64,4 @@ public class Library {
     private Set<String> disciplineIcons;
     private Set<String> sects;
     private Set<String> titles;
-    private Set<String> taints;
-    private Long deckPopularity;
-    private Long cardPopularity;
-    private boolean printOnDemand;
-    private BigDecimal minPrice;
-    private BigDecimal maxPrice;
-    private LocalDateTime lastUpdate;
 }

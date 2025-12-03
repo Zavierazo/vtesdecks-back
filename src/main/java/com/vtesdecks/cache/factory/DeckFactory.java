@@ -45,6 +45,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 import static java.math.RoundingMode.HALF_UP;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
@@ -263,12 +264,19 @@ public class DeckFactory {
     private Stats getDeckStats(List<Card> cards) {
         Stats deckStats = new Stats();
         List<Integer> groups = new ArrayList<>();
+        BigDecimal price = BigDecimal.ZERO;
+        boolean fullPrice = true;
         for (Card card : cards) {
             if (VtesUtils.isCrypt(card.getId())) {
                 deckStats.setCrypt(deckStats.getCrypt() + card.getNumber());
                 Crypt crypt = cryptCache.get(card.getId());
                 groups.add(crypt.getCapacity());
                 fillCryptDisciplineStats(deckStats, crypt);
+                if (fullPrice && crypt.getMinPrice() != null) {
+                    price = price.add(crypt.getMinPrice().multiply(BigDecimal.valueOf(card.getNumber())));
+                } else {
+                    fullPrice = false;
+                }
             } else if (VtesUtils.isLibrary(card.getId())) {
                 deckStats.setLibrary(deckStats.getLibrary() + card.getNumber());
                 Library library = libraryCache.get(card.getId());
@@ -277,6 +285,11 @@ public class DeckFactory {
                 }
                 if (library.getPoolCost() != null) {
                     deckStats.setPoolCost(deckStats.getPoolCost() + (Math.max(0, library.getPoolCost()) * card.getNumber()));
+                }
+                if (fullPrice && library.getMinPrice() != null) {
+                    price = price.add(library.getMinPrice().multiply(BigDecimal.valueOf(card.getNumber())));
+                } else {
+                    fullPrice = false;
                 }
                 switch (library.getType()) {
                     case "Event":
@@ -367,6 +380,11 @@ public class DeckFactory {
         deckStats.getCryptDisciplines().sort(Comparator.comparingInt(DisciplineStat::getSuperior).reversed());
         deckStats.getLibraryDisciplines().sort(Comparator.comparingInt(DisciplineStat::getInferior).reversed());
         deckStats.getLibraryClans().sort(Comparator.comparingInt(ClanStat::getNumber).reversed());
+        // Set price and currency only if all cards have price
+        if (fullPrice) {
+            deckStats.setPrice(price);
+            deckStats.setCurrency(DEFAULT_CURRENCY);
+        }
         return deckStats;
     }
 

@@ -36,15 +36,15 @@ public class ApiDeckService {
     @Autowired
     private ApiCollectionService apiCollectionService;
 
-    public ApiDeck getDeck(String deckId, boolean detailed, boolean collectionTracker) {
+    public ApiDeck getDeck(String deckId, boolean detailed, boolean collectionTracker, String currencyCode) {
         Deck deck = deckService.getDeck(deckId);
         if (deck == null) {
             return null;
         }
         if (detailed) {
-            return mapper.map(deck, ApiUtils.extractUserId(), collectionTracker);
+            return mapper.map(deck, ApiUtils.extractUserId(), collectionTracker, currencyCode);
         } else {
-            return mapper.mapSummary(deck, ApiUtils.extractUserId(), null);
+            return mapper.mapSummary(deck, ApiUtils.extractUserId(), null, currencyCode);
         }
     }
 
@@ -82,6 +82,7 @@ public class ApiDeckService {
                              String bySimilarity,
                              Integer collectionPercentage,
                              Boolean favorite,
+                             String currencyCode,
                              Integer offset,
                              Integer limit) {
         final Map<Integer, Integer> cardMap = new HashMap<>();
@@ -127,12 +128,12 @@ public class ApiDeckService {
         apiDecks.setDecks(deckStream
                 .skip(offset)
                 .limit(limit)
-                .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap))
+                .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap, currencyCode))
                 .toList());
         if (offset == 0 && userId != null && type == DeckType.USER) {
             apiDecks.setRestorableDecks(deckRepository.selectUserDeleted(userId).stream()
                     .map(dbDeck -> deckFactory.getDeck(dbDeck, new ArrayList<>(), new ArrayList<>()))
-                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap))
+                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap, currencyCode))
                     .toList());
         }
         return apiDecks;

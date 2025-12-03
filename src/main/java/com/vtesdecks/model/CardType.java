@@ -3,7 +3,7 @@ package com.vtesdecks.model;
 import lombok.Getter;
 
 public enum CardType {
-    MASTER("Master", null),//Master doenst have icon
+    MASTER("Master", "master"),
     EQUIPMENT("Equipment", "equipment"),
     ACTION("Action", "action"),
     POWER("Power", "power"),

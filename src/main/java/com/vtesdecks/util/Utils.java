@@ -21,12 +21,15 @@ import org.springframework.http.MediaType;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Currency;
 import java.util.List;
+import java.util.Locale;
 import java.util.Scanner;
 
 import static com.opencsv.ICSVWriter.DEFAULT_QUOTE_CHARACTER;
 import static com.opencsv.ICSVWriter.DEFAULT_SEPARATOR;
 import static com.vtesdecks.util.Constants.CONTENT_DISPOSITION_HEADER;
+import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 
 @Slf4j
 @UtilityClass
@@ -51,6 +54,23 @@ public class Utils {
             }
         }
         return remoteAddr;
+    }
+
+    public static String getCurrencyCode(HttpServletRequest httpServletRequest) {
+        String countryCode = null;
+        try {
+            countryCode = httpServletRequest.getHeader(Constants.USER_COUNTRY_HEADER);
+            if (countryCode == null || countryCode.isEmpty()) {
+                return DEFAULT_CURRENCY;
+            }
+            String currency = Currency.getInstance(Locale.of("", countryCode)).getCurrencyCode();
+            if (currency != null && !currency.isEmpty()) {
+                return currency;
+            }
+        } catch (Exception e) {
+            log.warn("Unable to obtain currency from request for country code {}", countryCode, e);
+        }
+        return DEFAULT_CURRENCY;
     }
 
     public static String removeCommas(String value, boolean advanced) {

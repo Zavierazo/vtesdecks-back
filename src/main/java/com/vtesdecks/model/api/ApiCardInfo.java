@@ -3,6 +3,7 @@ package com.vtesdecks.model.api;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -12,4 +13,7 @@ public class ApiCardInfo {
     private List<ApiShop> shopList;
     private List<ApiRuling> rulingList;
     private ApiCollectionCardStats collectionStats;
+    private BigDecimal minPrice;
+    private BigDecimal maxPrice;
+    private String currency;
 }

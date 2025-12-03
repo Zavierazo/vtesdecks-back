@@ -6,6 +6,8 @@ import com.vtesdecks.model.api.ApiCardInfo;
 import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiShop;
+import com.vtesdecks.util.Utils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -102,8 +104,8 @@ public class ApiCardController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<ApiCardInfo> getCardInfo(@PathVariable Integer id) {
-        return new ResponseEntity<>(apiCardInfoService.getCardInfo(id), HttpStatus.OK);
+    public ResponseEntity<ApiCardInfo> getCardInfo(HttpServletRequest request, @PathVariable Integer id) {
+        return new ResponseEntity<>(apiCardInfoService.getCardInfo(id, Utils.getCurrencyCode(request)), HttpStatus.OK);
     }
 
 
