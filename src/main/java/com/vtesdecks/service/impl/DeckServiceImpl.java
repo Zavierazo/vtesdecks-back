@@ -28,6 +28,7 @@ public class DeckServiceImpl implements DeckService {
                                     Integer userId,
                                     String name,
                                     String author,
+                                    Boolean exactAuthor,
                                     String cardText,
                                     List<String> clans,
                                     List<String> disciplines,
@@ -60,6 +61,7 @@ public class DeckServiceImpl implements DeckService {
                 .user(userId)
                 .name(name)
                 .author(author)
+                .exactAuthor(exactAuthor)
                 .cardText(cardText)
                 .clans(clans)
                 .disciplines(disciplines)

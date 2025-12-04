@@ -76,7 +76,7 @@ public class ApiDeckController {
 
     private ApiDecks decks(Integer limit, DeckType type, DeckSort order, Boolean favorite, String currencyCode) {
         return deckService.getDecks(type, order, ApiUtils.extractUserId(), null, null, null,
-                null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
                 null, null, null, null, null, null,
@@ -106,6 +106,7 @@ public class ApiDeckController {
                                           @RequestParam(name = "order", required = false, defaultValue = "NEWEST") DeckSort order,
                                           @RequestParam(name = "name", required = false) String name,
                                           @RequestParam(name = "author", required = false) String author,
+                                          @RequestParam(name = "exactAuthor", required = false) Boolean exactAuthor,
                                           @RequestParam(name = "cardText", required = false) String cardText,
                                           @RequestParam(name = "clans", required = false) List<String> clans,
                                           @RequestParam(name = "disciplines", required = false) List<String> disciplines,
@@ -137,7 +138,7 @@ public class ApiDeckController {
                                           @RequestParam(name = "collectionPercentage", required = false) Integer collectionPercentage,
                                           @RequestParam(name = "offset", required = false) Integer offset,
                                           @RequestParam(name = "limit", required = false) Integer limit) {
-        ApiDecks decks = deckService.getDecks(type, order, ApiUtils.extractUserId(), name, author, cardText, clans, disciplines, cards, cryptSize,
+        ApiDecks decks = deckService.getDecks(type, order, ApiUtils.extractUserId(), name, author, exactAuthor, cardText, clans, disciplines, cards, cryptSize,
                 librarySize, group, starVampire, singleClan, singleDiscipline, year, players, master, action, political, retainer, equipment, ally,
                 modifier, combat, reaction, event, absoluteProportion, tags, limitedFormat, paths, bySimilarity, collectionPercentage, favorite,
                 Utils.getCurrencyCode(request), offset != null ? offset : 0, limit != null ? limit : 20);

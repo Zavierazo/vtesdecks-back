@@ -53,6 +53,7 @@ public class ApiDeckService {
                              Integer userId,
                              String name,
                              String author,
+                             Boolean exactAuthor,
                              String cardText,
                              List<String> clans,
                              List<String> disciplines,
@@ -100,7 +101,7 @@ public class ApiDeckService {
                 cardMap.put(id, number);
             }
         }
-        ResultSet<Deck> decks = deckService.getDecks(type, order, userId, name, author, cardText, clans, disciplines,
+        ResultSet<Deck> decks = deckService.getDecks(type, order, userId, name, author, exactAuthor, cardText, clans, disciplines,
                 cardMap, cryptSize, librarySize, group, starVampire, singleClan, singleDiscipline, year, players, master, action, political, retainer,
                 equipment, ally, modifier, combat, reaction, event, absoluteProportion, tags, limitedFormat, paths, favorite);
         ApiDecks apiDecks = new ApiDecks();

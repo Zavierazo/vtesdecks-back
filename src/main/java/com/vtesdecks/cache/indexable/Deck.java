@@ -8,6 +8,7 @@ import com.googlecode.cqengine.query.option.QueryOptions;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.Stats;
 import com.vtesdecks.cache.indexable.deck.card.Card;
+import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.model.Errata;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
@@ -36,7 +37,7 @@ public class Deck {
     public static final Attribute<Deck, Integer> LIBRARY_SIZE_ATTRIBUTE = QueryFactory.attribute(Deck.class, Integer.class, "library_size", (Deck deck) -> deck.getStats().getLibrary());
     public static final Attribute<Deck, LocalDateTime> CREATION_DATE_ATTRIBUTE = QueryFactory.attribute(Deck.class, LocalDateTime.class, "creationDate", Deck::getCreationDate);
     public static final Attribute<Deck, LocalDateTime> MODIFY_DATE_ATTRIBUTE = QueryFactory.attribute(Deck.class, LocalDateTime.class, "modificationDate", Deck::getModifyDate);
-    public static final Attribute<Deck, Integer> USER_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, Integer.class, "user", Deck::getUser);
+    public static final Attribute<Deck, Integer> USER_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, Integer.class, "user", (Deck deck) -> deck.getUser() != null ? deck.getUser().getId() : null);
     public static final Attribute<Deck, Integer> CLAN_NUMBER_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, Integer.class, "clanNumber", (Deck deck) -> deck.getClans().size());
     public static final Attribute<Deck, Integer> DISCIPLINE_NUMBER_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, Integer.class, "disciplineNumber", (Deck deck) -> deck.getDisciplines().size());
     public static final Attribute<Deck, String> AUTHOR_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, String.class, "author", (Deck deck) -> deck.getAuthor() != null ? deck.getAuthor().toLowerCase() : null);
@@ -100,7 +101,8 @@ public class Deck {
     private String tournament;
     private Integer players;
     private Integer year;
-    private Integer user;
+    private UserEntity user;
+    private List<String> userRoles;
     private String author;
     private String url;
     private String source;

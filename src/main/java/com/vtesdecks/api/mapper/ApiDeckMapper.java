@@ -37,7 +37,7 @@ import java.util.Optional;
 import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 import static com.vtesdecks.util.VtesUtils.isCrypt;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {ApiPublicUserMapper.class})
 public abstract class ApiDeckMapper {
 
     @Autowired
@@ -57,6 +57,7 @@ public abstract class ApiDeckMapper {
 
 
     @BeanMapping(qualifiedByName = "map")
+    @Mapping(target = "user", source = "deck", qualifiedByName = "mapDeckUser")
     public abstract ApiDeck map(Deck deck, @Context Integer userId, @Context boolean collectionTracker, @Context String currencyCode);
 
     @BeanMapping(qualifiedByName = "mapSummary")
@@ -69,6 +70,7 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "stats.libraryClans", ignore = true)
     @Mapping(target = "erratas", ignore = true)
     @Mapping(target = "extra", ignore = true)
+    @Mapping(target = "user", source = "deck", qualifiedByName = "mapDeckUser")
     public abstract ApiDeck mapSummary(Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode);
 
     @Named("map")

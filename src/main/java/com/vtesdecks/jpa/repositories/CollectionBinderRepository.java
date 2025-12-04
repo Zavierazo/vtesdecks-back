@@ -9,6 +9,8 @@ import java.util.Optional;
 public interface CollectionBinderRepository extends JpaRepository<CollectionBinderEntity, Integer> {
     List<CollectionBinderEntity> findByCollectionId(Integer collectionId);
 
+    List<CollectionBinderEntity> findByCollectionIdAndPublicVisibilityTrue(Integer collectionId);
+
     boolean existsByCollectionIdAndNameIgnoreCase(Integer collectionId, String name);
 
     Optional<CollectionBinderEntity> findByCollectionIdAndNameIgnoreCase(Integer collectionId, String name);

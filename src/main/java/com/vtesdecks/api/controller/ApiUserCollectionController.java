@@ -174,7 +174,7 @@ public class ApiUserCollectionController {
     @GetMapping(value = "/cards/{id}/stats", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiCollectionCardStats cardStats(@PathVariable Integer id, @RequestParam(defaultValue = "false") Boolean summary) throws Exception {
         ApiDecks decks = apiDeckService.getDecks(DeckType.USER, DeckSort.NEWEST, ApiUtils.extractUserId(), null, null, null,
-                null, null, List.of(id + "=1"), null, null, null, null,
+                null, null, null, List.of(id + "=1"), null, null, null, null,
                 null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,

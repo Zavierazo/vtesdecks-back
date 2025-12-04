@@ -174,7 +174,7 @@ public class ApiStatisticsService {
     }
 
     private ResultSet<Deck> getDecks(DeckType type, Integer year) {
-        return deckService.getDecks(type, DeckSort.NEWEST, ApiUtils.extractUserId(), null, null, null,
+        return deckService.getDecks(type, DeckSort.NEWEST, ApiUtils.extractUserId(), null, null, null, null,
                 null, null, null, null, null, null, null,
                 null, null, year != null ? Lists.newArrayList(year, year) : null, null, null, null, null,
                 null, null, null, null, null, null, null,

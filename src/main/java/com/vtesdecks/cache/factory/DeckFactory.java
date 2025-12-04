@@ -129,8 +129,12 @@ public class DeckFactory {
         value.setPublished(deck.getPublished());
         value.setCollection(deck.getCollection());
         if (deck.getUser() != null) {
-            value.setUser(deck.getUser());
-            userRepository.findById(deck.getUser()).ifPresent(user -> value.setAuthor(user.getDisplayName()));
+            userRepository.findById(deck.getUser()).ifPresent(user -> {
+                value.setUser(user);
+                value.setAuthor(user.getDisplayName());
+                List<String> roles = userRepository.selectRolesByUserId(user.getId());
+                value.setUserRoles(roles);
+            });
         }
         if (deck.getExtra() != null && deck.getExtra().has("limitedFormat") && deck.getExtra().get("limitedFormat").has("name")) {
             if (deck.getExtra().get("limitedFormat").has("id")) {

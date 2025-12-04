@@ -5,10 +5,12 @@ import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.jpa.entity.CollectionBinderEntity;
 import com.vtesdecks.jpa.entity.CollectionCardEntity;
 import com.vtesdecks.jpa.entity.CollectionEntity;
+import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.CollectionBinderRepository;
 import com.vtesdecks.jpa.repositories.CollectionCardRepository;
 import com.vtesdecks.jpa.repositories.CollectionCardRepositoryCustom;
 import com.vtesdecks.jpa.repositories.CollectionRepository;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.CollectionType;
 import com.vtesdecks.model.api.ApiCollection;
 import com.vtesdecks.model.api.ApiCollectionBinder;
@@ -46,6 +48,7 @@ import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 @Service
 @RequiredArgsConstructor
 public class ApiCollectionService {
+    private final UserRepository userRepository;
     private final CollectionRepository collectionRepository;
     private final CollectionBinderRepository collectionBinderRepository;
     private final CollectionCardRepository collectionCardRepository;
@@ -100,6 +103,24 @@ public class ApiCollectionService {
             throw e; // Propagate validation errors
         } catch (Exception e) {
             throw new Exception("An unexpected error occurred while getting the binders", e);
+        }
+    }
+
+    public ApiCollection getUserPublicCollection(String username) throws Exception {
+        try {
+            UserEntity user = userRepository.findByUsername(username);
+            if (user == null) {
+                return null;
+            }
+            CollectionEntity collectionEntity = getCollection(user.getId());
+            List<CollectionBinderEntity> binders = collectionEntity != null
+                    ? collectionBinderRepository.findByCollectionIdAndPublicVisibilityTrue(collectionEntity.getId())
+                    : null;
+            return apiCollectionMapper.mapCollection(collectionEntity, binders);
+        } catch (IllegalArgumentException e) {
+            throw e; // Propagate validation errors
+        } catch (Exception e) {
+            throw new Exception("An unexpected error occurred while retrieving the public collection", e);
         }
     }
 
@@ -194,6 +215,14 @@ public class ApiCollectionService {
         } catch (Exception e) {
             throw new Exception("An unexpected error occurred while deleting the binder", e);
         }
+    }
+
+    private CollectionEntity getCollection(Integer userId) {
+        List<CollectionEntity> collectionEntityList = collectionRepository.findByUserIdAndDeletedFalse(userId);
+        if (collectionEntityList.isEmpty()) {
+            return null;
+        }
+        return collectionEntityList.getFirst();
     }
 
 

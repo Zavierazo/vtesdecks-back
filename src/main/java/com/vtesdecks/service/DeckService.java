@@ -17,6 +17,7 @@ public interface DeckService {
                              Integer userId,
                              String name,
                              String author,
+                             Boolean exactAuthor,
                              String cardText,
                              List<String> clans,
                              List<String> disciplines,

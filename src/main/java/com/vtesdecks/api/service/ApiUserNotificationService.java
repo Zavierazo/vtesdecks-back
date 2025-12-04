@@ -71,8 +71,8 @@ public class ApiUserNotificationService {
              *  Exceptions:
              * - Comment user is the same as deck owner
              */
-            if (deck.getUser() != null && !deck.getUser().equals(comment.getUser())) {
-                addCommentNotification(comment, deck, deck.getUser());
+            if (deck.getUser() != null && !comment.getUser().equals(deck.getUser().getId())) {
+                addCommentNotification(comment, deck, deck.getUser().getId());
             }
             /* Case 2: Notify last comment user when someone reply
              * Exceptions:
@@ -80,7 +80,7 @@ public class ApiUserNotificationService {
              * - Last comment user is the owner of the deck(covered by case 1)
              */
             Integer replyUserId = commentList.size() > 1 ? commentList.get(commentList.size() - 2).getUser() : null;
-            if (replyUserId != null && !replyUserId.equals(comment.getUser()) && !replyUserId.equals(deck.getUser())) {
+            if (replyUserId != null && !replyUserId.equals(comment.getUser()) && !replyUserId.equals(deck.getUser() != null ? deck.getUser().getId() : null)) {
                 addCommentNotification(comment, deck, replyUserId);
             }
         } else {

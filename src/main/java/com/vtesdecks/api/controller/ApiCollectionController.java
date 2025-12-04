@@ -1,6 +1,7 @@
 package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.ApiCollectionService;
+import com.vtesdecks.model.api.ApiCollection;
 import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
 import com.vtesdecks.model.api.ApiCollectionPage;
@@ -27,6 +28,12 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 public class ApiCollectionController {
 
     private final ApiCollectionService collectionService;
+
+
+    @GetMapping(value = "/users/{username}/collection", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiCollection getUserPublicCollection(@PathVariable String username) throws Exception {
+        return collectionService.getUserPublicCollection(username);
+    }
 
     @GetMapping(value = "/binders/{publicHash}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiCollectionBinder getBinder(@PathVariable String publicHash) throws Exception {

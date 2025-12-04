@@ -386,7 +386,11 @@ public class DeckIndex implements Runnable {
             query = and(query, contains(Deck.NAME_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getName())));
         }
         if (deckQuery.getAuthor() != null) {
-            query = and(query, contains(Deck.AUTHOR_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getAuthor())));
+            if (Boolean.TRUE.equals(deckQuery.getExactAuthor())) {
+                query = and(query, equal(Deck.AUTHOR_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getAuthor())));
+            } else {
+                query = and(query, contains(Deck.AUTHOR_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getAuthor())));
+            }
         }
         if (deckQuery.getGroups() != null) {
             Query groupQuery = null;

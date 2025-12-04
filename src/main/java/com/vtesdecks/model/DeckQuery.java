@@ -19,6 +19,7 @@ public class DeckQuery {
     private Integer user;
     private String name;
     private String author;
+    private Boolean exactAuthor;
     private String cardText;
     private List<String> clans;
     private List<String> disciplines;

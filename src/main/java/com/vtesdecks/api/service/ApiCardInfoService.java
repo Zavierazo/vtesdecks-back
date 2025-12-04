@@ -40,7 +40,7 @@ public class ApiCardInfoService {
         ApiCardInfo cardInfo = new ApiCardInfo();
         cardInfo.setShopList(apiCardService.getCardShops(id, false));
         ApiDecks apiDecks = apiDeckService.getDecks(DeckType.PRECONSTRUCTED, DeckSort.NEWEST, null, null,
-                null, null, null, null, List.of(id + "=1"), null, null,
+                null, null, null, null, null, List.of(id + "=1"), null, null,
                 null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
@@ -87,7 +87,7 @@ public class ApiCardInfoService {
         ApiCollectionCardStats collectionStats = null;
         try {
             ApiDecks decks = apiDeckService.getDecks(DeckType.USER, DeckSort.NEWEST, ApiUtils.extractUserId(), null, null,
-                    null, null, List.of(id + "=1"), null, null, null, null,
+                    null, null, null, null, List.of(id + "=1"), null, null, null,
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null,
