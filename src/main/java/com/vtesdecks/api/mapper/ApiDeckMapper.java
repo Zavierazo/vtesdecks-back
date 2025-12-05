@@ -149,7 +149,7 @@ public abstract class ApiDeckMapper {
     }
 
     private void afterMappingUser(ApiDeck api, Integer userId, Deck deck) {
-        api.setOwner(Objects.equals(userId, deck.getUser()));
+        api.setOwner(Objects.equals(userId, deck.getUser() != null ? deck.getUser().getId() : null));
         api.setFavorite(deck.getFavoriteUsers() != null && deck.getFavoriteUsers().contains(userId));
     }
 
