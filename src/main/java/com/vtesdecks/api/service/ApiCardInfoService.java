@@ -9,10 +9,13 @@ import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckType;
 import com.vtesdecks.model.api.ApiCardInfo;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
+import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDecks;
+import com.vtesdecks.model.api.ApiRuling;
 import com.vtesdecks.model.krcg.Card;
 import com.vtesdecks.service.CurrencyExchangeService;
 import com.vtesdecks.util.VtesUtils;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 
@@ -37,27 +41,33 @@ public class ApiCardInfoService {
     private final CurrencyExchangeService currencyExchangeService;
 
     public ApiCardInfo getCardInfo(Integer id, String currencyCode) {
+
+        Integer userId = ApiUtils.extractUserId();
+
+        // Execute independent remote operations
+        CompletableFuture<List<ApiRuling>> rulingsFuture = CompletableFuture.supplyAsync(() -> getRulings(id));
+
+        // Set results (join() will wait for each future to complete)
         ApiCardInfo cardInfo = new ApiCardInfo();
         cardInfo.setShopList(apiCardService.getCardShops(id, false));
+        cardInfo.setPreconstructedDecks(getPreconstructedDecks(id));
+        cardInfo.setCollectionStats(getCollectionStats(id, userId));
+        fillPriceInfo(cardInfo, id, currencyCode);
+        cardInfo.setRulingList(rulingsFuture.join());
+        return cardInfo;
+    }
+
+    private List<ApiDeck> getPreconstructedDecks(Integer id) {
         ApiDecks apiDecks = apiDeckService.getDecks(DeckType.PRECONSTRUCTED, DeckSort.NEWEST, null, null,
                 null, null, null, null, null, List.of(id + "=1"), null, null,
                 null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
                 null, 0, 10);
-        cardInfo.setPreconstructedDecks(apiDecks != null && apiDecks.getDecks() != null ? apiDecks.getDecks() : Collections.emptyList());
-        Card card = getKRCGRulings(id);
-        if (card != null) {
-            cardInfo.setRulingList(apiCardInfoMapper.mapRulings(card.getRulings()));
-        }
-        if (ApiUtils.extractUserId() != null) {
-            cardInfo.setCollectionStats(getCollectionStats(id));
-        }
-        fillPriceInfo(id, currencyCode, cardInfo);
-        return cardInfo;
+        return apiDecks != null && apiDecks.getDecks() != null ? apiDecks.getDecks() : Collections.emptyList();
     }
 
-    private void fillPriceInfo(Integer id, String currencyCode, ApiCardInfo cardInfo) {
+    private void fillPriceInfo(ApiCardInfo cardInfo, Integer id, String currencyCode) {
         Optional.ofNullable(VtesUtils.isCrypt(id) ? cryptCache.get(id) : libraryCache.get(id))
                 .filter(item -> item.getMinPrice() != null && item.getMaxPrice() != null)
                 .ifPresent(item -> {
@@ -73,20 +83,25 @@ public class ApiCardInfoService {
                 });
     }
 
-    private Card getKRCGRulings(Integer id) {
+    private List<ApiRuling> getRulings(Integer id) {
         Card card = null;
         try {
             card = krcgClient.getCard(id);
+        } catch (FeignException.NotFound e) {
+            log.warn("Card id {} not found in KRCG", id);
         } catch (Exception e) {
             log.warn("Unable to fetch card rulings from KRCG for card id {}", id, e);
         }
-        return card;
+        return card != null ? apiCardInfoMapper.mapRulings(card.getRulings()) : null;
     }
 
-    private ApiCollectionCardStats getCollectionStats(Integer id) {
+    private ApiCollectionCardStats getCollectionStats(Integer id, Integer userId) {
+        if (userId == null) {
+            return null;
+        }
         ApiCollectionCardStats collectionStats = null;
         try {
-            ApiDecks decks = apiDeckService.getDecks(DeckType.USER, DeckSort.NEWEST, ApiUtils.extractUserId(), null, null,
+            ApiDecks decks = apiDeckService.getDecks(DeckType.USER, DeckSort.NEWEST, userId, null, null,
                     null, null, null, null, List.of(id + "=1"), null, null, null,
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null,
