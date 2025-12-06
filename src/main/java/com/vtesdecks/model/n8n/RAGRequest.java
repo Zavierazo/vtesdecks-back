@@ -1,4 +1,4 @@
-package com.vtesdecks.model.vtesjudgeai;
+package com.vtesdecks.model.n8n;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ChatMessage {
-    private String type;
-    private String content;
+public class RAGRequest {
+    private String sessionId;
+    private String chatInput;
 }

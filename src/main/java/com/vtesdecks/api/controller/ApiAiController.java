@@ -1,17 +1,16 @@
 package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.util.ApiUtils;
-import com.vtesdecks.integration.VtesJudgeAiClient;
+import com.vtesdecks.configuration.N8NConfiguration;
+import com.vtesdecks.integration.N8NClient;
 import com.vtesdecks.jpa.entity.UserAiAskEntity;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserAiAskRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiAiAskRequest;
 import com.vtesdecks.model.api.ApiAiAskResponse;
-import com.vtesdecks.model.api.ApiAiMessage;
-import com.vtesdecks.model.vtesjudgeai.AskRequest;
-import com.vtesdecks.model.vtesjudgeai.AskResponse;
-import com.vtesdecks.model.vtesjudgeai.ChatMessage;
+import com.vtesdecks.model.n8n.RAGRequest;
+import com.vtesdecks.model.n8n.RAGResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -19,8 +18,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/1.0/ai")
@@ -30,50 +27,49 @@ public class ApiAiController {
 
     private final UserRepository userRepository;
     private final UserAiAskRepository userAiAskRepository;
-    private final VtesJudgeAiClient vtesJudgeAiClient;
+    private final N8NConfiguration n8NConfiguration;
+    private final N8NClient n8NClient;
 
 
     @PostMapping(value = "/ask", produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
-    public ApiAiAskResponse ask(@RequestBody ApiAiAskRequest request) {
-        ApiAiAskResponse response = new ApiAiAskResponse();
-        UserEntity user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
-        final String userId = user != null ? String.valueOf(user.getId()) : null;
-        if (userId != null && user.getValidated() != null && user.getValidated()) {
-            if ((user.getAdmin() == null || !user.getAdmin()) && userAiAskRepository.selectLastByUser(userId) > 10) {
-                response.setMessage("Quota exceeded. Please wait before asking another question.");
+    public ApiAiAskResponse ask(@RequestBody ApiAiAskRequest aiRequest) {
+        ApiAiAskResponse aiResponse = new ApiAiAskResponse();
+        if (aiRequest == null || aiRequest.getQuestion() == null || aiRequest.getSessionId() == null) {
+            aiResponse.setMessage("Invalid request");
+            return aiResponse;
+        }
+
+        Integer userId = ApiUtils.extractUserId();
+        UserEntity userEntity = userId != null ? userRepository.findById(userId).orElse(null) : null;
+        if (userEntity != null && Boolean.TRUE.equals(userEntity.getValidated())) {
+            final String user = String.valueOf(userEntity.getId());
+            if (Boolean.FALSE.equals(userEntity.getAdmin()) && userAiAskRepository.selectLastByUser(user) > 10) {
+                aiResponse.setMessage("Quota exceeded. Please wait before asking another question.");
             } else {
-                AskRequest askRequest = new AskRequest();
-                askRequest.setQuestion(request.getQuestion());
-                askRequest.setChatHistory(mapChatHistory(request.getChatHistory()));
-                AskResponse askResponse = vtesJudgeAiClient.getAmaranthDeck(askRequest);
-                response.setMessage(askResponse.getAnswer());
-                try {
-                    saveUserAiAsk(userId, request.getQuestion(), askResponse.getAnswer());
-                } catch (Exception e) {
-                    log.error("Unable to save user ai ask with user {} for question '{}' and answer '{}'", userId, request.getQuestion(), askResponse.getAnswer(), e);
+                RAGRequest request = new RAGRequest();
+                request.setSessionId(aiRequest.getSessionId());
+                request.setChatInput(aiRequest.getQuestion());
+                RAGResponse response = n8NClient.ask(n8NConfiguration.getVtesRagApiKey(), request);
+                if (response != null) {
+                    aiResponse.setMessage(response.getOutput());
+                } else {
+                    aiResponse.setMessage("We encountered an issue processing your request. Please try again. If the issue persists, please contact support and provide this session ID: " + aiRequest.getSessionId());
                 }
+                saveUserAiAsk(user);
             }
         } else {
-            response.setMessage("You need to be logged in to ask questions");
+            aiResponse.setMessage("You need to be logged in to ask questions");
         }
-        return response;
+        return aiResponse;
     }
 
-    private void saveUserAiAsk(String userId, String question, String answer) {
+    private void saveUserAiAsk(String userId) {
         UserAiAskEntity userAiAsk = new UserAiAskEntity();
         userAiAsk.setUser(userId);
-        userAiAsk.setQuestion(question.substring(0, Math.min(question.length(), 2000)));
-        userAiAsk.setAnswer(answer);
         userAiAskRepository.save(userAiAsk);
-        //userAiAskRepository.deleteOld();
-    }
-
-    private List<ChatMessage> mapChatHistory(List<ApiAiMessage> chatHistory) {
-        return chatHistory.stream()
-                .map(apiAiMessage -> new ChatMessage(apiAiMessage.getType().getValue(), apiAiMessage.getContent()))
-                .toList();
+        userAiAskRepository.deleteOld();
     }
 
 }

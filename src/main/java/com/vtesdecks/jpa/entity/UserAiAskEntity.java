@@ -21,14 +21,8 @@ public class UserAiAskEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "user")
+    @Column(name = "user", nullable = false)
     private String user;
-
-    @Column(name = "question")
-    private String question;
-
-    @Column(name = "answer")
-    private String answer;
 
     @CreationTimestamp
     @Column(name = "creation_date", nullable = false, insertable = false, updatable = false)
