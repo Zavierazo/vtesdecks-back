@@ -1,21 +1,17 @@
 package com.vtesdecks.api.service;
 
-import com.vtesdecks.api.mapper.ApiCardInfoMapper;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
-import com.vtesdecks.integration.KRCGClient;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckType;
 import com.vtesdecks.model.api.ApiCardInfo;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDecks;
-import com.vtesdecks.model.api.ApiRuling;
-import com.vtesdecks.model.krcg.Card;
 import com.vtesdecks.service.CurrencyExchangeService;
+import com.vtesdecks.service.RulingService;
 import com.vtesdecks.util.VtesUtils;
-import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,7 +19,6 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 
@@ -36,24 +31,17 @@ public class ApiCardInfoService {
     private final CryptCache cryptCache;
     private final ApiDeckService apiDeckService;
     private final ApiCollectionService apiCollectionService;
-    private final KRCGClient krcgClient;
-    private final ApiCardInfoMapper apiCardInfoMapper;
     private final CurrencyExchangeService currencyExchangeService;
+    private final RulingService rulingService;
 
     public ApiCardInfo getCardInfo(Integer id, String currencyCode) {
-
         Integer userId = ApiUtils.extractUserId();
-
-        // Execute independent remote operations
-        CompletableFuture<List<ApiRuling>> rulingsFuture = CompletableFuture.supplyAsync(() -> getRulings(id));
-
-        // Set results (join() will wait for each future to complete)
         ApiCardInfo cardInfo = new ApiCardInfo();
         cardInfo.setShopList(apiCardService.getCardShops(id, false));
         cardInfo.setPreconstructedDecks(getPreconstructedDecks(id));
         cardInfo.setCollectionStats(getCollectionStats(id, userId));
         fillPriceInfo(cardInfo, id, currencyCode);
-        cardInfo.setRulingList(rulingsFuture.join());
+        cardInfo.setRulingList(rulingService.getRulings(id));
         return cardInfo;
     }
 
@@ -83,17 +71,6 @@ public class ApiCardInfoService {
                 });
     }
 
-    private List<ApiRuling> getRulings(Integer id) {
-        Card card = null;
-        try {
-            card = krcgClient.getCard(id);
-        } catch (FeignException.NotFound e) {
-            log.warn("Card id {} not found in KRCG", id);
-        } catch (Exception e) {
-            log.warn("Unable to fetch card rulings from KRCG for card id {}", id, e);
-        }
-        return card != null ? apiCardInfoMapper.mapRulings(card.getRulings()) : null;
-    }
 
     private ApiCollectionCardStats getCollectionStats(Integer id, Integer userId) {
         if (userId == null) {
