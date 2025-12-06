@@ -3,6 +3,7 @@ package com.vtesdecks.integration;
 import com.vtesdecks.model.n8n.RAGRequest;
 import com.vtesdecks.model.n8n.RAGResponse;
 import feign.Logger;
+import feign.Request;
 import feign.codec.Encoder;
 import feign.form.spring.SpringFormEncoder;
 import org.springframework.beans.factory.ObjectFactory;
@@ -13,6 +14,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+
+import java.util.concurrent.TimeUnit;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
@@ -31,6 +34,11 @@ public interface N8NClient {
         @Bean
         public Encoder feignFormEncoder(ObjectFactory<HttpMessageConverters> converters) {
             return new SpringFormEncoder(new SpringEncoder(converters));
+        }
+
+        @Bean
+        public Request.Options requestOptions() {
+            return new Request.Options(5, TimeUnit.MINUTES, 5, TimeUnit.MINUTES, true);
         }
     }
 }
