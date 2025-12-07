@@ -19,12 +19,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/1.0/ai")
 @Slf4j
 @RequiredArgsConstructor
 public class ApiAiController {
-
     private final UserRepository userRepository;
     private final UserAiAskRepository userAiAskRepository;
     private final N8NConfiguration n8NConfiguration;
@@ -41,15 +42,20 @@ public class ApiAiController {
             return aiResponse;
         }
 
+
         Integer userId = ApiUtils.extractUserId();
         UserEntity userEntity = userId != null ? userRepository.findById(userId).orElse(null) : null;
         if (userEntity != null && Boolean.TRUE.equals(userEntity.getValidated())) {
             final String user = String.valueOf(userEntity.getId());
-            if (Boolean.FALSE.equals(userEntity.getAdmin()) && userAiAskRepository.selectLastByUser(user) > 10) {
+            List<String> roles = userRepository.selectRolesByUserId(userId);
+            final int userAskCount = userAiAskRepository.selectLastByUser(user);
+            final int maxAskCount = (roles != null && roles.contains("supporter")) ? 50 : 10;
+            if (Boolean.FALSE.equals(userEntity.getAdmin()) && userAskCount > maxAskCount) {
                 aiResponse.setMessage("Quota exceeded. Please wait before asking another question.");
             } else {
                 RAGRequest request = new RAGRequest();
                 request.setSessionId(aiRequest.getSessionId());
+                request.setModel("gpt-5-nano");// Currently nano, can be changed in the future if cost is not an issue
                 request.setChatInput(aiRequest.getQuestion());
                 RAGResponse response = n8NClient.ask(n8NConfiguration.getVtesRagApiKey(), request);
                 if (response != null) {

@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.List;
+import java.util.Set;
 
 @Controller
 @RequestMapping("/api/1.0/cards")
@@ -36,8 +37,8 @@ public class ApiCardController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<List<Object>> searchCards(@RequestParam String query) {
-        List<Object> results = apiCardService.searchCards(query);
+    public ResponseEntity<List<Object>> searchCards(@RequestParam String query, @RequestParam(required = false) Integer limit, @RequestParam(required = false) Set<String> fields) {
+        List<Object> results = apiCardService.searchCards(query, limit, fields);
         return new ResponseEntity<>(results, HttpStatus.OK);
     }
 

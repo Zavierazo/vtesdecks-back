@@ -8,11 +8,11 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface UserAiAskRepository extends JpaRepository<UserAiAskEntity, Integer> {
 
-    @Query(value = "SELECT count(1) FROM user_ai_ask WHERE user = #{user} AND  creation_date > (NOW() - INTERVAL 300 SECOND)", nativeQuery = true)
+    @Query(value = "SELECT count(1) FROM user_ai_ask WHERE user = :user AND  creation_date > (NOW() - INTERVAL 3600 SECOND)", nativeQuery = true)
     Integer selectLastByUser(String user);
 
     @Modifying
     @Transactional
-    @Query(value = "DELETE FROM user_ai_ask WHERE creation_date < (NOW() - INTERVAL 300 SECOND)", nativeQuery = true)
+    @Query(value = "DELETE FROM user_ai_ask WHERE creation_date < (NOW() - INTERVAL 3600 SECOND)", nativeQuery = true)
     void deleteOld();
 }

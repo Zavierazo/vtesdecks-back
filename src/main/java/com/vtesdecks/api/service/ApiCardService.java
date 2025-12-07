@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,7 +37,7 @@ public class ApiCardService {
         if (crypt == null) {
             return null;
         }
-        return apiCardMapper.mapCrypt(crypt, locale, null);
+        return apiCardMapper.mapCrypt(crypt, locale, null, null);
     }
 
     public List<ApiCrypt> getAllCrypt(String locale) {
@@ -45,13 +46,13 @@ public class ApiCardService {
             return Collections.emptyList();
         }
         return result.stream()
-                .map(card -> apiCardMapper.mapCrypt(card, locale, null))
+                .map(card -> apiCardMapper.mapCrypt(card, locale, null, null))
                 .collect(Collectors.toList());
     }
 
     public ApiCrypt getCryptLastUpdate() {
         Crypt crypt = cryptCache.selectLastUpdated();
-        return apiCardMapper.mapCrypt(crypt, null, null);
+        return apiCardMapper.mapCrypt(crypt, null, null, null);
     }
 
     public ApiLibrary getLibrary(Integer id, String locale) {
@@ -59,7 +60,7 @@ public class ApiCardService {
         if (library == null) {
             return null;
         }
-        return apiCardMapper.mapLibrary(library, locale, null);
+        return apiCardMapper.mapLibrary(library, locale, null, null);
     }
 
     public List<ApiLibrary> getAllLibrary(String locale) {
@@ -68,13 +69,13 @@ public class ApiCardService {
             return Collections.emptyList();
         }
         return result.stream()
-                .map(card -> apiCardMapper.mapLibrary(card, locale, null))
+                .map(card -> apiCardMapper.mapLibrary(card, locale, null, null))
                 .toList();
     }
 
     public ApiLibrary getLibraryLastUpdate() {
         Library library = libraryCache.selectLastUpdated();
-        return apiCardMapper.mapLibrary(library, null, null);
+        return apiCardMapper.mapLibrary(library, null, null, null);
     }
 
     public List<ApiShop> getCardShops(Integer cardId, Boolean showAll) {
@@ -100,19 +101,36 @@ public class ApiCardService {
                 .toList());
     }
 
-    public List<Object> searchCards(String query) {
+    public List<Object> searchCards(String query, Integer limit, Set<String> fields) {
+        try (ResultSet<Crypt> crypt = cryptCache.selectByExactName(query)) {
+            if (crypt.isNotEmpty()) {
+                return crypt.stream()
+                        .map(card -> apiCardMapper.mapCrypt(card, null, fields, 100.0))
+                        .limit(limit != null ? limit : crypt.size())
+                        .collect(Collectors.toList());
+            }
+        }
+        try (ResultSet<Library> library = libraryCache.selectByExactName(query)) {
+            if (library.isNotEmpty()) {
+                return library.stream()
+                        .map(card -> apiCardMapper.mapLibrary(card, null, fields, 100.0))
+                        .limit(limit != null ? limit : library.size())
+                        .collect(Collectors.toList());
+            }
+        }
         List<TextSearch> results = deckCardRepository.search(query);
         // Return list with ApiLibrary and ApiCrypt objects
         return results.stream()
                 .map(textSearch -> {
                     if (VtesUtils.isCrypt(textSearch.getId())) {
                         Crypt crypt = cryptCache.get(textSearch.getId());
-                        return apiCardMapper.mapCrypt(crypt, null, textSearch.getScore());
+                        return apiCardMapper.mapCrypt(crypt, null, fields, textSearch.getScore());
                     } else {
                         Library library = libraryCache.get(textSearch.getId());
-                        return apiCardMapper.mapLibrary(library, null, textSearch.getScore());
+                        return apiCardMapper.mapLibrary(library, null, fields, textSearch.getScore());
                     }
                 })
+                .limit(limit != null ? limit : results.size())
                 .toList();
     }
 }

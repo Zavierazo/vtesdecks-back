@@ -11,5 +11,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class RAGRequest {
     private String sessionId;
+    private String model;
     private String chatInput;
 }
