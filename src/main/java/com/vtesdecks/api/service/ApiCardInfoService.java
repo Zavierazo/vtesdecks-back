@@ -47,7 +47,8 @@ public class ApiCardInfoService {
     }
 
     public List<ApiRuling> getRulings(Integer id) {
-        return rulingService.getRulings(id);
+        List<ApiRuling> rulings = rulingService.getRulings(id);
+        return rulings != null ? rulings : Collections.emptyList();
     }
 
     private List<ApiDeck> getPreconstructedDecks(Integer id) {
