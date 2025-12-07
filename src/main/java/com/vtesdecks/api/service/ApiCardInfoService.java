@@ -9,6 +9,7 @@ import com.vtesdecks.model.api.ApiCardInfo;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDecks;
+import com.vtesdecks.model.api.ApiRuling;
 import com.vtesdecks.service.CurrencyExchangeService;
 import com.vtesdecks.service.RulingService;
 import com.vtesdecks.util.VtesUtils;
@@ -43,6 +44,10 @@ public class ApiCardInfoService {
         fillPriceInfo(cardInfo, id, currencyCode);
         cardInfo.setRulingList(rulingService.getRulings(id));
         return cardInfo;
+    }
+
+    public List<ApiRuling> getRulings(Integer id) {
+        return rulingService.getRulings(id);
     }
 
     private List<ApiDeck> getPreconstructedDecks(Integer id) {

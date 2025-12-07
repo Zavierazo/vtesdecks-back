@@ -5,6 +5,7 @@ import com.vtesdecks.api.service.ApiCardService;
 import com.vtesdecks.model.api.ApiCardInfo;
 import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
+import com.vtesdecks.model.api.ApiRuling;
 import com.vtesdecks.model.api.ApiShop;
 import com.vtesdecks.util.Utils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -107,6 +108,14 @@ public class ApiCardController {
     @ResponseBody
     public ResponseEntity<ApiCardInfo> getCardInfo(HttpServletRequest request, @PathVariable Integer id) {
         return new ResponseEntity<>(apiCardInfoService.getCardInfo(id, Utils.getCurrencyCode(request)), HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/{id}/rulings", produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public ResponseEntity<List<ApiRuling>> getRulings(@PathVariable Integer id) {
+        return new ResponseEntity<>(apiCardInfoService.getRulings(id), HttpStatus.OK);
     }
 
 
