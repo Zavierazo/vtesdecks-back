@@ -33,11 +33,12 @@ public class LoadHistoryService {
             loadHistory.setScript(filePath);
             loadHistory.setChecksum(Utils.getMD5(getClass().getClassLoader(), filePath));
             loadHistory.setExecutionTime(String.valueOf(stopWatch.lastTaskInfo().getTimeMillis()));
-            loadHistoryRepository.saveAndFlush(loadHistory);
+            loadHistoryRepository.save(loadHistory);
         } else {
             loadHistory.setChecksum(Utils.getMD5(getClass().getClassLoader(), filePath));
             loadHistory.setExecutionTime(String.valueOf(stopWatch.lastTaskInfo().getTimeMillis()));
             loadHistoryRepository.save(loadHistory);
         }
+        loadHistoryRepository.flush();
     }
 }
