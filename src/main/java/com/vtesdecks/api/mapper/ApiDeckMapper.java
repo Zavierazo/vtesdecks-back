@@ -69,6 +69,7 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "stats.libraryDisciplines", ignore = true)
     @Mapping(target = "stats.libraryClans", ignore = true)
     @Mapping(target = "erratas", ignore = true)
+    @Mapping(target = "warnings", ignore = true)
     @Mapping(target = "extra", ignore = true)
     @Mapping(target = "user", source = "deck", qualifiedByName = "mapDeckUser")
     public abstract ApiDeck mapSummary(Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode);

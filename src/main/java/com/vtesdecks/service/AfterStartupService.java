@@ -430,11 +430,9 @@ public class AfterStartupService {
         if (actual == null) {
             log.debug("Insert set {}", set.getId());
             setRepository.save(set);
-            setCache.refreshIndex(set);
         } else if (!actual.equals(set)) {
             log.debug("Update set {}", set.getId());
             setRepository.save(set);
-            setCache.refreshIndex(set);
         }
     }
 

@@ -120,7 +120,8 @@ public class Deck {
     private Set<Integer> groups;
     private Set<String> disciplines;
     private Stats stats;
-    private List<Errata> erratas;
+    private Set<Errata> erratas;
+    private Set<DeckWarning> warnings;
     private Set<String> tags;
     private Double l2Norm;
     private String path;

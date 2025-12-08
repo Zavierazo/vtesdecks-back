@@ -5,9 +5,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
+import com.vtesdecks.cache.SetCache;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.DeckCard;
+import com.vtesdecks.cache.indexable.DeckWarning;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.ClanStat;
 import com.vtesdecks.cache.indexable.deck.DeckType;
@@ -22,6 +24,7 @@ import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.jpa.repositories.DeckViewRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.DeckTag;
+import com.vtesdecks.model.DeckWarningLabel;
 import com.vtesdecks.model.Errata;
 import com.vtesdecks.model.limitedformat.LimitedFormatPayload;
 import com.vtesdecks.util.CosineSimilarityUtils;
@@ -89,6 +92,8 @@ public class DeckFactory {
     @Autowired
     private LibraryCache libraryCache;
     @Autowired
+    private SetCache setCache;
+    @Autowired
     private UserRepository userRepository;
     @Autowired
     private CommentRepository commentRepository;
@@ -148,12 +153,15 @@ public class DeckFactory {
             value.setLimitedFormat("Advent " + advent.get("year") + " - Day " + advent.get("day"));
         }
         List<Card> cards = new ArrayList<>();
+        Set<DeckWarning> warnings = new HashSet<>();
         for (DeckCard deckCard : deckCards) {
             Card card = null;
             if (VtesUtils.isCrypt(deckCard.getId())) {
                 card = new Card();
                 card.setId(deckCard.getId());
                 card.setNumber(deckCard.getNumber());
+                Crypt crypt = cryptCache.get(card.getId());
+                fillWarnings(warnings, crypt.getBanned(), crypt.getSets());
                 value.getCrypt().add(card);
             } else if (VtesUtils.isLibrary(deckCard.getId())) {
                 card = new Card();
@@ -163,12 +171,14 @@ public class DeckFactory {
                 if (!value.getLibraryByType().containsKey(library.getType())) {
                     value.getLibraryByType().put(library.getType(), new ArrayList<>());
                 }
+                fillWarnings(warnings, library.getBanned(), library.getSets());
                 value.getLibraryByType().get(library.getType()).add(card);
             }
             if (card != null) {
                 cards.add(card);
             }
         }
+        value.setWarnings(!warnings.isEmpty() ? warnings : null);
         //Sort cards
         value.getCrypt().sort(Comparator.comparingInt(Card::getNumber)
                 .thenComparingInt(card -> {
@@ -242,11 +252,32 @@ public class DeckFactory {
                 .map(Card::getId)
                 .map(id -> Errata.findErrata(id, deckDate))
                 .filter(Objects::nonNull)
-                .distinct()
-                .toList());
+                .collect(Collectors.toSet()));
         value.setTags(getDeckTags(value, limitedFormats));
         value.setL2Norm(CosineSimilarityUtils.computeL2Norm(CosineSimilarityUtils.getVector(value)));
         return value;
+    }
+
+    private void fillWarnings(Set<DeckWarning> warnings, String banned, List<String> sets) {
+        if (!isEmpty(banned)) {
+            warnings.add(DeckWarning.builder().label(DeckWarningLabel.BANNED_CARDS.getLabel()).build());
+        }
+        if (sets != null && sets.size() == 1) {
+            String setAbbreviation = sets.getFirst().split(":")[0];
+            com.vtesdecks.cache.indexable.Set set = setCache.get(setAbbreviation);
+            if (set != null) {
+                if (set.getReleaseDate() != null && set.getReleaseDate().isAfter(LocalDate.now())) {
+                    warnings.add(DeckWarning.builder()
+                            .label(DeckWarningLabel.TOURNAMENT_LEGAL_DATE.getLabel())
+                            .date(set.getReleaseDate())
+                            .build());
+                } else if (set.getAbbrev().equalsIgnoreCase("Spoiler")) {
+                    warnings.add(DeckWarning.builder()
+                            .label(DeckWarningLabel.SPOILER.getLabel())
+                            .build());
+                }
+            }
+        }
     }
 
     private static boolean isDeckRatingExcludingAuthor(DeckEntity deck, DeckUserEntity deckUser) {
