@@ -10,6 +10,7 @@ import com.vtesdecks.model.api.ApiCollectionCardStats;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDecks;
 import com.vtesdecks.model.api.ApiRuling;
+import com.vtesdecks.model.api.ApiShopResult;
 import com.vtesdecks.service.CurrencyExchangeService;
 import com.vtesdecks.service.RulingService;
 import com.vtesdecks.util.VtesUtils;
@@ -38,12 +39,20 @@ public class ApiCardInfoService {
     public ApiCardInfo getCardInfo(Integer id, String currencyCode) {
         Integer userId = ApiUtils.extractUserId();
         ApiCardInfo cardInfo = new ApiCardInfo();
-        cardInfo.setShopList(apiCardService.getCardShops(id, false));
+        fillShopInfo(id, cardInfo);
         cardInfo.setPreconstructedDecks(getPreconstructedDecks(id));
         cardInfo.setCollectionStats(getCollectionStats(id, userId));
         fillPriceInfo(cardInfo, id, currencyCode);
         cardInfo.setRulingList(rulingService.getRulings(id));
         return cardInfo;
+    }
+
+    private void fillShopInfo(Integer id, ApiCardInfo cardInfo) {
+        ApiShopResult shopResult = apiCardService.getCardShops(id, false);
+        if (shopResult != null) {
+            cardInfo.setShopList(shopResult.getShops());
+            cardInfo.setHasMoreShops(shopResult.getHasMore());
+        }
     }
 
     public List<ApiRuling> getRulings(Integer id) {

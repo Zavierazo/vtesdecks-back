@@ -13,6 +13,7 @@ import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiShop;
+import com.vtesdecks.model.api.ApiShopResult;
 import com.vtesdecks.util.VtesUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -78,14 +79,15 @@ public class ApiCardService {
         return apiCardMapper.mapLibrary(library, null, null, null);
     }
 
-    public List<ApiShop> getCardShops(Integer cardId, Boolean showAll) {
-        List<CardShopEntity> cardShopList = cardShopRepository.findByCardId(cardId);
-        if (Boolean.TRUE.equals(showAll)) {
-            return apiCardMapper.mapCardShop(cardShopList.stream()
-                    .filter(cardShop -> cardShop.getPlatform().isEnabled())
-                    .toList());
+    public ApiShopResult getCardShops(Integer cardId, boolean showAll) {
+        List<CardShopEntity> all = cardShopRepository.findByCardId(cardId)
+                .stream()
+                .filter(cardShop -> cardShop.getPlatform().isEnabled())
+                .toList();
+        if (showAll) {
+            return ApiShopResult.builder().shops(apiCardMapper.mapCardShop(all)).hasMore(false).build();
         }
-        return apiCardMapper.mapCardShop(cardShopList.stream()
+        List<ApiShop> groupedByShop = apiCardMapper.mapCardShop(all.stream()
                 .filter(cardShop -> cardShop.getPlatform().isEnabled())
                 .collect(Collectors.groupingBy(CardShopEntity::getPlatform))
                 .values()
@@ -99,6 +101,8 @@ public class ApiCardService {
                 )
                 .sorted(Comparator.comparing(CardShopEntity::getPrice))
                 .toList());
+
+        return ApiShopResult.builder().shops(groupedByShop).hasMore(all.size() > groupedByShop.size()).build();
     }
 
     public List<Object> searchCards(String query, Integer limit, Set<String> fields) {

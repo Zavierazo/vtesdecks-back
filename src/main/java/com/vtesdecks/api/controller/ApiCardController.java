@@ -7,6 +7,7 @@ import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiRuling;
 import com.vtesdecks.model.api.ApiShop;
+import com.vtesdecks.model.api.ApiShopResult;
 import com.vtesdecks.util.Utils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -119,13 +120,13 @@ public class ApiCardController {
     }
 
 
-    @Deprecated(since = "Use cards/{id}/info endpoint instead")
     @GetMapping(value = "/{id}/shops", produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
     public ResponseEntity<List<ApiShop>> getCardShops(@PathVariable Integer id, @RequestParam(required = false) Boolean showAll) {
-        return new ResponseEntity<>(apiCardService.getCardShops(id, showAll), HttpStatus.OK);
+        ApiShopResult result = apiCardService.getCardShops(id, showAll);
+        return new ResponseEntity<>(result.getShops(), HttpStatus.OK);
     }
 
 
