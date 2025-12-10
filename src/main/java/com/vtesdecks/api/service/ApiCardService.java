@@ -83,6 +83,7 @@ public class ApiCardService {
         List<CardShopEntity> all = cardShopRepository.findByCardId(cardId)
                 .stream()
                 .filter(cardShop -> cardShop.getPlatform().isEnabled())
+                .sorted(Comparator.comparing(CardShopEntity::getPrice))
                 .toList();
         if (showAll) {
             return ApiShopResult.builder().shops(apiCardMapper.mapCardShop(all)).hasMore(false).build();
