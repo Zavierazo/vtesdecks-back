@@ -7,8 +7,9 @@ import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.jpa.repositories.DeckViewRepository;
+import com.vtesdecks.service.AiService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,17 +22,14 @@ import java.util.Optional;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class CleanUpScheduler {
-    @Autowired
-    private DeckRepository deckRepository;
-    @Autowired
-    private DeckViewRepository deckViewRepository;
-    @Autowired
-    private DeckCardRepository deckCardRepository;
-    @Autowired
-    private DeckUserRepository deckUserRepository;
-    @Autowired
-    private DeckCardHistoryRepository deckCardHistoryRepository;
+    private final DeckRepository deckRepository;
+    private final DeckViewRepository deckViewRepository;
+    private final DeckCardRepository deckCardRepository;
+    private final DeckUserRepository deckUserRepository;
+    private final DeckCardHistoryRepository deckCardHistoryRepository;
+    private final AiService aiService;
 
     @Scheduled(cron = "${jobs.deckViewCleanCron:0 0 2 * * *}")
     @Transactional
@@ -79,6 +77,11 @@ public class CleanUpScheduler {
                 deckRepository.flush();
             }
         }
+    }
 
+    @Scheduled(cron = "${jobs.deckCleanCron:0 0 1 * * *}")
+    @Transactional
+    public void aiCleanScheduler() {
+        aiService.cleanupOldAsks();
     }
 }
