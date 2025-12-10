@@ -5916,3 +5916,11 @@ Zombie inflicts 1 damage on the opposing minion each round of combat during norm
 Put this card in play. During your master phase, you may choose a location controlled by another Methuselah. Until the end of your minion phase, any minion can move that location to its owner's library as a (D) action (the owner shuffles afterward). If that action is successful, that controller gains X pool, where X is the pool cost of the location. Any vampire can call a referendum to burn this card as a +1 stealth political action. You may lock this card to gain 1 vote in that referendum.","","CE:R2, KoT:R","","Steve Ellis",""
 "102212","Zoo Hunting Ground","","Master","Gangrel","","","2","","","","Unique location. Hunting ground.
 During your unlock phase, a ready vampire you control can gain 1 blood. A vampire can gain blood from only one hunting ground each turn.","","Jyhad:U, VTES:U, Anarchs:PG, KoT:U, V5A:PG1","","Susan Van Camp; Christopher Shy",""
+"150001","Anticipation","","Combat","Salubri","","Auspex","","","","","[aus] Strike: hand strike or use a melee weapon strike. This strike is at +2 damage.
+[AUS] Burn 1 blood to cancel the opposing minion's strike card as it is played, and its cost is not paid (the minion chooses a strike again).","","Spoiler:NB4","","Raquel Cornejo",""
+"150002","Angel's Gift","","Combat","Salubri","","","","","","","Only usable before range is determined. A vampire can play only one Angel's Gift each round.
+Equip this vampire with a melee weapon card from your hand (requirements and cost apply as normal).
+This round, this vampire gets 1 optional maneuver, only usable to get to close range.","","Spoiler:NB4","","Ginés Quiñonero",""
+"150003","Hunting the Beast","","Action","Salubri","","Auspex","","","","","+1 stealth action.
+(D) Enter combat with a vampire
+As above, and at the end of that combat, if this vampire is ready and the opposing vampire is not, add 2 blood to a in your uncontrolled","","Spoiler:NB4","","Francisco Tébar",""
