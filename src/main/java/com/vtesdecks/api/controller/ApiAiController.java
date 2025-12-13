@@ -29,10 +29,12 @@ public class ApiAiController {
     private final AsyncAiService asyncAiService;
 
 
+    @Deprecated
     @PostMapping(value = "/ask", produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
     public ApiAiAskResponse ask(@RequestBody ApiAiAskRequest aiRequest) {
+        log.warn("Synchronous AI ask endpoint is deprecated.");
         return aiService.ask(aiRequest, ApiUtils.extractUserId());
     }
 
