@@ -158,7 +158,7 @@ public class ApiAuthController {
                     response.setMessage("Verification link has been sent to your email address!");
                     log.info("Register request for {} success", username);
                 } else {
-                    response.setMessage("User already exists.");
+                    response.setMessage("User or email already exists.");
                 }
             }
         } else {
