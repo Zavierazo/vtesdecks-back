@@ -5916,3 +5916,26 @@ Zombie inflicts 1 damage on the opposing minion each round of combat during norm
 Put this card in play. During your master phase, you may choose a location controlled by another Methuselah. Until the end of your minion phase, any minion can move that location to its owner's library as a (D) action (the owner shuffles afterward). If that action is successful, that controller gains X pool, where X is the pool cost of the location. Any vampire can call a referendum to burn this card as a +1 stealth political action. You may lock this card to gain 1 vote in that referendum.","","CE:R2, KoT:R","","Steve Ellis",""
 "102212","Zoo Hunting Ground","","Master","Gangrel","","","2","","","","Unique location. Hunting ground.
 During your unlock phase, a ready vampire you control can gain 1 blood. A vampire can gain blood from only one hunting ground each turn.","","Jyhad:U, VTES:U, Anarchs:PG, KoT:U, V5A:PG1","","Susan Van Camp; Christopher Shy",""
+"150001","Anticipation","","Combat","Salubri","","Auspex","","","","","[aus] Strike: hand strike or use a melee weapon strike. This strike is at +2 damage.
+[AUS] Burn 1 blood to cancel the opposing minion's strike card as it is played, and its cost is not paid (the minion chooses a strike again).","","Spoiler:NB4","","Raquel Cornejo",""
+"150002","Angel's Gift","","Combat","Salubri","","","","","","","Only usable before range is determined. A vampire can play only one Angel's Gift each round.
+Equip this vampire with a melee weapon card from your hand (requirements and cost apply as normal).
+This round, this vampire gets 1 optional maneuver, only usable to get to close range.","","Spoiler:NB4","","Ginés Quiñonero",""
+"150003","Hunting the Beast","","Action","Salubri","","Auspex","","","","","+1 stealth action.
+(D) Enter combat with a vampire
+As above, and at the end of that combat, if this vampire is ready and the opposing vampire is not, add 2 blood to a in your uncontrolled","","Spoiler:NB4","","Francisco Tébar",""
+"150004","Szlachta Bodyguard","","Retainer","Tzimisce","","","","1","","","Ghoul with 2 life.
+The employer can lock this retainer to prevent 1 damage in combat. You can burn this retainer to have an action directed at a minion you control fail.","","Spoiler:NB4","","Pablo D. Hidalgo",""
+"150005","Fleshforge Chamber","","Master","Tzimisce","","","","1","","","Unique location.
+During your master phase, you can put a ghoul (ally or retainer) from your hand on this location, face up and out of play. Tzimisce you control can play cards from this location as if from your hand (requirements and cost apply as normal).","","Spoiler:NB4","","Konrad Waściński",""
+"150006","Vozhd of Juiz de Fora, The","","Ally","Tzimisce","","","3","","","","Unique ghoul with 5 life. 4 strength, 0 bleed.
+After this ally enters play, burn an ally or retainer you control. This ally can enter combat with a vampire as a (D) action. This ally can play cards requiring basic Animalism as a vampire with capacity 5. During your unlock phase, this ally can steal any amount of blood (becoming life) from a Tzimisce you control, not to exceed its starting life.","","Spoiler:NB4","","Peter Scholtz",""
+"150007","Vozhd of Szczecin, The","","Ally","Tzimisce","","","4","","","","Unique ghoul with 5 life. 4 strength, 0 bleed.
+After this ally enters play, burn an ally or retainer you control. This ally can enter combat with a vampire as a (D) action. Once each combat, this ally can discard a card requiring Protean to prevent 2 damage. During any other Methuselah's minion phase, a Tzimisce you control can burn 1 blood to unlock this ally.","","Spoiler:NB4","","Krasen Maximov",""
+"150008","Righteous Blade","","Equipment","Salubri","","","","","","","Melee weapon.
+Strike: strength+1 damage, with 1 optional press, only to continue combat, each combat.","","Spoiler:NB4","","Pablo D. Hidalgo",""
+"150009","Dogged Pursuit","","Reaction","Ravnos","","Animalism","","","","","Only usable by a locked vampire.
+[ani] This vampire unlocks and attempts to block. If this vampire does not block this action, lock them after action resolution.
+[ANI] As above, and if this vampire does not block this action, put this card on them after action resolution. This vampire can burn this card to get +1 intercept. A vampire can have only one Dogged Pursuit.","","Spoiler:NB4","","Peter Scholtz",""
+"150010","Black Market Cache","","Master","Ravnos","","","","","","","Unique location.
+Search your library (shuffle afterward) for up to three non-unique equipment cards and put them on this location, face up and out of play. If you would draw a card from your library, you can draw one of those cards instead. If this location has no cards on it, burn it","","Spoiler:NB4","","Mitch Mueller",""
