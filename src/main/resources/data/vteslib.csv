@@ -5934,3 +5934,8 @@ After this ally enters play, burn an ally or retainer you control. This ally can
 After this ally enters play, burn an ally or retainer you control. This ally can enter combat with a vampire as a (D) action. Once each combat, this ally can discard a card requiring Protean to prevent 2 damage. During any other Methuselah's minion phase, a Tzimisce you control can burn 1 blood to unlock this ally.","","Spoiler:NB4","","Krasen Maximov",""
 "150008","Righteous Blade","","Equipment","Salubri","","","","","","","Melee weapon.
 Strike: strength+1 damage, with 1 optional press, only to continue combat, each combat.","","Spoiler:NB4","","Pablo D. Hidalgo",""
+"150009","Dogged Pursuit","","Reaction","Ravnos","","Animalism","","","","","Only usable by a locked vampire.
+[ani] This vampire unlocks and attempts to block. If this vampire does not block this action, lock them after action resolution.
+[ANI] As above, and if this vampire does not block this action, put this card on them after action resolution. This vampire can burn this card to get +1 intercept. A vampire can have only one Dogged Pursuit.","","Spoiler:NB4","","Peter Scholtz",""
+"150010","Black Market Cache","","Master","Ravnos","","","","","","","Unique location.
+Search your library (shuffle afterward) for up to three non-unique equipment cards and put them on this location, face up and out of play. If you would draw a card from your library, you can draw one of those cards instead. If this location has no cards on it, burn it","","Spoiler:NB4","","Mitch Mueller",""
