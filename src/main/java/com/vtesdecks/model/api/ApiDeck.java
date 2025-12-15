@@ -42,7 +42,8 @@ public class ApiDeck {
     private Boolean favorite = false;
     private Boolean rated = false;
     private Boolean owner = false;
-    private List<ApiErrata> erratas;
+    private Set<ApiErrata> erratas;
+    private Set<ApiDeckWarning> warnings;
     private List<String> tags;
     private LocalDateTime creationDate;
     private LocalDateTime modifyDate;

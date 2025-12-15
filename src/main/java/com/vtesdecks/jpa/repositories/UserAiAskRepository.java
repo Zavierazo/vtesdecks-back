@@ -13,6 +13,6 @@ public interface UserAiAskRepository extends JpaRepository<UserAiAskEntity, Inte
 
     @Modifying
     @Transactional
-    @Query(value = "DELETE FROM user_ai_ask WHERE creation_date < (NOW() - INTERVAL 3600 SECOND)", nativeQuery = true)
+    @Query(value = "DELETE FROM user_ai_ask WHERE creation_date < (NOW() - INTERVAL 86400 SECOND)", nativeQuery = true)
     void deleteOld();
 }

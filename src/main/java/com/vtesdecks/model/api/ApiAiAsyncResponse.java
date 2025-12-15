@@ -5,7 +5,8 @@ import lombok.Data;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ApiAiAskRequest {
-    private String sessionId;
-    private String question;
+public class ApiAiAsyncResponse {
+    private String taskId;
+    private String error;
 }
+
