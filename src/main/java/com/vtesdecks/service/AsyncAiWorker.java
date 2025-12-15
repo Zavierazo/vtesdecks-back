@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -22,6 +23,7 @@ public class AsyncAiWorker {
     private final AiService aiService;
 
     @Async("asyncAiExecutor")
+    @Transactional
     public void processTask(AsyncAiTask task, AsyncAiService asyncAiService) {
         try {
             // Update task status to PROCESSING
@@ -39,8 +41,8 @@ public class AsyncAiWorker {
             task.setStatus(AsyncAiStatus.COMPLETED);
             task.setResult(aiResponse.getMessage());
             task.setUpdatedAt(LocalDateTime.now());
-            
-            log.info("Task {} completed successfully", task.getTaskId());
+
+            log.info("Task {} completed successfully for user {}", task.getTaskId(), task.getUserId());
         } catch (Exception e) {
             log.error("Error processing async task {}", task.getTaskId(), e);
             task.setStatus(AsyncAiStatus.ERROR);

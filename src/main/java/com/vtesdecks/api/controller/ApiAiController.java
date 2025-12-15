@@ -64,7 +64,7 @@ public class ApiAiController {
 
             String taskId = asyncAiService.createAsyncTask(asyncRequest, userId);
             response.setTaskId(taskId);
-            log.info("Created async AI task with taskId: {}", taskId);
+            log.info("Created async AI task for user {} with taskId: {}", userId, taskId);
         } catch (Exception e) {
             log.error("Error creating async AI task", e);
             response.setError("Error creating async task: " + e.getMessage());

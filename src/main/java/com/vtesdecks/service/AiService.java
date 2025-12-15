@@ -36,7 +36,7 @@ public class AiService {
             final String user = String.valueOf(userEntity.getId());
             List<String> roles = userRepository.selectRolesByUserId(userId);
             final int userAskCount = userAiAskRepository.selectLastByUser(user);
-            final int maxAskCount = (roles != null && roles.contains("supporter")) ? 50 : 10;
+            final int maxAskCount = (roles != null && roles.contains("supporter")) ? 30 : 5;
             if (Boolean.FALSE.equals(userEntity.getAdmin()) && userAskCount > maxAskCount) {
                 aiResponse.setMessage("Quota exceeded. Please wait before asking another question.");
             } else {
@@ -62,6 +62,7 @@ public class AiService {
         UserAiAskEntity userAiAsk = new UserAiAskEntity();
         userAiAsk.setUser(userId);
         userAiAskRepository.save(userAiAsk);
+        userAiAskRepository.flush();
     }
 
     public void cleanupOldAsks() {
