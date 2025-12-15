@@ -5924,3 +5924,11 @@ This round, this vampire gets 1 optional maneuver, only usable to get to close r
 "150003","Hunting the Beast","","Action","Salubri","","Auspex","","","","","+1 stealth action.
 (D) Enter combat with a vampire
 As above, and at the end of that combat, if this vampire is ready and the opposing vampire is not, add 2 blood to a in your uncontrolled","","Spoiler:NB4","","Francisco Tébar",""
+"150004","Szlachta Bodyguard","","Retainer","Tzimisce","","","","1","","","Ghoul with 2 life.
+The employer can lock this retainer to prevent 1 damage in combat. You can burn this retainer to have an action directed at a minion you control fail.","","Spoiler:NB4","","Pablo D. Hidalgo",""
+"150005","Fleshforge Chamber","","Master","Tzimisce","","","","1","","","Unique location.
+During your master phase, you can put a ghoul (ally or retainer) from your hand on this location, face up and out of play. Tzimisce you control can play cards from this location as if from your hand (requirements and cost apply as normal).","","Spoiler:NB4","","Konrad Waściński",""
+"150006","Vozhd of Juiz de Fora, The","","Ally","Tzimisce","","","3","","","","Unique ghoul with 5 life. 4 strength, 0 bleed.
+After this ally enters play, burn an ally or retainer you control. This ally can enter combat with a vampire as a (D) action. This ally can play cards requiring basic Animalism as a vampire with capacity 5. During your unlock phase, this ally can steal any amount of blood (becoming life) from a Tzimisce you control, not to exceed its starting life.","","Spoiler:NB4","","Peter Scholtz",""
+"150007","Vozhd of Szczecin, The","","Ally","Tzimisce","","","4","","","","Unique ghoul with 5 life. 4 strength, 0 bleed.
+After this ally enters play, burn an ally or retainer you control. This ally can enter combat with a vampire as a (D) action. Once each combat, this ally can discard a card requiring Protean to prevent 2 damage. During any other Methuselah's minion phase, a Tzimisce you control can burn 1 blood to unlock this ally.","","Spoiler:NB4","","Krasen Maximov",""
