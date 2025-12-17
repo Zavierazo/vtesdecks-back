@@ -37,6 +37,7 @@ public class ApiCrypt {
     private Long cardPopularity;
     private ApiI18n i18n;
     private Boolean printOnDemand;
+    private Boolean unreleased;
     private Double score;
     private LocalDateTime lastUpdate;
 }

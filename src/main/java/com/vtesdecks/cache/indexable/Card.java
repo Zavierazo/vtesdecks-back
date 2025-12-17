@@ -16,6 +16,7 @@ public class Card {
     private Long deckPopularity;
     private Long cardPopularity;
     private boolean printOnDemand;
+    private boolean unreleased;
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
     private LocalDateTime lastUpdate;

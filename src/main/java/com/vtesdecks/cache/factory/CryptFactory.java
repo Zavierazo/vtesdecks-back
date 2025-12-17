@@ -52,6 +52,7 @@ public abstract class CryptFactory {
         crypt.setSets(VtesUtils.getSets(dbCrypt.getSet()));
         crypt.setLastUpdate(dbCrypt.getModificationDate() != null ? dbCrypt.getModificationDate() : dbCrypt.getCreationDate());
         crypt.setPrintOnDemand(VtesUtils.isPrintOnDemand(cardShopList));
+        crypt.setUnreleased(VtesUtils.isUnreleased(crypt.getSets()));
         if (!CollectionUtils.isEmpty(cardShopList)) {
             // Add all sets from print on demand shops
             if (crypt.isPrintOnDemand()) {

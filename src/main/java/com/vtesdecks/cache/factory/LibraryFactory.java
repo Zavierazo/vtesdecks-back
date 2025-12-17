@@ -61,6 +61,7 @@ public abstract class LibraryFactory {
         library.setSets(VtesUtils.getSets(dbLibrary.getSet()));
         library.setLastUpdate(dbLibrary.getModificationDate() != null ? dbLibrary.getModificationDate() : dbLibrary.getCreationDate());
         library.setPrintOnDemand(VtesUtils.isPrintOnDemand(cardShopList));
+        library.setUnreleased(VtesUtils.isUnreleased(library.getSets()));
         if (!CollectionUtils.isEmpty(cardShopList)) {
             // Add all sets from print on demand shops
             if (library.isPrintOnDemand()) {
