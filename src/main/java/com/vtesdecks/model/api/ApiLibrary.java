@@ -3,6 +3,7 @@ package com.vtesdecks.model.api;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -44,6 +45,7 @@ public class ApiLibrary {
     private ApiI18n i18n;
     private Boolean printOnDemand;
     private Boolean unreleased;
+    private BigDecimal minPrice;
     private Double score;
     private LocalDateTime lastUpdate;
 }

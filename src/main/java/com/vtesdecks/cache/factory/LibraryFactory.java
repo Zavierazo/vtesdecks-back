@@ -74,16 +74,23 @@ public abstract class LibraryFactory {
             // Find min and max price in EUR
             List<BigDecimal> priceList = cardShopList.stream()
                     .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
+                    .filter(CardShopEntity::isInStock)
                     .map(cardShop -> currencyExchangeService.convert(cardShop.getPrice(), cardShop.getCurrency(), DEFAULT_CURRENCY))
                     .toList();
+            if (priceList.isEmpty()) {
+                priceList = cardShopList.stream()
+                        .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
+                        .map(cardShop -> currencyExchangeService.convert(cardShop.getPrice(), cardShop.getCurrency(), DEFAULT_CURRENCY))
+                        .toList();
+            }
             library.setMinPrice(priceList.stream().min(BigDecimal::compareTo).orElse(null));
             library.setMaxPrice(priceList.stream().max(BigDecimal::compareTo).orElse(null));
             //Force lastUpdate when new shop find
             if (!CollectionUtils.isEmpty(cardShopList)) {
                 LocalDateTime cardShopCreationDate = cardShopList.stream()
-                        .filter(cardShop -> cardShop.getPlatform().isPrintOnDemand())
+                        .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
                         .map(CardShopEntity::getCreationDate)
-                        .findAny()
+                        .max(LocalDateTime::compareTo)
                         .orElse(null);
                 if (cardShopCreationDate != null && cardShopCreationDate.isAfter(library.getLastUpdate())) {
                     library.setLastUpdate(cardShopCreationDate);

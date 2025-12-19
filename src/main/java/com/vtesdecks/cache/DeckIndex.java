@@ -59,6 +59,7 @@ import static com.googlecode.cqengine.query.QueryFactory.descending;
 import static com.googlecode.cqengine.query.QueryFactory.equal;
 import static com.googlecode.cqengine.query.QueryFactory.existsIn;
 import static com.googlecode.cqengine.query.QueryFactory.greaterThanOrEqualTo;
+import static com.googlecode.cqengine.query.QueryFactory.has;
 import static com.googlecode.cqengine.query.QueryFactory.in;
 import static com.googlecode.cqengine.query.QueryFactory.lessThanOrEqualTo;
 import static com.googlecode.cqengine.query.QueryFactory.orderBy;
@@ -137,6 +138,7 @@ public class DeckIndex implements Runnable {
         decks.addIndex(HashIndex.onAttribute(Deck.FAVORITE_MULTI_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.LIMITED_FORMAT_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.PATH_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(Deck.PRICE_ATTRIBUTE));
         Thread workerThread = new Thread(this);
         workerThread.setDaemon(true);
         workerThread.start();
@@ -258,6 +260,7 @@ public class DeckIndex implements Runnable {
         DeduplicationOption deduplication = deduplicate(DeduplicationStrategy.MATERIALIZE);
         Thresholds threshold = applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
         QueryOptions queryOptions;
+        Query<Deck> query = null;
         switch (deckQuery.getOrder()) {
             case NAME:
                 queryOptions = queryOptions(orderBy(ascending(Deck.NAME_ATTRIBUTE),
@@ -299,11 +302,18 @@ public class DeckIndex implements Runnable {
                 queryOptions = queryOptions(orderBy(descending(Deck.PLAYERS_ATTRIBUTE),
                         descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
+            case CHEAPEST:
+                query = and(query, has(Deck.PRICE_ATTRIBUTE));
+                queryOptions = queryOptions(orderBy(ascending(Deck.PRICE_ATTRIBUTE), descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                break;
+            case EXPENSIVE:
+                query = and(query, has(Deck.PRICE_ATTRIBUTE));
+                queryOptions = queryOptions(orderBy(descending(Deck.PRICE_ATTRIBUTE), descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                break;
             case NEWEST:
             default:
                 queryOptions = queryOptions(orderBy(descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
         }
-        Query<Deck> query = null;
         Equal<Deck, Boolean> published = QueryFactory.equal(Deck.PUBLISHED_ATTRIBUTE, true);
         if (deckQuery.getUser() != null) {
             query = and(query, or(equal(Deck.USER_ATTRIBUTE, deckQuery.getUser()), published));
@@ -393,7 +403,7 @@ public class DeckIndex implements Runnable {
             }
         }
         if (deckQuery.getGroups() != null) {
-            Query groupQuery = null;
+            Query<Deck> groupQuery = null;
             for (Integer group : deckQuery.getGroups()) {
                 groupQuery = or(groupQuery, in(Deck.GROUP_MULTI_ATTRIBUTE, group));
             }
