@@ -1,8 +1,8 @@
 package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.util.ApiUtils;
+import com.vtesdecks.cache.redis.entity.AiChatTask;
 import com.vtesdecks.enums.AsyncAiStatus;
-import com.vtesdecks.model.AsyncAiTask;
 import com.vtesdecks.model.api.ApiAiAskRequest;
 import com.vtesdecks.model.api.ApiAiAskResponse;
 import com.vtesdecks.model.api.ApiAiAsyncRequest;
@@ -79,7 +79,7 @@ public class ApiAiController {
         ApiAiAsyncStatusResponse response = new ApiAiAsyncStatusResponse();
 
         try {
-            AsyncAiTask task = asyncAiService.getTaskStatus(taskId);
+            AiChatTask task = asyncAiService.getTaskStatus(taskId);
 
             if (task == null) {
                 response.setStatus(AsyncAiStatus.ERROR);

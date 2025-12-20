@@ -1,12 +1,16 @@
-package com.vtesdecks.model;
+package com.vtesdecks.cache.redis.entity;
 
 import com.vtesdecks.enums.AsyncAiStatus;
 import lombok.Data;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.redis.core.RedisHash;
 
 import java.time.LocalDateTime;
 
 @Data
-public class AsyncAiTask {
+@RedisHash(value = "AiChatTask", timeToLive = 1800)
+public class AiChatTask {
+    @Id
     private String taskId;
     private String sessionId;
     private String question;
