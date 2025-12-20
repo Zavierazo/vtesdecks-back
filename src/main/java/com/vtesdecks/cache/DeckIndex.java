@@ -143,7 +143,7 @@ public class DeckIndex {
         try {
             stopWatch.start();
             Set<String> currentKeys = decks.stream().map(Deck::getId).collect(Collectors.toSet());
-            executor = Executors.newFixedThreadPool(10);
+            executor = Executors.newFixedThreadPool(5);
             List<LimitedFormatPayload> limitedFormats = getLimitedFormats();
             for (DeckEntity deck : deckRepository.findAll()) {
                 if (Boolean.FALSE.equals(deck.getDeleted())) {
