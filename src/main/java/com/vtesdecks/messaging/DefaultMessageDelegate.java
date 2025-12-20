@@ -16,7 +16,7 @@ public class DefaultMessageDelegate implements MessageDelegate {
 
     @Override
     public void handleMessage(String message, String channel) {
-        log.info("Received message for channel {}: {}", channel, message);
+        log.trace("Received message for channel {}: {}", channel, message);
         try {
             switch (channel) {
                 case "deck-sync" -> handleMessage(objectMapper.readValue(message, DeckSyncData.class));
