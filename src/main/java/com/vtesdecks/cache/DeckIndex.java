@@ -20,7 +20,6 @@ import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.DeckCard;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.DeckType;
-import com.vtesdecks.enums.CacheEnum;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.LimitedFormatEntity;
 import com.vtesdecks.jpa.repositories.DeckRepository;
@@ -32,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -85,7 +83,6 @@ public class DeckIndex {
     @Autowired
     private LimitedFormatRepository limitedFormatRepository;
     private IndexedCollection<Deck> decks = new ConcurrentIndexedCollection<Deck>();
-    private boolean keepRunning = true;
 
 
     @PostConstruct
@@ -146,7 +143,7 @@ public class DeckIndex {
         try {
             stopWatch.start();
             Set<String> currentKeys = decks.stream().map(Deck::getId).collect(Collectors.toSet());
-            executor = Executors.newFixedThreadPool(50);
+            executor = Executors.newFixedThreadPool(10);
             List<LimitedFormatPayload> limitedFormats = getLimitedFormats();
             for (DeckEntity deck : deckRepository.findAll()) {
                 if (Boolean.FALSE.equals(deck.getDeleted())) {
@@ -221,13 +218,6 @@ public class DeckIndex {
         Query<Deck> findByKeyQuery = equal(Deck.ID_ATTRIBUTE, id);
         ResultSet<Deck> result = decks.retrieve(findByKeyQuery);
         return (result.size() >= 1) ? result.uniqueResult() : null;
-    }
-
-    @Cacheable(value = CacheEnum.GENERIC, key = "'countByType'+#a0")
-    public int countByType(DeckType deckType) {
-        Query<Deck> query = equal(Deck.TYPE_ATTRIBUTE, deckType);
-        ResultSet<Deck> results = decks.retrieve(query);
-        return results.size();
     }
 
     public ResultSet<Deck> selectAll(DeckQuery deckQuery) {

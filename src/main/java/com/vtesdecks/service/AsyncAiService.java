@@ -1,7 +1,7 @@
 package com.vtesdecks.service;
 
 import com.vtesdecks.cache.redis.entity.AiChatTask;
-import com.vtesdecks.cache.redis.repository.AiChatTaskRepository;
+import com.vtesdecks.cache.redis.repositories.AiChatTaskRepository;
 import com.vtesdecks.enums.AsyncAiStatus;
 import com.vtesdecks.model.api.ApiAiAsyncRequest;
 import lombok.RequiredArgsConstructor;
@@ -16,11 +16,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AsyncAiService {
     private final AsyncAiWorker asyncAiWorker;
-
-    //    private final Cache<String, AiChatTask> taskCache = Caffeine.newBuilder()
-//            .expireAfterWrite(30, TimeUnit.MINUTES)
-//            .maximumSize(1000)
-//            .build();
     private final AiChatTaskRepository aiChatTaskRepository;
 
     /**

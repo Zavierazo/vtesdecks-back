@@ -8,7 +8,7 @@ import org.springframework.data.redis.core.RedisHash;
 import java.time.LocalDateTime;
 
 @Data
-@RedisHash(value = "AiChatTask", timeToLive = 1800)
+@RedisHash(value = "AiChatTask", timeToLive = 1800)// 30 minutes
 public class AiChatTask {
     @Id
     private String taskId;

@@ -1,4 +1,4 @@
-package com.vtesdecks.cache.redis.repository;
+package com.vtesdecks.cache.redis.repositories;
 
 import com.vtesdecks.cache.redis.entity.AiChatTask;
 import org.springframework.data.repository.CrudRepository;
