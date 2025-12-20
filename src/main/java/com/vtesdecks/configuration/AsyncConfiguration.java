@@ -18,7 +18,7 @@ public class AsyncConfiguration {
     @Primary
     public Executor taskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(1);
+        executor.setCorePoolSize(10);
         executor.setMaxPoolSize(10);
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("async-ai-");

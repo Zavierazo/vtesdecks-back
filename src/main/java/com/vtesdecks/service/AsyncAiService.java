@@ -35,7 +35,7 @@ public class AsyncAiService {
         aiChatTaskRepository.save(task);
 
         // Process the task asynchronously using the worker
-        asyncAiWorker.processTask(task, this);
+        asyncAiWorker.processTask(task);
 
         return task.getTaskId();
     }
