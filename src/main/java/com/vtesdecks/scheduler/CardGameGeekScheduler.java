@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.typesense.api.Client;
@@ -69,11 +70,19 @@ public class CardGameGeekScheduler {
             entry(" G3", ""),
             entry(" G2", ""),
             entry(" G6", ""),
-            entry(" \\((?!G\\d+\\))[^)]*\\)", ""),
+            entry(" \\((?!G\\d+|Adv\\))[^)]*\\)", ""),
             // Map aka names
             entry("Sebastian Goulet", "Sebastien Goulet"),
             // Fix name
-            entry("Enzo Giovanni \\(Adv\\)", "Enzo Giovanni, Pentex Board of Directors (Adv)")
+            entry("Enzo Giovanni \\(Adv\\)", "Enzo Giovanni, Pentex Board of Directors (Adv)"),
+            entry("47th Street Royal", "47th Street Royals"),
+            entry("Crimson Sentinel", "Crimson Sentinel, The"),
+            entry("Pentex Subversion", "Pentex(TM) Subversion"),
+            entry("Khabar: The Community", "Khabar: Community, The"),
+            entry("Sacre Cour", "Sacré-Cœur"),
+            entry("Thadius Zho, Mage", "Thadius Zho"),
+            entry("Vozhd of Sofia", "Vozhd of Sofia, The"),
+            entry("Seeds of Fear", "Seeds of Terror")
     );
     private static final Map<String, String> EDITION_MAPPINGS = Map.ofEntries(
             entry("BCP Reprint", "POD"),
@@ -95,7 +104,13 @@ public class CardGameGeekScheduler {
             entry("Anarchs Unbound", "AU"),
             entry("Humble Bundle", "Promo"),
             entry("Julius Stonis Vilnius", "Promo"),
-            entry("Fallen London", "FoL")
+            entry("Fallen London", "FoL"),
+            entry("V5 Sabbat", "SV5"),
+            entry("Promo - Full Bleed - Catalan", "PFA"),
+            entry("Promo - Full Bleed - Latin", "PFA"),
+            entry("Promo - Full Bleed - French", "PFA"),
+            entry("Promo - Latin", "Promo"),
+            entry("Promo - French", "Promo")
     );
 
     private final DeckCardRepository deckCardRepository;
@@ -106,9 +121,7 @@ public class CardGameGeekScheduler {
     private final Client client;
     private final ObjectMapper objectMapper;
 
-    //TODO: Work in progress, disabled
-    //Disabled until fix problems
-    //@Scheduled(initialDelay = 0, fixedRate = 100000000000L)
+    @Scheduled(cron = "2 0 0 * * MON")
     @Transactional
     public void scrapCards() {
         log.info("Starting CardGameGeek scrapping...");
@@ -154,87 +167,107 @@ public class CardGameGeekScheduler {
 
     private void parsePage(List<SearchResultHit> hits, java.util.Set<Pair<Integer, String>> existingCardSets) {
         for (SearchResultHit hit : hits) {
-            try {
-                Map<String, Object> document = hit.getDocument();
+            Map<String, Object> document = hit.getDocument();
 
-                // Scrap main card
-                CardShopEntity baseCardShopEntity = scrapCard(document, null, false).orElse(null);
-                if (baseCardShopEntity != null) {
-                    List<CardShopEntity> cardShopEntityList = new ArrayList<>();
-                    cardShopEntityList.add(baseCardShopEntity);
-                    // Scrap variants
-                    if (document.containsKey("hasVariants")) {
-                        for (Map<String, Object> variant : (List<Map<String, Object>>) document.get("hasVariants")) {
-                            scrapCard(variant, baseCardShopEntity.getLink(), true).ifPresent(cardShopEntityList::add);
-                        }
-                        // Set in stock if any variant is in stock
-                        baseCardShopEntity.setInStock(cardShopEntityList.stream().anyMatch(CardShopEntity::isInStock));
+            // Scrap main card
+            CardShopEntity baseCardShopEntity = scrapCard(document, null, false).orElse(null);
+            if (baseCardShopEntity != null) {
+                List<CardShopEntity> cardShopEntityList = new ArrayList<>();
+                cardShopEntityList.add(baseCardShopEntity);
+                // Scrap variants
+                if (document.containsKey("hasVariants")) {
+                    for (Map<String, Object> variant : (List<Map<String, Object>>) document.get("hasVariants")) {
+                        scrapCard(variant, baseCardShopEntity.getLink(), true).ifPresent(cardShopEntityList::add);
                     }
-                    // Save all found cards
-                    if (!isEmpty(cardShopEntityList)) {
-                        Map<String, CardShopEntity> cardShopBySet = cardShopEntityList.stream()
-                                .collect(java.util.stream.Collectors.toMap(
-                                        c -> c.getCardId() + "_" + c.getSet(),
-                                        c -> c,
-                                        (existing, replacement) -> {
-                                            log.debug("Duplicate CardShop entry for cardId {} set {}: existing [{}], replacement [{}]",
-                                                    existing.getCardId(), existing.getSet(),
-                                                    existing.getLink(), replacement.getLink());
-                                            if (existing.isInStock() && !replacement.isInStock()) {
-                                                return existing;
-                                            } else if (!existing.isInStock() && replacement.isInStock()) {
-                                                return replacement;
-                                            } else {
-                                                return existing.getPrice().compareTo(replacement.getPrice()) <= 0 ? existing : replacement;
-                                            }
+                    // Set in stock if any variant is in stock
+                    baseCardShopEntity.setInStock(cardShopEntityList.stream().anyMatch(CardShopEntity::isInStock));
+                }
+                // Save all found cards
+                if (!isEmpty(cardShopEntityList)) {
+                    Map<String, CardShopEntity> cardShopBySet = cardShopEntityList.stream()
+                            .collect(java.util.stream.Collectors.toMap(
+                                    c -> c.getCardId() + "_" + c.getSet(),
+                                    c -> c,
+                                    (existing, replacement) -> {
+                                        log.debug("Duplicate CardShop entry for cardId {} set {}: existing [{}], replacement [{}]",
+                                                existing.getCardId(), existing.getSet(),
+                                                existing.getLink(), replacement.getLink());
+                                        if (existing.isInStock() && !replacement.isInStock()) {
+                                            return existing;
+                                        } else if (!existing.isInStock() && replacement.isInStock()) {
+                                            return replacement;
+                                        } else {
+                                            return existing.getPrice().compareTo(replacement.getPrice()) <= 0 ? existing : replacement;
                                         }
-                                ));
-                        List<CardShopEntity> existingCards = cardShopRepository.findByCardIdAndPlatform(baseCardShopEntity.getCardId(), PLATFORM);
-                        for (CardShopEntity cardShopEntity : cardShopBySet.values()) {
-                            Optional<CardShopEntity> currentOptional = existingCards.stream()
-                                    .filter(card -> Objects.equals(card.getCardId(), cardShopEntity.getCardId()) && Objects.equals(card.getSet(), cardShopEntity.getSet()))
-                                    .findFirst();
-                            if (currentOptional.isPresent()) {
-                                CardShopEntity currentCard = currentOptional.get();
-                                cardShopEntity.setId(currentCard.getId());
-                                if (!cardShopEntity.equals(currentCard)) {
-                                    cardShopRepository.saveAndFlush(cardShopEntity);
-                                }
-                            } else {
+                                    }
+                            ));
+                    List<CardShopEntity> existingCards = cardShopRepository.findByCardIdAndPlatform(baseCardShopEntity.getCardId(), PLATFORM);
+                    for (CardShopEntity cardShopEntity : cardShopBySet.values()) {
+                        Optional<CardShopEntity> currentOptional = existingCards.stream()
+                                .filter(card -> Objects.equals(card.getCardId(), cardShopEntity.getCardId()) && Objects.equals(card.getSet(), cardShopEntity.getSet()))
+                                .findFirst();
+                        if (currentOptional.isPresent()) {
+                            CardShopEntity currentCard = currentOptional.get();
+                            cardShopEntity.setId(currentCard.getId());
+                            if (!cardShopEntity.equals(currentCard)) {
                                 cardShopRepository.saveAndFlush(cardShopEntity);
                             }
-                            existingCardSets.removeIf(cardSet -> Objects.equals(cardSet.getLeft(), cardShopEntity.getCardId()) && Objects.equals(cardSet.getRight(), cardShopEntity.getSet()));
+                        } else {
+                            cardShopRepository.saveAndFlush(cardShopEntity);
                         }
+                        existingCardSets.removeIf(cardSet -> Objects.equals(cardSet.getLeft(), cardShopEntity.getCardId()) && Objects.equals(cardSet.getRight(), cardShopEntity.getSet()));
                     }
                 }
-            } catch (Exception e) {
-                log.error("Error scrapping CardGameGeek element {}", hit, e);
             }
         }
     }
 
     private Optional<CardShopEntity> scrapCard(Map<String, Object> document, String overrideUrl, boolean mandatorySet) {
         Map<String, Object> searchInfo = (Map<String, Object>) document.get("@search");
-        if (searchInfo.containsKey("Game_facet")) {
-            String gameFacet = String.valueOf(searchInfo.get("Game_facet"));
-            if (!"Vampire The Eternal Struggle".equalsIgnoreCase(gameFacet)) {
-                // Not a VTES card
-                return Optional.empty();
+        if (document.get("additionalProperty") instanceof List) {
+            for (Map<String, Object> property : (List<Map<String, Object>>) document.get("additionalProperty")) {
+                if ("Edition".equals(property.get("name"))) {
+                    String setName = String.valueOf(property.get("value"));
+                    if (setName.equalsIgnoreCase("Demo Deck")) {
+                        log.debug("Skipping not legal for play product {}", document.get("name"));
+                        return Optional.empty();
+                    }
+                }
+                if ("Set".equals(property.get("name"))) {
+                    String setName = String.valueOf(property.get("value"));
+                    if (setName.equalsIgnoreCase("Storyline")) {
+                        log.debug("Skipping not legal for play product {}", document.get("name"));
+                        return Optional.empty();
+                    }
+                }
+                if ("Type".equals(property.get("name"))) {
+                    String typeValue = String.valueOf(property.get("value"));
+                    if (typeValue.equalsIgnoreCase("Special")) {
+                        log.debug("Skipping special product {}", document.get("name"));
+                        return Optional.empty();
+                    }
+                }
             }
-        } else {
-            //return Optional.empty();
         }
 
         // Product info
         String url = String.valueOf(document.get("@id"));
         String sku = String.valueOf(document.get("sku"));
+        if (sku != null && sku.startsWith("PLA-")) {
+            log.debug("Skipping platform product {}", document.get("name"));
+            return Optional.empty();
+        }
 
         // Prepare card name
         String cardNameRaw = String.valueOf(document.get("name"));
+        if (cardNameRaw.startsWith("Vampire The Eternal Struggle - ")) {
+            log.debug("Skipping bundle/product pack '{}'", cardNameRaw);
+            return Optional.empty();
+        }
         String cardName = cardNameRaw;
         // Replacements
         for (Map.Entry<String, String> entry : REPLACEMENTS) {
-            cardName = cardName.replaceFirst(entry.getKey(), entry.getValue());
+            cardName = cardName.replaceFirst("(?i)" + entry.getKey(), entry.getValue());
         }
         // Advanced handling
         int advancedIndex = cardName.toLowerCase().indexOf("(adv)");
@@ -262,6 +295,10 @@ public class CardGameGeekScheduler {
         // The handling
         if (cardName.startsWith("The ")) {
             cardName = cardName.substring(4) + ", The";
+        }
+        // The handling
+        if (cardName.startsWith("An ")) {
+            cardName = cardName.substring(4) + ", An";
         }
         // Trim
         cardName = cardName.trim();
@@ -319,9 +356,6 @@ public class CardGameGeekScheduler {
             for (Map<String, Object> property : (List<Map<String, Object>>) document.get("additionalProperty")) {
                 if ("Edition".equals(property.get("name"))) {
                     String setName = String.valueOf(property.get("value"));
-                    if (setName.equalsIgnoreCase("Demo Deck")) {
-                        return Optional.empty();
-                    }
                     if (EDITION_MAPPINGS.containsKey(setName)) {
                         setName = EDITION_MAPPINGS.get(setName);
                     }

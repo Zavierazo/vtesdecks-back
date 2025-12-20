@@ -1,9 +1,8 @@
 package com.vtesdecks.service;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
+import com.vtesdecks.cache.redis.entity.AiChatTask;
+import com.vtesdecks.cache.redis.repositories.AiChatTaskRepository;
 import com.vtesdecks.enums.AsyncAiStatus;
-import com.vtesdecks.model.AsyncAiTask;
 import com.vtesdecks.model.api.ApiAiAsyncRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,18 +10,13 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AsyncAiService {
     private final AsyncAiWorker asyncAiWorker;
-
-    private final Cache<String, AsyncAiTask> taskCache = Caffeine.newBuilder()
-            .expireAfterWrite(30, TimeUnit.MINUTES)
-            .maximumSize(1000)
-            .build();
+    private final AiChatTaskRepository aiChatTaskRepository;
 
     /**
      * Creates a new async task and processes it in the background
@@ -30,7 +24,7 @@ public class AsyncAiService {
     public String createAsyncTask(ApiAiAsyncRequest request, Integer userId) {
         String taskId = UUID.randomUUID().toString();
 
-        AsyncAiTask task = new AsyncAiTask();
+        AiChatTask task = new AiChatTask();
         task.setTaskId(taskId);
         task.setSessionId(request.getSessionId());
         task.setQuestion(request.getQuestion());
@@ -38,10 +32,10 @@ public class AsyncAiService {
         task.setStatus(AsyncAiStatus.PENDING);
         task.setCreatedAt(LocalDateTime.now());
         task.setUpdatedAt(LocalDateTime.now());
-        taskCache.put(taskId, task);
+        aiChatTaskRepository.save(task);
 
         // Process the task asynchronously using the worker
-        asyncAiWorker.processTask(task, this);
+        asyncAiWorker.processTask(task);
 
         return task.getTaskId();
     }
@@ -49,15 +43,15 @@ public class AsyncAiService {
     /**
      * Updates a task in the cache
      */
-    public void updateTask(AsyncAiTask task) {
-        taskCache.put(task.getTaskId(), task);
+    public void updateTask(AiChatTask task) {
+        aiChatTaskRepository.save(task);
     }
 
     /**
      * Get the status of an async AI task
      */
-    public AsyncAiTask getTaskStatus(String taskId) {
-        return taskCache.getIfPresent(taskId);
+    public AiChatTask getTaskStatus(String taskId) {
+        return aiChatTaskRepository.findById(taskId).orElse(null);
     }
 }
 

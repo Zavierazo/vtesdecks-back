@@ -267,4 +267,11 @@ public class VtesUtils {
         }
         return cardShopList.stream().anyMatch(cardShop -> cardShop.getPlatform().equals(platform));
     }
+
+    public static boolean isUnreleased(List<String> sets) {
+        if (sets != null && sets.size() == 1) {
+            return sets.getFirst().startsWith("Spoiler:");
+        }
+        return false;
+    }
 }

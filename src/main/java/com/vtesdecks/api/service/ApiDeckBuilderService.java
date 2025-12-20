@@ -17,15 +17,16 @@ import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.LimitedFormatRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
+import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.ImportType;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeckBuilder;
 import com.vtesdecks.model.krcg.Card;
 import com.vtesdecks.model.krcg.Deck;
 import feign.FeignException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -39,24 +40,17 @@ import java.util.function.Function;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ApiDeckBuilderService {
-
-    @Autowired
-    private DeckRepository deckRepository;
-    @Autowired
-    private DeckCardRepository deckCardRepository;
-    @Autowired
-    private LibraryCache libraryCache;
-    @Autowired
-    private KRCGClient krcgClient;
-    @Autowired
-    private ObjectMapper objectMapper;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private DeckIndex deckIndex;
-    @Autowired
-    private LimitedFormatRepository limitedFormatRepository;
+    private final DeckRepository deckRepository;
+    private final DeckCardRepository deckCardRepository;
+    private final LibraryCache libraryCache;
+    private final KRCGClient krcgClient;
+    private final ObjectMapper objectMapper;
+    private final UserRepository userRepository;
+    private final DeckIndex deckIndex;
+    private final LimitedFormatRepository limitedFormatRepository;
+    private final MessageProducer messageProducer;
 
 
     public ApiDeckBuilder getDeck(String deckId) {
@@ -175,7 +169,7 @@ public class ApiDeckBuilderService {
             }
         }
         //Enqueue indexation of new deck
-        deckIndex.enqueueRefreshIndex(deck.getId());
+        messageProducer.publishDeckSync(deck.getId());
         return getDeck(deckId);
 
     }
@@ -190,7 +184,7 @@ public class ApiDeckBuilderService {
         deck.setDeleted(true);
         deckRepository.save(deck);
         //Enqueue indexation of new deck
-        deckIndex.enqueueRefreshIndex(deck.getId());
+        messageProducer.publishDeckSync(deck.getId());
         return true;
     }
 
@@ -206,7 +200,7 @@ public class ApiDeckBuilderService {
         deck.setDeleted(false);
         deckRepository.save(deck);
         //Enqueue indexation of new deck
-        deckIndex.enqueueRefreshIndex(deck.getId());
+        messageProducer.publishDeckSync(deck.getId());
         return true;
     }
 
@@ -268,7 +262,7 @@ public class ApiDeckBuilderService {
         deck.setCollection(collectionTracker);
         deckRepository.save(deck);
         //Enqueue indexation of new deck
-        deckIndex.enqueueRefreshIndex(deck.getId());
+        messageProducer.publishDeckSync(deck.getId());
         return true;
     }
 

@@ -416,7 +416,7 @@ public class DeckFactory {
         deckStats.getLibraryDisciplines().sort(Comparator.comparingInt(DisciplineStat::getInferior).reversed());
         deckStats.getLibraryClans().sort(Comparator.comparingInt(ClanStat::getNumber).reversed());
         // Set price and currency only if all cards have price
-        if (fullPrice) {
+        if (fullPrice && price.compareTo(BigDecimal.ZERO) > 0) {
             deckStats.setPrice(price);
             deckStats.setCurrency(DEFAULT_CURRENCY);
         }

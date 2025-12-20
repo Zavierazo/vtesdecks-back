@@ -7,12 +7,11 @@ import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Image;
 import com.itextpdf.text.pdf.PdfContentByte;
 import com.itextpdf.text.pdf.PdfWriter;
-import com.vtesdecks.cache.indexable.proxy.ProxyCardOption;
 import com.vtesdecks.model.api.ApiProxyCard;
 import com.vtesdecks.model.api.ApiProxyCardOption;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -26,18 +25,19 @@ import static org.springframework.util.CollectionUtils.isEmpty;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ProxyService {
 
-    private final static float MILLIMETERS = 2.834f;
-    private final static float CARD_HEIGHT = 88 * MILLIMETERS;
-    private final static float CARD_WIDTH = 63 * MILLIMETERS;
-    private final static float MARGIN_LEFT = 10 * MILLIMETERS;
-    private final static float MARGIN_BOT = 15 * MILLIMETERS;
-    private final static String CARD_IMAGES_URL = "https://cdn.vtesdecks.com/img/cards/sets/%s/%d.jpg";
-    private final static String CARD_IMAGE_FAILOVER_URL = "https://cdn.vtesdecks.com/img/cards/%d.jpg";
+    private static final float MILLIMETERS = 2.834f;
+    private static final float CARD_HEIGHT = 88 * MILLIMETERS;
+    private static final float CARD_WIDTH = 63 * MILLIMETERS;
+    private static final float MARGIN_LEFT = 10 * MILLIMETERS;
+    private static final float MARGIN_BOT = 15 * MILLIMETERS;
+    private static final String CARD_IMAGES_URL = "https://cdn.vtesdecks.com/img/cards/sets/%s/%d.jpg";
+    private static final String CARD_IMAGE_FAILOVER_URL = "https://cdn.vtesdecks.com/img/cards/%d.jpg";
 
 
-    private final static float[][] CARD_POSITIONS = new float[][]{
+    private static final float[][] CARD_POSITIONS = new float[][]{
             new float[]{MARGIN_LEFT, MARGIN_BOT + CARD_HEIGHT * 2},
             new float[]{MARGIN_LEFT + CARD_WIDTH, MARGIN_BOT + CARD_HEIGHT * 2},
             new float[]{MARGIN_LEFT + CARD_WIDTH * 2, MARGIN_BOT + CARD_HEIGHT * 2},
@@ -51,20 +51,14 @@ public class ProxyService {
             new float[]{MARGIN_LEFT + CARD_WIDTH * 2, MARGIN_BOT},
     };
 
-    @Autowired
-    private RestTemplate restTemplate;
-
-    public boolean checkProxyCardOptionExists(ProxyCardOption proxyCardOption) {
-        String imgUrl = getProxyImageUrl(proxyCardOption.getSetAbbrev(), proxyCardOption.getCardId());
-        return existImage(imgUrl);
-    }
+    private final RestTemplate restTemplate;
 
 
     public String getProxyImageUrl(String setAbbrev, Integer cardId) {
         return String.format(CARD_IMAGES_URL, StringUtils.lowerCase(setAbbrev), cardId);
     }
 
-    private boolean existImage(String imgUrl) {
+    public boolean existImage(String imgUrl) {
         try {
             restTemplate.headForHeaders(imgUrl);
         } catch (HttpClientErrorException.NotFound ex) {

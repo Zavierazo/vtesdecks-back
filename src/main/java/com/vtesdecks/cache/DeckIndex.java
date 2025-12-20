@@ -20,7 +20,6 @@ import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.DeckCard;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.DeckType;
-import com.vtesdecks.enums.CacheEnum;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.LimitedFormatEntity;
 import com.vtesdecks.jpa.repositories.DeckRepository;
@@ -32,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -44,10 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -59,6 +55,7 @@ import static com.googlecode.cqengine.query.QueryFactory.descending;
 import static com.googlecode.cqengine.query.QueryFactory.equal;
 import static com.googlecode.cqengine.query.QueryFactory.existsIn;
 import static com.googlecode.cqengine.query.QueryFactory.greaterThanOrEqualTo;
+import static com.googlecode.cqengine.query.QueryFactory.has;
 import static com.googlecode.cqengine.query.QueryFactory.in;
 import static com.googlecode.cqengine.query.QueryFactory.lessThanOrEqualTo;
 import static com.googlecode.cqengine.query.QueryFactory.orderBy;
@@ -69,7 +66,7 @@ import static com.googlecode.cqengine.query.option.EngineThresholds.INDEX_ORDERI
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
-public class DeckIndex implements Runnable {
+public class DeckIndex {
     private static final List<DeckType> ALL_DECK_TYPES = Lists.newArrayList(DeckType.TOURNAMENT, DeckType.COMMUNITY);
     private static final int CRYPT_MAIN_MIN_NUMBER = 4;
     private static final int CRYPT_SINGLE_MIN_NUMBER = 8;
@@ -86,8 +83,6 @@ public class DeckIndex implements Runnable {
     @Autowired
     private LimitedFormatRepository limitedFormatRepository;
     private IndexedCollection<Deck> decks = new ConcurrentIndexedCollection<Deck>();
-    private final BlockingQueue<String> refreshQueue = new LinkedBlockingQueue<>();
-    private boolean keepRunning = true;
 
 
     @PostConstruct
@@ -137,25 +132,7 @@ public class DeckIndex implements Runnable {
         decks.addIndex(HashIndex.onAttribute(Deck.FAVORITE_MULTI_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.LIMITED_FORMAT_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.PATH_ATTRIBUTE));
-        Thread workerThread = new Thread(this);
-        workerThread.setDaemon(true);
-        workerThread.start();
-    }
-
-
-    @Override
-    public void run() {
-        while (keepRunning) {
-            try {
-                refreshIndex(refreshQueue.take());
-            } catch (final InterruptedException e) {
-                log.error("Blocking queue was interrupted {}", e);
-                // Restore interrupted state...
-                Thread.currentThread().interrupt();
-            } catch (final Exception e) {
-                log.error("Unhandled exception: {} ", e);
-            }
-        }
+        decks.addIndex(HashIndex.onAttribute(Deck.PRICE_ATTRIBUTE));
     }
 
 
@@ -166,7 +143,7 @@ public class DeckIndex implements Runnable {
         try {
             stopWatch.start();
             Set<String> currentKeys = decks.stream().map(Deck::getId).collect(Collectors.toSet());
-            executor = Executors.newFixedThreadPool(50);
+            executor = Executors.newFixedThreadPool(5);
             List<LimitedFormatPayload> limitedFormats = getLimitedFormats();
             for (DeckEntity deck : deckRepository.findAll()) {
                 if (Boolean.FALSE.equals(deck.getDeleted())) {
@@ -199,7 +176,7 @@ public class DeckIndex implements Runnable {
         }
     }
 
-    private void refreshIndex(String deckId) {
+    public void refreshIndex(String deckId) {
         Optional<DeckEntity> deck = deckRepository.findById(deckId);
         if (deck.isPresent() && Boolean.FALSE.equals(deck.get().getDeleted())) {
             refreshDeck(deck.get(), getLimitedFormats());
@@ -236,10 +213,6 @@ public class DeckIndex implements Runnable {
         return limitedFormatEntities.stream().map(LimitedFormatEntity::getFormat).toList();
     }
 
-    public void enqueueRefreshIndex(String deckId) {
-        refreshQueue.add(deckId);
-    }
-
 
     public Deck get(String id) {
         Query<Deck> findByKeyQuery = equal(Deck.ID_ATTRIBUTE, id);
@@ -247,17 +220,11 @@ public class DeckIndex implements Runnable {
         return (result.size() >= 1) ? result.uniqueResult() : null;
     }
 
-    @Cacheable(value = CacheEnum.GENERIC, key = "'countByType'+#a0")
-    public int countByType(DeckType deckType) {
-        Query<Deck> query = equal(Deck.TYPE_ATTRIBUTE, deckType);
-        ResultSet<Deck> results = decks.retrieve(query);
-        return results.size();
-    }
-
     public ResultSet<Deck> selectAll(DeckQuery deckQuery) {
         DeduplicationOption deduplication = deduplicate(DeduplicationStrategy.MATERIALIZE);
         Thresholds threshold = applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
         QueryOptions queryOptions;
+        Query<Deck> query = null;
         switch (deckQuery.getOrder()) {
             case NAME:
                 queryOptions = queryOptions(orderBy(ascending(Deck.NAME_ATTRIBUTE),
@@ -299,11 +266,18 @@ public class DeckIndex implements Runnable {
                 queryOptions = queryOptions(orderBy(descending(Deck.PLAYERS_ATTRIBUTE),
                         descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
+            case CHEAPEST:
+                query = and(query, has(Deck.PRICE_ATTRIBUTE));
+                queryOptions = queryOptions(orderBy(ascending(Deck.PRICE_ATTRIBUTE), descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                break;
+            case EXPENSIVE:
+                query = and(query, has(Deck.PRICE_ATTRIBUTE));
+                queryOptions = queryOptions(orderBy(descending(Deck.PRICE_ATTRIBUTE), descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                break;
             case NEWEST:
             default:
                 queryOptions = queryOptions(orderBy(descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
         }
-        Query<Deck> query = null;
         Equal<Deck, Boolean> published = QueryFactory.equal(Deck.PUBLISHED_ATTRIBUTE, true);
         if (deckQuery.getUser() != null) {
             query = and(query, or(equal(Deck.USER_ATTRIBUTE, deckQuery.getUser()), published));
@@ -393,7 +367,7 @@ public class DeckIndex implements Runnable {
             }
         }
         if (deckQuery.getGroups() != null) {
-            Query groupQuery = null;
+            Query<Deck> groupQuery = null;
             for (Integer group : deckQuery.getGroups()) {
                 groupQuery = or(groupQuery, in(Deck.GROUP_MULTI_ATTRIBUTE, group));
             }

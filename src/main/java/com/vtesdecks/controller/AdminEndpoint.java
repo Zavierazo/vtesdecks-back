@@ -4,93 +4,90 @@ import com.vtesdecks.scheduler.CardGameGeekScheduler;
 import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DriveThruCardsScheduler;
 import com.vtesdecks.scheduler.GamePodScheduler;
+import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.scheduler.TournamentDeckScheduler;
 import com.vtesdecks.scheduler.VtesdleTodayScheduler;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
-@RequestMapping("/admin")
 @Slf4j
+@RestController
+@RequestMapping("/admin")
+@RequiredArgsConstructor
 public class AdminEndpoint {
-    @Autowired
-    private CleanUpScheduler cleanUpScheduler;
-    @Autowired
-    private TournamentDeckScheduler tournamentDeckScheduler;
-    @Autowired
-    private DriveThruCardsScheduler driveThruCardsScheduler;
-    @Autowired
-    private GamePodScheduler gamePodScheduler;
-    @Autowired
-    private VtesdleTodayScheduler vtesdleTodayScheduler;
-    @Autowired
-    private CardGameGeekScheduler cardGameGeekScheduler;
+    private final CleanUpScheduler cleanUpScheduler;
+    private final TournamentDeckScheduler tournamentDeckScheduler;
+    private final DriveThruCardsScheduler driveThruCardsScheduler;
+    private final GamePodScheduler gamePodScheduler;
+    private final VtesdleTodayScheduler vtesdleTodayScheduler;
+    private final CardGameGeekScheduler cardGameGeekScheduler;
+    private final ProxyCardOptionScheduler proxyCardOptionScheduler;
 
-    @RequestMapping(method = RequestMethod.GET, value = "/scheduler/deck_views_clean", produces = {
+    @GetMapping(value = "/scheduler/deck_views_clean", produces = {
             MediaType.TEXT_PLAIN_VALUE
     })
-    @ResponseBody
     public String deckViewCleanScheduler() {
         cleanUpScheduler.deckViewCleanScheduler();
         return "OK";
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/scheduler/deck_clean", produces = {
+    @GetMapping(value = "/scheduler/deck_clean", produces = {
             MediaType.TEXT_PLAIN_VALUE
     })
-    @ResponseBody
     public String deckCleanScheduler() {
         cleanUpScheduler.deckCleanScheduler();
         return "OK";
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/scheduler/scrap_decks", produces = {
+    @GetMapping(value = "/scheduler/scrap_decks", produces = {
             MediaType.TEXT_PLAIN_VALUE
     })
-    @ResponseBody
     public String scrappingDecks() {
         tournamentDeckScheduler.scrappingDecks();
         return "OK";
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/scheduler/dtc", produces = {
+    @GetMapping(value = "/scheduler/dtc", produces = {
             MediaType.TEXT_PLAIN_VALUE
     })
-    @ResponseBody
     public String driveThruCardsScheduler() {
         driveThruCardsScheduler.scrapCards();
         return "OK";
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/scheduler/gp", produces = {
+    @GetMapping(value = "/scheduler/gp", produces = {
             MediaType.TEXT_PLAIN_VALUE
     })
-    @ResponseBody
     public String gamePodScheduler() {
         gamePodScheduler.scrapCards();
         return "OK";
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/scheduler/cgg", produces = {
+    @GetMapping(value = "/scheduler/cgg", produces = {
             MediaType.TEXT_PLAIN_VALUE
     })
-    @ResponseBody
     public String cardGameGeekScheduler() {
         cardGameGeekScheduler.scrapCards();
         return "OK";
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/scheduler/vtesdle_today", produces = {
+    @GetMapping(value = "/scheduler/vtesdle_today", produces = {
             MediaType.TEXT_PLAIN_VALUE
     })
-    @ResponseBody
     public String vtesdleTodayScheduler() {
         vtesdleTodayScheduler.selectTodayVtesdle();
+        return "OK";
+    }
+
+    @GetMapping(value = "/scheduler/proxyCardOption", produces = {
+            MediaType.TEXT_PLAIN_VALUE
+    })
+    public String proxyCardOption() {
+        proxyCardOptionScheduler.proxyCardOptionScheduler();
         return "OK";
     }
 

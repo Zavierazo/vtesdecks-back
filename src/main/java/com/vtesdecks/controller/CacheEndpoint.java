@@ -1,6 +1,7 @@
 package com.vtesdecks.controller;
 
 import com.vtesdecks.cache.DeckIndex;
+import com.vtesdecks.messaging.MessageProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class CacheEndpoint {
     private final CacheManager cacheManager;
     private final DeckIndex deckIndex;
+    private final MessageProducer messageProducer;
 
     @GetMapping(value = "/clearAll", produces = {
             MediaType.TEXT_PLAIN_VALUE
@@ -97,7 +99,7 @@ public class CacheEndpoint {
             MediaType.TEXT_PLAIN_VALUE
     })
     public String refreshDeck(@PathVariable String id) {
-        deckIndex.enqueueRefreshIndex(id);
+        messageProducer.publishDeckSync(id);
         return "DONE!";
     }
 }

@@ -1,18 +1,20 @@
 package com.vtesdecks.api.service;
 
 import com.itextpdf.text.DocumentException;
-import com.vtesdecks.cache.ProxyCardOptionCache;
 import com.vtesdecks.cache.SetCache;
 import com.vtesdecks.cache.indexable.Set;
-import com.vtesdecks.cache.indexable.proxy.ProxyCardOption;
+import com.vtesdecks.cache.redis.entity.ProxyCardOption;
+import com.vtesdecks.cache.redis.repositories.ProxyCardOptionRepository;
 import com.vtesdecks.model.api.ApiProxyCard;
 import com.vtesdecks.model.api.ApiProxyCardOption;
+import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.service.ProxyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -24,7 +26,8 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class ApiProxyService {
     private final ProxyService proxyService;
-    private final ProxyCardOptionCache cardOptionCache;
+    private final ProxyCardOptionRepository proxyCardOptionRepository;
+    private final ProxyCardOptionScheduler proxyCardOptionScheduler;
     private final SetCache setCache;
 
     public byte[] generatePDF(List<ApiProxyCard> cards) throws IOException, DocumentException {
@@ -39,35 +42,41 @@ public class ApiProxyService {
     }
 
     public ApiProxyCardOption getProxyOption(Integer cardId, String set) {
-        return cardOptionCache.get(cardId).stream()
-                .filter(o -> o.getSetAbbrev().equalsIgnoreCase(set))
-                .findFirst()
-                .map(this::map)
+        return proxyCardOptionRepository.findById(cardId)
+                .filter(proxyCardOption -> proxyCardOption.getSets().contains(set))
+                .map(proxyCardOption -> map(proxyCardOption, set))
                 .orElse(null);
     }
 
     public List<ApiProxyCardOption> getProxyOptions(Integer cardId) {
-        return cardOptionCache.get(cardId).stream()
-                .map(this::map)
+        ProxyCardOption proxyCardOption = proxyCardOptionRepository.findById(cardId).orElse(null);
+        if (proxyCardOption == null) {
+            return Collections.emptyList();
+        }
+        return proxyCardOption.getSets()
+                .stream()
+                .map(set -> map(proxyCardOption, set))
                 .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(ApiProxyCardOption::getSetReleaseDate, Comparator.nullsFirst(Comparator.naturalOrder())).reversed())
                 .toList();
     }
 
     public List<ApiProxyCardOption> getMissingProxyOptions() {
-        return cardOptionCache.getAllPossibleOptions()
-                .filter(proxyCardOption -> getProxyOption(proxyCardOption.getCardId(), proxyCardOption.getSetAbbrev()) == null)
-                .map(this::map)
+        return proxyCardOptionScheduler.getAllPossibleOptions()
+                .flatMap(option -> option.getSets().stream()
+                        .filter(set -> getProxyOption(option.getCardId(), set) == null)
+                        .map(set -> map(option, set))
+                )
                 .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(ApiProxyCardOption::getCardId))
                 .toList();
     }
 
-    private ApiProxyCardOption map(ProxyCardOption proxyCardOption) {
-        Set set = setCache.get(proxyCardOption.getSetAbbrev());
+    private ApiProxyCardOption map(ProxyCardOption proxyCardOption, String setAbbrev) {
+        Set set = setCache.get(setAbbrev);
 
         if (set == null) {
-            log.warn("Set '{}' not found for proxy option", proxyCardOption.getSetAbbrev());
+            log.warn("Set '{}' not found for proxy option", setAbbrev);
             return null;
         }
         return ApiProxyCardOption.builder()

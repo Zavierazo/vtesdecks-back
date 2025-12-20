@@ -52,6 +52,7 @@ public abstract class CryptFactory {
         crypt.setSets(VtesUtils.getSets(dbCrypt.getSet()));
         crypt.setLastUpdate(dbCrypt.getModificationDate() != null ? dbCrypt.getModificationDate() : dbCrypt.getCreationDate());
         crypt.setPrintOnDemand(VtesUtils.isPrintOnDemand(cardShopList));
+        crypt.setUnreleased(VtesUtils.isUnreleased(crypt.getSets()));
         if (!CollectionUtils.isEmpty(cardShopList)) {
             // Add all sets from print on demand shops
             if (crypt.isPrintOnDemand()) {
@@ -64,15 +65,22 @@ public abstract class CryptFactory {
             // Find min and max price in EUR
             List<BigDecimal> priceList = cardShopList.stream()
                     .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
+                    .filter(CardShopEntity::isInStock)
                     .map(cardShop -> currencyExchangeService.convert(cardShop.getPrice(), cardShop.getCurrency(), DEFAULT_CURRENCY))
                     .toList();
+            if (priceList.isEmpty()) {
+                priceList = cardShopList.stream()
+                        .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
+                        .map(cardShop -> currencyExchangeService.convert(cardShop.getPrice(), cardShop.getCurrency(), DEFAULT_CURRENCY))
+                        .toList();
+            }
             crypt.setMinPrice(priceList.stream().min(BigDecimal::compareTo).orElse(null));
             crypt.setMaxPrice(priceList.stream().max(BigDecimal::compareTo).orElse(null));
             // Force lastUpdate when new shop find
             LocalDateTime cardShopCreationDate = cardShopList.stream()
-                    .filter(cardShop -> cardShop.getPlatform().isPrintOnDemand())
+                    .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
                     .map(CardShopEntity::getCreationDate)
-                    .findAny()
+                    .max(LocalDateTime::compareTo)
                     .orElse(null);
             if (cardShopCreationDate != null && cardShopCreationDate.isAfter(crypt.getLastUpdate())) {
                 crypt.setLastUpdate(cardShopCreationDate);

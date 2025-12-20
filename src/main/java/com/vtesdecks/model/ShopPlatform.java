@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 public enum ShopPlatform {
     DTC("DriveThruCards", "https://drivethrucards.com", true, true, true),
     GP("GamePod", "https://gamepod.es", true, true, true),
-    CGG("CardGameGeek", "https://shop.cardgamegeek.com", false, false, false);
+    CGG("CardGameGeek", "https://shop.cardgamegeek.com", true, false, false);
 
     @Getter
     private String fullName;

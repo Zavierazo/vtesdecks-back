@@ -8,7 +8,6 @@ import com.opencsv.exceptions.CsvException;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.LibraryCache;
-import com.vtesdecks.cache.ProxyCardOptionCache;
 import com.vtesdecks.cache.SetCache;
 import com.vtesdecks.csv.entity.CryptCsv;
 import com.vtesdecks.csv.entity.CryptI18nCsv;
@@ -29,7 +28,6 @@ import com.vtesdecks.jpa.repositories.CryptI18nRepository;
 import com.vtesdecks.jpa.repositories.CryptRepository;
 import com.vtesdecks.jpa.repositories.LibraryI18nRepository;
 import com.vtesdecks.jpa.repositories.LibraryRepository;
-import com.vtesdecks.jpa.repositories.LoadHistoryRepository;
 import com.vtesdecks.jpa.repositories.SetRepository;
 import com.vtesdecks.model.csv.SetCard;
 import com.vtesdecks.util.VtesUtils;
@@ -93,10 +91,6 @@ public class AfterStartupService {
     @Autowired
     private SetCache setCache;
     @Autowired
-    private ProxyCardOptionCache proxyCardOptionCache;
-    @Autowired
-    private LoadHistoryRepository loadHistoryRepository;
-    @Autowired
     private LoadHistoryService loadHistoryService;
 
     @Transactional
@@ -135,7 +129,6 @@ public class AfterStartupService {
             libraryCache.refreshIndex();
             deckIndex.refreshIndex();
         }
-        proxyCardOptionCache.refreshIndex();
         log.info("Finish background tasks...");
     }
 

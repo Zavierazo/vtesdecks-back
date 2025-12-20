@@ -1,21 +1,19 @@
 package com.vtesdecks.service;
 
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
-import com.github.benmanes.caffeine.cache.Scheduler;
 import com.vtesdecks.api.mapper.ApiCardInfoMapper;
+import com.vtesdecks.cache.redis.entity.CardRuling;
+import com.vtesdecks.cache.redis.repositories.CardRulingRepository;
 import com.vtesdecks.integration.KRCGClient;
 import com.vtesdecks.model.api.ApiRuling;
 import com.vtesdecks.model.krcg.Card;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -23,14 +21,25 @@ import java.util.List;
 public class RulingService {
     private final KRCGClient krcgClient;
     private final ApiCardInfoMapper apiCardInfoMapper;
-    private final LoadingCache<@NonNull Integer, List<ApiRuling>> rulingsCache = Caffeine.newBuilder()
-            .refreshAfterWrite(Duration.ofHours(12))
-            .scheduler(Scheduler.systemScheduler())
-            .build(this::getKRCGRulings);
-
+    private final CardRulingRepository cardRulingRepository;
 
     public List<ApiRuling> getRulings(Integer id) {
-        return rulingsCache.get(id);
+        CardRuling cardRuling = getCardRuling(id);
+        return cardRuling != null ? cardRuling.getRulings() : Collections.emptyList();
+    }
+
+    private CardRuling getCardRuling(Integer id) {
+        Optional<CardRuling> cardRuling = cardRulingRepository.findById(id);
+        if (cardRuling.isPresent()) {
+            return cardRuling.get();
+        } else {
+            CardRuling newCardRuling = CardRuling.builder()
+                    .id(id)
+                    .rulings(getKRCGRulings(id))
+                    .build();
+            cardRulingRepository.save(newCardRuling);
+            return newCardRuling;
+        }
     }
 
     private List<ApiRuling> getKRCGRulings(Integer id) {

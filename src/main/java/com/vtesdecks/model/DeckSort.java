@@ -10,5 +10,7 @@ public enum DeckSort {
     VIEWS,
     COMMENTS,
     POPULAR,
-    PLAYERS
+    PLAYERS,
+    CHEAPEST,
+    EXPENSIVE
 }
