@@ -23,6 +23,7 @@ public class AsyncConfiguration {
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("async-ai-");
         executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(120);
         executor.setRejectedExecutionHandler((r, e) ->
                 log.warn("Task rejected from async-ai executor. Task: {}", r.toString())
         );
