@@ -44,10 +44,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -70,7 +68,7 @@ import static com.googlecode.cqengine.query.option.EngineThresholds.INDEX_ORDERI
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
-public class DeckIndex implements Runnable {
+public class DeckIndex {
     private static final List<DeckType> ALL_DECK_TYPES = Lists.newArrayList(DeckType.TOURNAMENT, DeckType.COMMUNITY);
     private static final int CRYPT_MAIN_MIN_NUMBER = 4;
     private static final int CRYPT_SINGLE_MIN_NUMBER = 8;
@@ -87,7 +85,6 @@ public class DeckIndex implements Runnable {
     @Autowired
     private LimitedFormatRepository limitedFormatRepository;
     private IndexedCollection<Deck> decks = new ConcurrentIndexedCollection<Deck>();
-    private final BlockingQueue<String> refreshQueue = new LinkedBlockingQueue<>();
     private boolean keepRunning = true;
 
 
@@ -139,25 +136,6 @@ public class DeckIndex implements Runnable {
         decks.addIndex(HashIndex.onAttribute(Deck.LIMITED_FORMAT_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.PATH_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.PRICE_ATTRIBUTE));
-        Thread workerThread = new Thread(this);
-        workerThread.setDaemon(true);
-        workerThread.start();
-    }
-
-
-    @Override
-    public void run() {
-        while (keepRunning) {
-            try {
-                refreshIndex(refreshQueue.take());
-            } catch (final InterruptedException e) {
-                log.error("Blocking queue was interrupted {}", e);
-                // Restore interrupted state...
-                Thread.currentThread().interrupt();
-            } catch (final Exception e) {
-                log.error("Unhandled exception: {} ", e);
-            }
-        }
     }
 
 
@@ -201,7 +179,7 @@ public class DeckIndex implements Runnable {
         }
     }
 
-    private void refreshIndex(String deckId) {
+    public void refreshIndex(String deckId) {
         Optional<DeckEntity> deck = deckRepository.findById(deckId);
         if (deck.isPresent() && Boolean.FALSE.equals(deck.get().getDeleted())) {
             refreshDeck(deck.get(), getLimitedFormats());
@@ -236,10 +214,6 @@ public class DeckIndex implements Runnable {
     private List<LimitedFormatPayload> getLimitedFormats() {
         List<LimitedFormatEntity> limitedFormatEntities = limitedFormatRepository.findAll();
         return limitedFormatEntities.stream().map(LimitedFormatEntity::getFormat).toList();
-    }
-
-    public void enqueueRefreshIndex(String deckId) {
-        refreshQueue.add(deckId);
     }
 
 

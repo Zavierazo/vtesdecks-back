@@ -1,17 +1,17 @@
 package com.vtesdecks.worker;
 
 import com.google.common.hash.Hashing;
-import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.jpa.entity.DeckViewEntity;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.DeckViewRepository;
+import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.util.Utils;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Builder;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -20,14 +20,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 @Component
 @Log4j2
+@RequiredArgsConstructor
 public class DeckFeedbackWorker implements Runnable {
-
     private final BlockingQueue<DeckFeedback> operationLogQueue = new LinkedBlockingQueue<>();
+    private final MessageProducer messageProducer;
+    private final DeckViewRepository deckViewRepository;
     private boolean keepRunning = true;
-    @Autowired
-    private DeckIndex deckIndex;
-    @Autowired
-    private DeckViewRepository deckViewRepository;
 
     @Data
     @Builder
@@ -68,7 +66,7 @@ public class DeckFeedbackWorker implements Runnable {
                     deckView.setSource(deckFeedback.getSource());
                     deckViewRepository.saveAndFlush(deckView);
                 }
-                deckIndex.enqueueRefreshIndex(deckFeedback.getDeck());
+                messageProducer.publishDeckSync(deckFeedback.getDeck());
             } catch (final InterruptedException e) {
                 log.error("Blocking queue was interrupted {}", e);
                 // Restore interrupted state...

@@ -6,12 +6,13 @@ import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
+import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.service.DeckUserService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -20,11 +21,11 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class DeckUserServiceImpl implements DeckUserService {
-    @Autowired
-    private DeckUserRepository deckUserRepository;
-    @Autowired
-    private DeckIndex deckIndex;
+    private final DeckUserRepository deckUserRepository;
+    private final DeckIndex deckIndex;
+    private final MessageProducer messageProducer;
 
     @Override
     public void rate(Integer userId, String deckId, Integer rate) {
@@ -46,7 +47,7 @@ public class DeckUserServiceImpl implements DeckUserService {
                 updated = true;
             }
             if (updated) {
-                deckIndex.enqueueRefreshIndex(deckId);
+                messageProducer.publishDeckSync(deckId);
             }
             log.debug("Deck rate {}", deckUser);
         }
@@ -72,7 +73,7 @@ public class DeckUserServiceImpl implements DeckUserService {
                 updated = true;
             }
             if (updated) {
-                deckIndex.enqueueRefreshIndex(deckId);
+                messageProducer.publishDeckSync(deckId);
             }
             return favorite;
         }
@@ -97,7 +98,7 @@ public class DeckUserServiceImpl implements DeckUserService {
                 .user(userId)
                 .build());
         if (deckUsers != null) {
-            deckUsers.forEach(deck -> deckIndex.enqueueRefreshIndex(deck.getId()));
+            deckUsers.forEach(deck -> messageProducer.publishDeckSync(deck.getId()));
         }
     }
 
