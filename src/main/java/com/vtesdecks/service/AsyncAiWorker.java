@@ -1,7 +1,7 @@
 package com.vtesdecks.service;
 
+import com.vtesdecks.cache.redis.entity.AiChatTask;
 import com.vtesdecks.enums.AsyncAiStatus;
-import com.vtesdecks.model.AsyncAiTask;
 import com.vtesdecks.model.api.ApiAiAskRequest;
 import com.vtesdecks.model.api.ApiAiAskResponse;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +22,9 @@ import java.time.LocalDateTime;
 public class AsyncAiWorker {
     private final AiService aiService;
 
-    @Async("asyncAiExecutor")
+    @Async("taskExecutor")
     @Transactional
-    public void processTask(AsyncAiTask task, AsyncAiService asyncAiService) {
+    public void processTask(AiChatTask task, AsyncAiService asyncAiService) {
         try {
             // Update task status to PROCESSING
             task.setStatus(AsyncAiStatus.PROCESSING);
