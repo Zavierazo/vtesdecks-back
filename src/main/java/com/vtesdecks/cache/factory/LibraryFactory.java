@@ -11,6 +11,7 @@ import com.vtesdecks.jpa.entity.LibraryI18nEntity;
 import com.vtesdecks.model.LibraryTaint;
 import com.vtesdecks.model.LibraryTitle;
 import com.vtesdecks.service.CurrencyExchangeService;
+import com.vtesdecks.util.TrigramSimilarity;
 import com.vtesdecks.util.VtesUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -62,6 +63,8 @@ public abstract class LibraryFactory {
         library.setLastUpdate(dbLibrary.getModificationDate() != null ? dbLibrary.getModificationDate() : dbLibrary.getCreationDate());
         library.setPrintOnDemand(VtesUtils.isPrintOnDemand(cardShopList));
         library.setUnreleased(VtesUtils.isUnreleased(library.getSets()));
+        library.setNameTrigrams(TrigramSimilarity.generateTrigram(library.getName()));
+        library.setAkaTrigrams(TrigramSimilarity.generateTrigram(library.getAka()));
         if (!CollectionUtils.isEmpty(cardShopList)) {
             // Add all sets from print on demand shops
             if (library.isPrintOnDemand()) {

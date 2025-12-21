@@ -4,33 +4,36 @@ import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.ApiCardMapper;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
+import com.vtesdecks.cache.indexable.Card;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.jpa.entity.CardShopEntity;
-import com.vtesdecks.jpa.entity.extra.TextSearch;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
-import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiShop;
 import com.vtesdecks.model.api.ApiShopResult;
-import com.vtesdecks.util.VtesUtils;
+import com.vtesdecks.util.TrigramSimilarity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
 public class ApiCardService {
+    private static final BigDecimal MIN_TRIGRAMS_SCORE = BigDecimal.valueOf(0.25);
+
     private final CryptCache cryptCache;
     private final LibraryCache libraryCache;
     private final CardShopRepository cardShopRepository;
-    private final DeckCardRepository deckCardRepository;
     private final ApiCardMapper apiCardMapper;
 
     public ApiCrypt getCrypt(Integer id, String locale) {
@@ -110,7 +113,7 @@ public class ApiCardService {
         try (ResultSet<Crypt> crypt = cryptCache.selectByExactName(query)) {
             if (crypt.isNotEmpty()) {
                 return crypt.stream()
-                        .map(card -> apiCardMapper.mapCrypt(card, null, fields, 100.0))
+                        .map(card -> apiCardMapper.mapCrypt(card, null, fields, 1.0))
                         .limit(limit != null ? limit : crypt.size())
                         .collect(Collectors.toList());
             }
@@ -118,24 +121,39 @@ public class ApiCardService {
         try (ResultSet<Library> library = libraryCache.selectByExactName(query)) {
             if (library.isNotEmpty()) {
                 return library.stream()
-                        .map(card -> apiCardMapper.mapLibrary(card, null, fields, 100.0))
+                        .map(card -> apiCardMapper.mapLibrary(card, null, fields, 1.0))
                         .limit(limit != null ? limit : library.size())
                         .collect(Collectors.toList());
             }
         }
-        List<TextSearch> results = deckCardRepository.search(query);
-        // Return list with ApiLibrary and ApiCrypt objects
-        return results.stream()
-                .map(textSearch -> {
-                    if (VtesUtils.isCrypt(textSearch.getId())) {
-                        Crypt crypt = cryptCache.get(textSearch.getId());
-                        return apiCardMapper.mapCrypt(crypt, null, fields, textSearch.getScore());
-                    } else {
-                        Library library = libraryCache.get(textSearch.getId());
-                        return apiCardMapper.mapLibrary(library, null, fields, textSearch.getScore());
-                    }
-                })
-                .limit(limit != null ? limit : results.size())
-                .toList();
+
+        try (ResultSet<Crypt> cryptResult = cryptCache.selectAll(null, null); ResultSet<Library> libraryResult = libraryCache.selectAll(null, null);) {
+            Set<String> queryTrigrams = TrigramSimilarity.generateTrigram(query);
+            return Stream.concat(cryptResult.stream(), libraryResult.stream())
+                    .map((Card card) -> {
+                        BigDecimal trigramsScore = TrigramSimilarity.trigramSimilarity(card.getName(), query, card.getNameTrigrams(), queryTrigrams);
+                        if (trigramsScore.compareTo(MIN_TRIGRAMS_SCORE) < 0) {
+                            trigramsScore = TrigramSimilarity.trigramSimilarity(card.getAka(), query, card.getAkaTrigrams(), queryTrigrams);
+                        }
+                        if (trigramsScore.compareTo(MIN_TRIGRAMS_SCORE) > 0) {
+                            if (card instanceof Crypt crypt) {
+                                return apiCardMapper.mapCrypt(crypt, null, fields, trigramsScore.doubleValue());
+                            } else if (card instanceof Library library) {
+                                return apiCardMapper.mapLibrary(library, null, fields, trigramsScore.doubleValue());
+                            }
+                        }
+                        return null;
+                    })
+                    .filter(Objects::nonNull)
+                    .sorted(Comparator.comparingDouble(card -> {
+                        if (card instanceof ApiCrypt crypt) {
+                            return crypt.getScore();
+                        } else {
+                            return ((ApiLibrary) card).getScore();
+                        }
+                    }).reversed())
+                    .limit(limit != null ? limit : Long.MAX_VALUE)
+                    .toList();
+        }
     }
 }

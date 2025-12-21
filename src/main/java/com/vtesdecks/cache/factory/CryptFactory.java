@@ -9,6 +9,7 @@ import com.vtesdecks.jpa.entity.CryptEntity;
 import com.vtesdecks.jpa.entity.CryptI18nEntity;
 import com.vtesdecks.model.CryptTaint;
 import com.vtesdecks.service.CurrencyExchangeService;
+import com.vtesdecks.util.TrigramSimilarity;
 import com.vtesdecks.util.VtesUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -53,6 +54,8 @@ public abstract class CryptFactory {
         crypt.setLastUpdate(dbCrypt.getModificationDate() != null ? dbCrypt.getModificationDate() : dbCrypt.getCreationDate());
         crypt.setPrintOnDemand(VtesUtils.isPrintOnDemand(cardShopList));
         crypt.setUnreleased(VtesUtils.isUnreleased(crypt.getSets()));
+        crypt.setNameTrigrams(TrigramSimilarity.generateTrigram(crypt.getName()));
+        crypt.setAkaTrigrams(TrigramSimilarity.generateTrigram(crypt.getAka()));
         if (!CollectionUtils.isEmpty(cardShopList)) {
             // Add all sets from print on demand shops
             if (crypt.isPrintOnDemand()) {

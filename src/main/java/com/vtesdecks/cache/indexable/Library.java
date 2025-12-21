@@ -38,8 +38,6 @@ public class Library extends Card {
     public static final Attribute<Library, LocalDateTime> LAST_UPDATE_ATTRIBUTE = QueryFactory.attribute(Library.class, LocalDateTime.class, "last_update", Library::getLastUpdate);
 
     private Integer id;
-    private String name;
-    private String aka;
     private String type;
     private Set<String> clans;
     private String path;

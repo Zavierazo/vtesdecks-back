@@ -9,6 +9,10 @@ import java.util.Set;
 
 @Data
 public class Card {
+    private String name;
+    private Set<String> nameTrigrams;
+    private String aka;
+    private Set<String> akaTrigrams;
     private Map<String, I18n> i18n;
     private String image;
     private String cropImage;

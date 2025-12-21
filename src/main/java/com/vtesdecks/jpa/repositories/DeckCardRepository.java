@@ -27,17 +27,6 @@ public interface DeckCardRepository extends JpaRepository<DeckCardEntity, DeckCa
     @Query(value = "SELECT id, name, score " +
             "FROM (SELECT id, name, MATCH(name, aka) AGAINST(?1 IN NATURAL LANGUAGE MODE) AS score FROM crypt " +
             "WHERE MATCH(name, aka) AGAINST(?1 IN NATURAL LANGUAGE MODE) " +
-            "UNION ALL " +
-            "SELECT id, name, MATCH(name, aka) AGAINST(?1 IN NATURAL LANGUAGE MODE) AS score FROM library " +
-            "WHERE MATCH(name, aka) AGAINST(?1 IN NATURAL LANGUAGE MODE)) AS cards " +
-            "WHERE cards.score > 5.0 " +
-            "ORDER BY cards.score DESC",
-            nativeQuery = true)
-    List<TextSearch> search(String name);
-
-    @Query(value = "SELECT id, name, score " +
-            "FROM (SELECT id, name, MATCH(name, aka) AGAINST(?1 IN NATURAL LANGUAGE MODE) AS score FROM crypt " +
-            "WHERE MATCH(name, aka) AGAINST(?1 IN NATURAL LANGUAGE MODE) " +
             "AND (?2 IS NULL OR adv = ?2) " +
             "UNION ALL " +
             "SELECT id, name, MATCH(name, aka) AGAINST(?1 IN NATURAL LANGUAGE MODE) AS score FROM library " +

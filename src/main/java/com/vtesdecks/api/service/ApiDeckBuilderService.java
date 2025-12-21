@@ -116,7 +116,6 @@ public class ApiDeckBuilderService {
             UserEntity user = userRepository.findById(userId).orElse(null);
             deckId = "user-" + StringUtils.lowerCase(user.getUsername()) + "-" + UUID.randomUUID().toString().replace("-", "");
         }
-        boolean exists = true;
         if (deck == null) {
             deck = new DeckEntity();
             deck.setId(deckId);
@@ -124,7 +123,6 @@ public class ApiDeckBuilderService {
             deck.setUser(userId);
             deck.setVerified(true);
             deck.setCreationDate(LocalDateTime.now());
-            exists = false;
         } else if (!isOwnerOrAdmin(deck, userId)) {
             log.warn("Deck {} is not valid for user {}", apiDeckBuilder.getId(), userId);
             throw new IllegalArgumentException("Deck " + apiDeckBuilder.getId() + " is not valid for user " + userId);
