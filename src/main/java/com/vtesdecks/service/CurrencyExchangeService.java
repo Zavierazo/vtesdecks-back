@@ -3,6 +3,7 @@ package com.vtesdecks.service;
 import com.vtesdecks.cache.redis.entity.CurrencyExchangeRate;
 import com.vtesdecks.cache.redis.repositories.CurrencyExchangeRateRepository;
 import com.vtesdecks.integration.CurrencyExchangeClient;
+import com.vtesdecks.model.currencyexchange.CurrencyResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -32,26 +33,32 @@ public class CurrencyExchangeService {
             return exchangeRate.get().getRate();
         }
         BigDecimal rate = getExchangeRateFromApi(fromCurrency, toCurrency);
-        currencyExchangeRateRepository.save(
-                CurrencyExchangeRate.builder()
-                        .id(id)
-                        .rate(rate)
-                        .build()
-        );
-        return rate;
+        if (rate != null) {
+            currencyExchangeRateRepository.save(
+                    CurrencyExchangeRate.builder()
+                            .id(id)
+                            .rate(rate)
+                            .build()
+            );
+            return rate;
+        } else {
+            return BigDecimal.ONE;
+        }
     }
 
     private BigDecimal getExchangeRateFromApi(String sourceCurrency, String targetCurrency) {
         try {
-            String exchangeRate = currencyExchangeClient.getLatest(sourceCurrency, targetCurrency);
-            if (StringUtils.isNotBlank(exchangeRate)) {
-                return new BigDecimal(exchangeRate);
+            String source = StringUtils.lowerCase(sourceCurrency);
+            String target = StringUtils.lowerCase(targetCurrency);
+            CurrencyResponse exchangeRate = currencyExchangeClient.getLatest(source);
+            if (exchangeRate != null && exchangeRate.getRatesFor(source) != null && exchangeRate.getRatesFor(source).containsKey(target)) {
+                return BigDecimal.valueOf(exchangeRate.getRatesFor(source).get(target));
             } else {
                 log.warn("Could not get exchange rate from {} to {}", sourceCurrency, targetCurrency);
             }
         } catch (Exception e) {
             log.warn("Could not get exchange rate from {} to {}", sourceCurrency, targetCurrency, e);
         }
-        return BigDecimal.ONE;
+        return null;
     }
 }

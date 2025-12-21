@@ -1,5 +1,6 @@
 package com.vtesdecks.integration;
 
+import com.vtesdecks.model.currencyexchange.CurrencyResponse;
 import feign.Logger;
 import feign.codec.Encoder;
 import feign.form.spring.SpringFormEncoder;
@@ -11,13 +12,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-@FeignClient(name = "CurrencyExchangeClient", url = "http://currencies.apps.grandtrunk.net", configuration = CurrencyExchangeClient.Configuration.class)
+@FeignClient(name = "CurrencyExchangeClient", url = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest", configuration = CurrencyExchangeClient.Configuration.class)
 public interface CurrencyExchangeClient {
 
-    @GetMapping(value = "/getlatest/{from}/{to}", produces = TEXT_PLAIN_VALUE)
-    String getLatest(@PathVariable String from, @PathVariable String to);
+    @GetMapping(value = "/v1/currencies/{from}.json", produces = APPLICATION_JSON_VALUE)
+    CurrencyResponse getLatest(@PathVariable String from);
 
 
     class Configuration {
