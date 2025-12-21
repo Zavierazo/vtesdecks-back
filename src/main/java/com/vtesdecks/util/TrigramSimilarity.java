@@ -63,9 +63,6 @@ public final class TrigramSimilarity {
         if (input1 != null && input1.equals(input2)) {
             return BigDecimal.ONE;
         }
-        if (input1 != null && input2 != null && input1.toLowerCase().contains(input2.toLowerCase())) {
-            return BigDecimal.ONE;
-        }
 
         if (t1.isEmpty() && t2.isEmpty()) {
             return BigDecimal.ZERO;
@@ -80,7 +77,7 @@ public final class TrigramSimilarity {
         if (union.isEmpty()) {
             return BigDecimal.ZERO;
         }
-        
+
         BigDecimal numerator = BigDecimal.valueOf(intersection.size());
         BigDecimal denominator = BigDecimal.valueOf(union.size());
         return numerator.divide(denominator, 2, RoundingMode.HALF_UP);
