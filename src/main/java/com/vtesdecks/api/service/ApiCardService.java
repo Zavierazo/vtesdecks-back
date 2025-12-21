@@ -109,7 +109,8 @@ public class ApiCardService {
         return ApiShopResult.builder().shops(groupedByShop).hasMore(all.size() > groupedByShop.size()).build();
     }
 
-    public List<Object> searchCards(String query, Integer limit, Set<String> fields) {
+    public List<Object> searchCards(String query, Double minScore, Integer limit, Set<String> fields) {
+        BigDecimal targetScore = minScore != null ? BigDecimal.valueOf(minScore) : MIN_TRIGRAMS_SCORE;
         try (ResultSet<Crypt> crypt = cryptCache.selectByExactName(query)) {
             if (crypt.isNotEmpty()) {
                 return crypt.stream()
@@ -132,10 +133,10 @@ public class ApiCardService {
             return Stream.concat(cryptResult.stream(), libraryResult.stream())
                     .map((Card card) -> {
                         BigDecimal trigramsScore = TrigramSimilarity.trigramSimilarity(card.getName(), query, card.getNameTrigrams(), queryTrigrams);
-                        if (trigramsScore.compareTo(MIN_TRIGRAMS_SCORE) < 0) {
+                        if (trigramsScore.compareTo(targetScore) < 0) {
                             trigramsScore = TrigramSimilarity.trigramSimilarity(card.getAka(), query, card.getAkaTrigrams(), queryTrigrams);
                         }
-                        if (trigramsScore.compareTo(MIN_TRIGRAMS_SCORE) > 0) {
+                        if (trigramsScore.compareTo(targetScore) > 0) {
                             if (card instanceof Crypt crypt) {
                                 return apiCardMapper.mapCrypt(crypt, null, fields, trigramsScore.doubleValue());
                             } else if (card instanceof Library library) {

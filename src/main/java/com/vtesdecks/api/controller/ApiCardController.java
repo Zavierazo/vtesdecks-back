@@ -39,8 +39,8 @@ public class ApiCardController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<List<Object>> searchCards(@RequestParam String query, @RequestParam(required = false) Integer limit, @RequestParam(required = false) Set<String> fields) {
-        List<Object> results = apiCardService.searchCards(query, limit, fields);
+    public ResponseEntity<List<Object>> searchCards(@RequestParam String query, @RequestParam(required = false) Double minScore, @RequestParam(required = false) Integer limit, @RequestParam(required = false) Set<String> fields) {
+        List<Object> results = apiCardService.searchCards(query, minScore, limit, fields);
         return new ResponseEntity<>(results, HttpStatus.OK);
     }
 
