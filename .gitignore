@@ -32,3 +32,4 @@ replay_pid*
 .idea/
 .run/
 /src/main/resources/application-live.properties
+/secrets/

@@ -1,5 +1,6 @@
 package com.vtesdecks.api.controller;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.vtesdecks.api.service.ApiUserNotificationService;
 import com.vtesdecks.api.service.ApiUserService;
 import com.vtesdecks.jpa.entity.UserEntity;
@@ -8,6 +9,7 @@ import com.vtesdecks.model.api.ApiResponse;
 import com.vtesdecks.model.api.ApiUser;
 import com.vtesdecks.model.api.ApiUserCountry;
 import com.vtesdecks.service.MailService;
+import com.vtesdecks.service.OauthService;
 import com.vtesdecks.service.RecaptchaService;
 import com.vtesdecks.util.Utils;
 import jakarta.mail.internet.AddressException;
@@ -37,6 +39,7 @@ import static com.vtesdecks.util.Constants.USER_COUNTRY_HEADER;
 @RequestMapping("/api/1.0/auth")
 @Slf4j
 public class ApiAuthController {
+    private static final String FORM_DATA_TOKEN = "token";
     private static final String FORM_DATA_USERNAME = "username";
     private static final String FORM_DATA_EMAIL = "email";
     private static final String FORM_DATA_PASSWORD = "password";
@@ -55,6 +58,8 @@ public class ApiAuthController {
     private ApiUserService userService;
     @Autowired
     private ApiUserNotificationService userNotificationService;
+    @Autowired
+    private OauthService oauthService;
 
     @RequestMapping(method = RequestMethod.POST, value = "/login", produces = {
             MediaType.APPLICATION_JSON_VALUE
@@ -103,6 +108,58 @@ public class ApiAuthController {
         if (user.getToken() == null && user.getMessage() == null) {
             user.setMessage("You have entered an invalid username or password");
             log.warn("Invalid username or password for login {}", username);
+        }
+        return user;
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/oauth/login", produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public ApiUser oauthLogin(HttpServletRequest httpServletRequest, @RequestParam Map<String, String> data) {
+        String token = data.get(FORM_DATA_TOKEN);
+        log.debug("Login request for {}", token);
+        ApiUser user = new ApiUser();
+
+        GoogleIdToken googleId = oauthService.validateOauthToken(token);
+        if (googleId != null && googleId.getPayload() != null) {
+            GoogleIdToken.Payload googlePayload = googleId.getPayload();
+            UserEntity dbUser = userRepository.findByEmail(googlePayload.getEmail());
+            if (dbUser == null) {
+                // Create new user
+                dbUser = new UserEntity();
+                dbUser.setUsername(googlePayload.getSubject());
+                dbUser.setEmail(googlePayload.getEmail());
+                dbUser.setPassword(StringUtils.EMPTY); // No password for oauth users (no default login)
+                dbUser.setValidated(true); // Oauth users are always validated
+                dbUser.setAdmin(false);
+                dbUser.setLoginHash(getRandomLoginHash());
+                if (googlePayload.get("name") != null) {
+                    dbUser.setDisplayName((String) googlePayload.get("name"));
+                } else {
+                    dbUser.setDisplayName(googlePayload.getEmail().split("@")[0]);
+                }
+                userRepository.save(dbUser);
+                try {
+                    userNotificationService.welcomeNotifications(dbUser.getId());
+                } catch (Exception e) {
+                    log.error("Error sending in-app notification for user {}", dbUser.getUsername(), e);
+                }
+                log.info("Oauth Register {} success, with user {}", dbUser.getEmail(), dbUser.getUsername());
+            }
+            List<String> roles = userRepository.selectRolesByUserId(dbUser.getId());
+            if (Boolean.FALSE.equals(dbUser.getValidated())) {
+                dbUser.setValidated(true);
+                userRepository.save(dbUser);
+                log.info("Validated user {} through oauth login", dbUser.getEmail());
+            }
+            user = userService.getAuthenticatedUser(dbUser, roles);
+            log.info("Oauth Login request for {} success. Jwt token: {}", user.getEmail(), user.getToken());
+        }
+
+        if (user.getToken() == null && user.getMessage() == null) {
+            user.setMessage("Invalid authentication");
+            log.warn("Invalid oauth token {}", token);
         }
         return user;
     }
