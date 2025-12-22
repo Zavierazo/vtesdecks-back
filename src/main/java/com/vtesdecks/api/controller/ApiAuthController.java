@@ -127,8 +127,9 @@ public class ApiAuthController {
             UserEntity dbUser = userRepository.findByEmail(googlePayload.getEmail());
             if (dbUser == null) {
                 // Create new user
+                String emailUser = googlePayload.getEmail().split("@")[0];
                 dbUser = new UserEntity();
-                dbUser.setUsername(googlePayload.getSubject());
+                dbUser.setUsername("oauth_" + emailUser);
                 dbUser.setEmail(googlePayload.getEmail());
                 dbUser.setPassword(StringUtils.EMPTY); // No password for oauth users (no default login)
                 dbUser.setValidated(true); // Oauth users are always validated
@@ -137,7 +138,7 @@ public class ApiAuthController {
                 if (googlePayload.get("name") != null) {
                     dbUser.setDisplayName((String) googlePayload.get("name"));
                 } else {
-                    dbUser.setDisplayName(googlePayload.getEmail().split("@")[0]);
+                    dbUser.setDisplayName(emailUser);
                 }
                 userRepository.save(dbUser);
                 try {
