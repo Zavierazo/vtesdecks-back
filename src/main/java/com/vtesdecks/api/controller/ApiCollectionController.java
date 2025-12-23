@@ -5,6 +5,8 @@ import com.vtesdecks.model.api.ApiCollection;
 import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
 import com.vtesdecks.model.api.ApiCollectionPage;
+import com.vtesdecks.util.Utils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -41,12 +43,12 @@ public class ApiCollectionController {
     }
 
     @GetMapping(value = "/binders/{publicHash}/cards", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiCollectionPage<ApiCollectionCard> getCards(@PathVariable String publicHash, @RequestParam Integer page, @RequestParam Integer size, @RequestParam(required = false) String groupBy, @RequestParam(required = false) String sortBy, @RequestParam(required = false) String sortDirection, @RequestParam Map<String, String> params) throws Exception {
+    public ApiCollectionPage<ApiCollectionCard> getCards(HttpServletRequest request, @PathVariable String publicHash, @RequestParam Integer page, @RequestParam Integer size, @RequestParam(required = false) String groupBy, @RequestParam(required = false) String sortBy, @RequestParam(required = false) String sortDirection, @RequestParam Map<String, String> params) throws Exception {
         Map<String, String> filters = params != null ? params.entrySet().stream()
                 .filter(entry -> ALLOWED_FILTERS.contains(entry.getKey()))
                 .filter(entry -> !isEmpty(entry.getValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)) : new HashMap<>();
-        return collectionService.getPublicCards(publicHash, page, size, groupBy, sortBy, sortDirection, filters);
+        return collectionService.getPublicCards(publicHash, page, size, groupBy, sortBy, sortDirection, filters, Utils.getCurrencyCode(request));
     }
 
 

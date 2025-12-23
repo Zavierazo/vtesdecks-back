@@ -1,6 +1,7 @@
 package com.vtesdecks.jpa.repositories;// CollectionCardRepositoryImpl.java
 
 import com.google.common.base.Splitter;
+import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.CollectionCardEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -12,6 +13,7 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -64,6 +66,13 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                         orders.add(cb.asc(cardNumber));
                     } else {
                         orders.add(cb.desc(cardNumber));
+                    }
+                } else if (order.getProperty().equals("price") || order.getProperty().equals("totalPrice")) {
+                    Expression<Number> cardPrice = getCardPriceJoin(cq, cb, root, order.getProperty().equals("totalPrice"));
+                    if (order.isAscending()) {
+                        orders.add(cb.asc(cardPrice));
+                    } else {
+                        orders.add(cb.desc(cardPrice));
                     }
                 } else {
                     if (order.isAscending()) {
@@ -152,6 +161,13 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                     } else {
                         orders.add(cb.desc(cardName));
                     }
+                } else if (order.getProperty().equals("price") || order.getProperty().equals("totalPrice")) {
+                    Expression<Number> cardPrice = getCardPriceJoin(cq, cb, root, order.getProperty().equals("totalPrice"));
+                    if (order.isAscending()) {
+                        orders.add(cb.asc(cardPrice));
+                    } else {
+                        orders.add(cb.desc(cardPrice));
+                    }
                 } else {
                     if (order.isAscending()) {
                         orders.add(cb.asc(root.get(order.getProperty())));
@@ -183,6 +199,18 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                 .otherwise(cryptJoin.get("name"));
     }
 
+    private static Expression<Number> getCardPriceJoin(CriteriaQuery<?> cq, CriteriaBuilder cb, Root<CollectionCardEntity> root, boolean totalPrice) {
+        Subquery<Number> sub = cq.subquery(Number.class);
+        Root<CardShopEntity> subRoot = sub.from(CardShopEntity.class);
+        sub.select(cb.min(subRoot.get("price")));
+        sub.where(cb.equal(subRoot.get("cardId"), root.get("cardId")));
+        if (totalPrice) {
+            return cb.prod(sub, root.get(NUMBER));
+        } else {
+            return sub;
+        }
+    }
+
     private static List<Predicate> getPredicates(CriteriaBuilder cb, Root<CollectionCardEntity> root, Integer collectionId, Map<String, String> filters) {
         List<Predicate> predicates = new ArrayList<>();
         predicates.add(cb.equal(root.get("collectionId"), collectionId));
@@ -205,8 +233,7 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                     List<String> values = Splitter.on(',').trimResults().splitToList(value);
                     predicates.add(root.get(field).in(values));
                 } else {
-                    if (value.equalsIgnoreCase("" +
-                            "") || value.equalsIgnoreCase("null") || value.equals("0")) {
+                    if (value.isEmpty() || value.equalsIgnoreCase("null") || value.equals("0")) {
                         predicates.add(cb.isNull(root.get(field)));
                     } else {
                         predicates.add(cb.equal(root.get(field), value));

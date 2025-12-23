@@ -22,6 +22,9 @@ public class CurrencyExchangeService {
     private final CurrencyExchangeRateRepository currencyExchangeRateRepository;
 
     public BigDecimal convert(BigDecimal value, String fromCurrency, String toCurrency) {
+        if (fromCurrency.equals(toCurrency)) {
+            return value;
+        }
         BigDecimal exchangeRate = getExchangeRate(fromCurrency, toCurrency);
         return value.multiply(exchangeRate).setScale(SCALE, RoundingMode.UP);
     }

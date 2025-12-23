@@ -18,6 +18,8 @@ import com.vtesdecks.model.api.ApiCollectionCardStats;
 import com.vtesdecks.model.api.ApiCollectionImport;
 import com.vtesdecks.model.api.ApiCollectionPage;
 import com.vtesdecks.model.api.ApiDecks;
+import com.vtesdecks.util.Utils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -92,7 +94,7 @@ public class ApiUserCollectionController {
     }
 
     @GetMapping(value = "/cards", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiCollectionPage<ApiCollectionCard> getCards(@RequestParam Integer page, @RequestParam Integer size, @RequestParam(required = false) String groupBy, @RequestParam(required = false) String sortBy, @RequestParam(required = false) String sortDirection, @RequestParam Map<String, String> params) throws Exception {
+    public ApiCollectionPage<ApiCollectionCard> getCards(HttpServletRequest request, @RequestParam Integer page, @RequestParam Integer size, @RequestParam(required = false) String groupBy, @RequestParam(required = false) String sortBy, @RequestParam(required = false) String sortDirection, @RequestParam Map<String, String> params) throws Exception {
         Map<String, String> filters = params != null ? params.entrySet().stream()
                 .filter(entry -> ALLOWED_FILTERS.contains(entry.getKey()))
                 .filter(entry -> !isEmpty(entry.getValue()))
@@ -109,7 +111,7 @@ public class ApiUserCollectionController {
                         .collect(Collectors.joining(",")));
             }
         }
-        return collectionService.getCards(page, size, groupBy, sortBy, sortDirection, filters);
+        return collectionService.getCards(page, size, groupBy, sortBy, sortDirection, filters, Utils.getCurrencyCode(request));
     }
 
     private Set<Integer> getCardIdFilter(String cardTypes, String cardClans, String cardDisciplines) {
@@ -127,23 +129,23 @@ public class ApiUserCollectionController {
     }
 
     @PostMapping(value = "/cards", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiCollectionCard createCard(HttpServletResponse response, @RequestBody ApiCollectionCard card) throws Exception {
-        return collectionService.createCards(card, response);
+    public ApiCollectionCard createCard(HttpServletRequest request, HttpServletResponse response, @RequestBody ApiCollectionCard card) throws Exception {
+        return collectionService.createCards(card, response, Utils.getCurrencyCode(request));
     }
 
     @PostMapping(value = "/cards/bulk", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<ApiCollectionCard> createCardsBulk(HttpServletResponse response, @RequestBody List<ApiCollectionCard> cards) throws Exception {
-        return collectionService.createCardsBulk(cards, response);
+    public List<ApiCollectionCard> createCardsBulk(HttpServletRequest request, HttpServletResponse response, @RequestBody List<ApiCollectionCard> cards) throws Exception {
+        return collectionService.createCardsBulk(cards, response, Utils.getCurrencyCode(request));
     }
 
     @GetMapping(value = "/cards/{ids}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<ApiCollectionCard> getCardsById(@PathVariable List<Integer> ids) {
-        return collectionService.getCardsById(ids);
+    public List<ApiCollectionCard> getCardsById(HttpServletRequest request, @PathVariable List<Integer> ids) {
+        return collectionService.getCardsById(ids, Utils.getCurrencyCode(request));
     }
 
     @PutMapping(value = "/cards/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiCollectionCard updateCard(HttpServletResponse response, @PathVariable Integer id, @RequestBody ApiCollectionCard card) throws Exception {
-        return collectionService.updateCard(id, card, response);
+    public ApiCollectionCard updateCard(HttpServletRequest request, HttpServletResponse response, @PathVariable Integer id, @RequestBody ApiCollectionCard card) throws Exception {
+        return collectionService.updateCard(id, card, response, Utils.getCurrencyCode(request));
     }
 
     @DeleteMapping(value = "/cards/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -152,13 +154,13 @@ public class ApiUserCollectionController {
     }
 
     @PatchMapping(value = "/cards/{id}/binders", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiCollectionCard addCardToBinder(@PathVariable Integer id, @RequestParam(required = false) Integer binderId, @RequestParam Integer quantity) throws Exception {
-        return collectionService.moveCardToBinder(id, binderId, quantity);
+    public ApiCollectionCard addCardToBinder(HttpServletRequest request, @PathVariable Integer id, @RequestParam(required = false) Integer binderId, @RequestParam Integer quantity) throws Exception {
+        return collectionService.moveCardToBinder(id, binderId, quantity, Utils.getCurrencyCode(request));
     }
 
     @PatchMapping(value = "/cards/{ids}/bulk", produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<ApiCollectionCard> bulkEditCards(HttpServletResponse response, @PathVariable List<Integer> ids, @RequestParam(required = false) Integer binderId, @RequestParam(required = false) String condition, @RequestParam(required = false) String language) throws Exception {
-        return collectionService.bulkEditCards(ids, binderId, condition, language, response);
+    public List<ApiCollectionCard> bulkEditCards(HttpServletRequest request, HttpServletResponse response, @PathVariable List<Integer> ids, @RequestParam(required = false) Integer binderId, @RequestParam(required = false) String condition, @RequestParam(required = false) String language) throws Exception {
+        return collectionService.bulkEditCards(ids, binderId, condition, language, response, Utils.getCurrencyCode(request));
     }
 
     @GetMapping(value = "/cards/export")

@@ -2,7 +2,6 @@ package com.vtesdecks.api.mapper;
 
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
-import com.vtesdecks.cache.SetCache;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.jpa.entity.CollectionBinderEntity;
 import com.vtesdecks.jpa.entity.CollectionCardEntity;
@@ -12,28 +11,31 @@ import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
 import com.vtesdecks.model.api.ApiCollectionCardCsv;
 import com.vtesdecks.model.api.ApiCollectionPage;
+import com.vtesdecks.service.CurrencyExchangeService;
+import org.mapstruct.AfterMapping;
 import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 
+import java.math.BigDecimal;
 import java.util.List;
 
+import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 import static com.vtesdecks.util.VtesUtils.isLibrary;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public abstract class ApiCollectionMapper {
     @Autowired
-    private SetCache setCache;
-    @Autowired
-    private ApiSetMapper apiSetMapper;
-    @Autowired
     private LibraryCache libraryCache;
     @Autowired
     private CryptCache cryptCache;
+    @Autowired
+    private CurrencyExchangeService currencyExchangeService;
 
     public abstract ApiCollection mapCollection(CollectionEntity entity, List<CollectionBinderEntity> binders);
 
@@ -47,12 +49,40 @@ public abstract class ApiCollectionMapper {
     @Mapping(target = "content", source = "content")
     @Mapping(target = "totalPages", source = "totalPages")
     @Mapping(target = "totalElements", source = "totalElements")
-    public abstract ApiCollectionPage<ApiCollectionCard> mapCards(Page<CollectionCardEntity> entity);
+    public abstract ApiCollectionPage<ApiCollectionCard> mapCards(Page<CollectionCardEntity> entity, @Context String currencyCode);
 
-    public abstract List<ApiCollectionCard> mapCards(List<CollectionCardEntity> entity);
+    public abstract List<ApiCollectionCard> mapCards(List<CollectionCardEntity> entity, @Context String currencyCode);
 
     @Mapping(target = "cardName", source = "cardId", qualifiedByName = "mapCardName")
-    public abstract ApiCollectionCard mapCard(CollectionCardEntity entity);
+    @Mapping(target = "price", ignore = true)
+    @Mapping(target = "totalPrice", ignore = true)
+    @Mapping(target = "currency", ignore = true)
+    public abstract ApiCollectionCard mapCard(CollectionCardEntity entity, @Context String currencyCode);
+
+    @AfterMapping
+    protected void afterMapping(@MappingTarget ApiCollectionCard api, @Context String currencyCode) {
+        if (currencyCode != null) {
+            BigDecimal price = getPrice(api.getCardId());
+            if (price != null) {
+                api.setPrice(currencyExchangeService.convert(price, DEFAULT_CURRENCY, currencyCode));
+                if (api.getNumber() != null && api.getNumber() > 0) {
+                    api.setTotalPrice(api.getPrice().multiply(BigDecimal.valueOf(api.getNumber())));
+                }
+                api.setCurrency(currencyCode);
+            }
+        }
+    }
+
+    protected BigDecimal getPrice(Integer cardId) {
+        if (cardId == null) {
+            return null;
+        }
+        if (isLibrary(cardId)) {
+            return libraryCache.get(cardId).getMinPrice();
+        } else {
+            return cryptCache.get(cardId).getMinPrice();
+        }
+    }
 
     @Mapping(target = "collectionId", ignore = true)
     @Mapping(target = "crypt", ignore = true)

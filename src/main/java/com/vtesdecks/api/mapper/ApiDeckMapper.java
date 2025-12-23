@@ -9,8 +9,6 @@ import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.CollectionTracker;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
-import com.vtesdecks.jpa.repositories.CollectionCardRepository;
-import com.vtesdecks.jpa.repositories.CollectionRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.model.Errata;
 import com.vtesdecks.model.api.ApiCard;
@@ -46,10 +44,6 @@ public abstract class ApiDeckMapper {
     private LibraryCache libraryCache;
     @Autowired
     private CryptCache cryptCache;
-    @Autowired
-    private CollectionRepository collectionRepository;
-    @Autowired
-    private CollectionCardRepository collectionCardRepository;
     @Autowired
     private ApiCollectionService apiCollectionService;
     @Autowired

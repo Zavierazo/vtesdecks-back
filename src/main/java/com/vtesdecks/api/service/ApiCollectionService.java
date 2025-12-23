@@ -251,7 +251,7 @@ public class ApiCollectionService {
 
     }
 
-    public ApiCollectionPage<ApiCollectionCard> getPublicCards(String publicHash, Integer page, Integer size, String groupBy, String sortBy, String sortDirection, Map<String, String> filters) throws Exception {
+    public ApiCollectionPage<ApiCollectionCard> getPublicCards(String publicHash, Integer page, Integer size, String groupBy, String sortBy, String sortDirection, Map<String, String> filters, String currencyCode) throws Exception {
         try {
             CollectionBinderEntity binder = collectionBinderRepository.findByPublicHash(publicHash).orElseThrow(() -> new IllegalArgumentException("Binder does not exist"));
             Sort.Direction sortDirectionEnum = StringUtils.equalsIgnoreCase(sortDirection, "desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
@@ -259,9 +259,9 @@ public class ApiCollectionService {
             Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirectionEnum, sortByEntity));
             filters.put("binderId", String.valueOf(binder.getId()));
             if (groupBy != null) {
-                return apiCollectionMapper.mapCards(collectionCardRepositoryCustom.findByDynamicFiltersGroupBy(binder.getCollectionId(), filters, groupBy, pageable));
+                return apiCollectionMapper.mapCards(collectionCardRepositoryCustom.findByDynamicFiltersGroupBy(binder.getCollectionId(), filters, groupBy, pageable), currencyCode);
             } else {
-                return apiCollectionMapper.mapCards(collectionCardRepositoryCustom.findByDynamicFilters(binder.getCollectionId(), filters, pageable));
+                return apiCollectionMapper.mapCards(collectionCardRepositoryCustom.findByDynamicFilters(binder.getCollectionId(), filters, pageable), currencyCode);
             }
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
@@ -270,16 +270,16 @@ public class ApiCollectionService {
         }
     }
 
-    public ApiCollectionPage<ApiCollectionCard> getCards(Integer page, Integer size, String groupBy, String sortBy, String sortDirection, Map<String, String> filters) throws Exception {
+    public ApiCollectionPage<ApiCollectionCard> getCards(Integer page, Integer size, String groupBy, String sortBy, String sortDirection, Map<String, String> filters, String currencyCode) throws Exception {
         try {
             CollectionEntity collectionEntity = getCollectionOrCreate();
             Sort.Direction sortDirectionEnum = StringUtils.equalsIgnoreCase(sortDirection, "desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
             String sortByEntity = StringUtils.isNotBlank(sortBy) ? sortBy : "cardName";
             Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirectionEnum, sortByEntity));
             if (groupBy != null) {
-                return apiCollectionMapper.mapCards(collectionCardRepositoryCustom.findByDynamicFiltersGroupBy(collectionEntity.getId(), filters, groupBy, pageable));
+                return apiCollectionMapper.mapCards(collectionCardRepositoryCustom.findByDynamicFiltersGroupBy(collectionEntity.getId(), filters, groupBy, pageable), currencyCode);
             } else {
-                return apiCollectionMapper.mapCards(collectionCardRepositoryCustom.findByDynamicFilters(collectionEntity.getId(), filters, pageable));
+                return apiCollectionMapper.mapCards(collectionCardRepositoryCustom.findByDynamicFilters(collectionEntity.getId(), filters, pageable), currencyCode);
             }
 
         } catch (IllegalArgumentException e) {
@@ -289,11 +289,11 @@ public class ApiCollectionService {
         }
     }
 
-    public List<ApiCollectionCard> getCardsById(List<Integer> ids) {
+    public List<ApiCollectionCard> getCardsById(List<Integer> ids, String currencyCode) {
         try {
             CollectionEntity collectionEntity = getCollectionOrCreate();
             List<CollectionCardEntity> cards = collectionCardRepository.findByCollectionIdAndCardIdIn(collectionEntity.getId(), ids);
-            return apiCollectionMapper.mapCards(cards);
+            return apiCollectionMapper.mapCards(cards, currencyCode);
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
         } catch (Exception e) {
@@ -301,7 +301,7 @@ public class ApiCollectionService {
         }
     }
 
-    public ApiCollectionCard createCards(ApiCollectionCard card, HttpServletResponse response) throws Exception {
+    public ApiCollectionCard createCards(ApiCollectionCard card, HttpServletResponse response, String currencyCode) throws Exception {
         try {
             CollectionEntity collectionEntity = getCollectionOrCreate();
             if (card.getBinderId() != null && !collectionBinderRepository.existsByCollectionIdAndId(collectionEntity.getId(), card.getBinderId())) {
@@ -326,9 +326,9 @@ public class ApiCollectionService {
                         response.addHeader(CARDS_DELETED_HEADER, StringUtils.join(deleteIds, ","));
                     }
                 }
-                return apiCollectionMapper.mapCard(collectionCardRepository.save(existingCard));
+                return apiCollectionMapper.mapCard(collectionCardRepository.save(existingCard), currencyCode);
             } else {
-                return apiCollectionMapper.mapCard(collectionCardRepository.save(collectionCardEntity));
+                return apiCollectionMapper.mapCard(collectionCardRepository.save(collectionCardEntity), currencyCode);
             }
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
@@ -337,15 +337,15 @@ public class ApiCollectionService {
         }
     }
 
-    public List<ApiCollectionCard> createCardsBulk(List<ApiCollectionCard> cards, HttpServletResponse response) throws Exception {
+    public List<ApiCollectionCard> createCardsBulk(List<ApiCollectionCard> cards, HttpServletResponse response, String currencyCode) throws Exception {
         List<ApiCollectionCard> result = new ArrayList<>();
         for (ApiCollectionCard card : cards) {
-            result.add(createCards(card, response));
+            result.add(createCards(card, response, currencyCode));
         }
         return result;
     }
 
-    public ApiCollectionCard updateCard(Integer id, ApiCollectionCard card, HttpServletResponse response) throws Exception {
+    public ApiCollectionCard updateCard(Integer id, ApiCollectionCard card, HttpServletResponse response, String currencyCode) throws Exception {
         try {
             CollectionEntity collectionEntity = getCollectionOrCreate();
             CollectionCardEntity existingCard = collectionCardRepository.findByCollectionIdAndId(collectionEntity.getId(), id)
@@ -375,7 +375,7 @@ public class ApiCollectionService {
                     response.addHeader(CARDS_DELETED_HEADER, StringUtils.join(deleteIds, ","));
                 }
             }
-            return apiCollectionMapper.mapCard(collectionCardRepository.save(existingCard));
+            return apiCollectionMapper.mapCard(collectionCardRepository.save(existingCard), currencyCode);
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
         } catch (Exception e) {
@@ -400,7 +400,7 @@ public class ApiCollectionService {
     }
 
 
-    public ApiCollectionCard moveCardToBinder(Integer id, Integer binderId, Integer quantity) throws Exception {
+    public ApiCollectionCard moveCardToBinder(Integer id, Integer binderId, Integer quantity, String currencyCode) throws Exception {
         try {
             CollectionEntity collectionEntity = getCollectionOrCreate();
             CollectionCardEntity card = collectionCardRepository.findByCollectionIdAndId(collectionEntity.getId(), id)
@@ -431,7 +431,7 @@ public class ApiCollectionService {
             if (!CollectionUtils.isEmpty(existingCard)) {
                 CollectionCardEntity existing = existingCard.getFirst();
                 existing.setNumber(existing.getNumber() + quantity);
-                return apiCollectionMapper.mapCard(collectionCardRepository.save(existing));
+                return apiCollectionMapper.mapCard(collectionCardRepository.save(existing), currencyCode);
             } else {
                 CollectionCardEntity newCard = new CollectionCardEntity();
                 newCard.setCollectionId(collectionEntity.getId());
@@ -442,7 +442,7 @@ public class ApiCollectionService {
                 newCard.setCondition(card.getCondition());
                 newCard.setLanguage(card.getLanguage());
                 newCard.setNotes(card.getNotes());
-                return apiCollectionMapper.mapCard(collectionCardRepository.save(newCard));
+                return apiCollectionMapper.mapCard(collectionCardRepository.save(newCard), currencyCode);
             }
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
@@ -452,7 +452,7 @@ public class ApiCollectionService {
     }
 
 
-    public List<ApiCollectionCard> bulkEditCards(List<Integer> ids, Integer binderId, String condition, String language, HttpServletResponse response) throws Exception {
+    public List<ApiCollectionCard> bulkEditCards(List<Integer> ids, Integer binderId, String condition, String language, HttpServletResponse response, String currencyCode) throws Exception {
         try {
             CollectionEntity collectionEntity = getCollectionOrCreate();
             List<CollectionCardEntity> cards = collectionCardRepository.findByCollectionIdAndIdIn(collectionEntity.getId(), ids);
@@ -518,7 +518,7 @@ public class ApiCollectionService {
                 response.addHeader(CARDS_DELETED_HEADER, StringUtils.join(deleteIds, ","));
                 collectionCardRepository.deleteAllById(deleteIds);
             }
-            return apiCollectionMapper.mapCards(cardWithoutDuplicates);
+            return apiCollectionMapper.mapCards(cardWithoutDuplicates, currencyCode);
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
         } catch (Exception e) {
@@ -568,7 +568,7 @@ public class ApiCollectionService {
                     .mapToInt(deck -> !isEmpty(deck.getFilterCards()) ? deck.getFilterCards().getFirst().getNumber() : 0)
                     .sum());
             if (!Boolean.TRUE.equals(summary)) {
-                stats.setCollectionCards(apiCollectionMapper.mapCards(cards));
+                stats.setCollectionCards(apiCollectionMapper.mapCards(cards, null));
                 stats.setDecks(decks);
             }
             return stats;
