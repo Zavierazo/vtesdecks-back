@@ -18,6 +18,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -88,6 +89,9 @@ public class DeckEntity {
     @Column(name = "collection")
     @Builder.Default
     private Boolean collection = false;
+
+    @Column(name = "price", precision = 10, scale = 2)
+    private BigDecimal price;
 
     @CreationTimestamp
     @Column(name = "creation_date", nullable = false)

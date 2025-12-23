@@ -1,0 +1,2 @@
+ALTER TABLE `deck` ADD COLUMN `price` DECIMAL(10,2) NULL AFTER `set`;
+

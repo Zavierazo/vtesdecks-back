@@ -243,7 +243,7 @@ public class DeckFactory {
                 .map(Library::getPathIcon)
                 .filter(Objects::nonNull)
                 .findAny().orElse(null));
-        value.setStats(getDeckStats(cards));
+        value.setStats(getDeckStats(deck, cards));
         value.setCreationDate(deck.getCreationDate());
         value.setModifyDate(deck.getModificationDate());
         LocalDate deckDate = value.getType() == DeckType.COMMUNITY && value.getModifyDate() != null ? value.getModifyDate().toLocalDate() : value.getCreationDate().toLocalDate();
@@ -296,7 +296,7 @@ public class DeckFactory {
                 : 0;
     }
 
-    private Stats getDeckStats(List<Card> cards) {
+    private Stats getDeckStats(DeckEntity deck, List<Card> cards) {
         Stats deckStats = new Stats();
         List<Integer> groups = new ArrayList<>();
         BigDecimal price = BigDecimal.ZERO;
@@ -415,8 +415,13 @@ public class DeckFactory {
         deckStats.getCryptDisciplines().sort(Comparator.comparingInt(DisciplineStat::getSuperior).reversed());
         deckStats.getLibraryDisciplines().sort(Comparator.comparingInt(DisciplineStat::getInferior).reversed());
         deckStats.getLibraryClans().sort(Comparator.comparingInt(ClanStat::getNumber).reversed());
-        // Set price and currency only if all cards have price
-        if (fullPrice && price.compareTo(BigDecimal.ZERO) > 0) {
+
+        if (deck.getPrice() != null) {
+            // If deck has an explicit price (for preconstructed decks), override calculated stats price
+            deckStats.setPrice(deck.getPrice());
+            deckStats.setCurrency(DEFAULT_CURRENCY);
+        } else if (fullPrice && price.compareTo(BigDecimal.ZERO) > 0) {
+            // Set price and currency only if all cards have price
             deckStats.setPrice(price);
             deckStats.setCurrency(DEFAULT_CURRENCY);
         }
