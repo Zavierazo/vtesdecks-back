@@ -24,6 +24,9 @@ public class UserVisitService {
     }
 
     public void registerVisit(Integer userId) {
+        if (userId == null) {
+            return;
+        }
         try {
             UserVisit userVisit = UserVisit.builder()
                     .id(String.format("%d_%s", userId, LocalDate.now()))

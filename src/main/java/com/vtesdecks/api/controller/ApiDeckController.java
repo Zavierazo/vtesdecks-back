@@ -70,6 +70,7 @@ public class ApiDeckController {
         apiDeckHome.setCommunityNewest(communityNewest.getDecks());
         apiDeckHome.setTournamentTotal(tournamentPopular.getTotal());
         apiDeckHome.setCommunityTotal(communityPopular.getTotal());
+        userVisitService.registerVisit(ApiUtils.extractUserId());
         return new ResponseEntity<>(apiDeckHome, HttpStatus.OK);
     }
 
@@ -161,7 +162,6 @@ public class ApiDeckController {
         Integer userId = ApiUtils.extractUserId();
         if (userId != null) {
             user = userRepository.findById(userId).orElse(null);
-            userVisitService.registerVisit(userId);
         }
         deckFeedbackWorker.enqueueView(id, user, deckView.getSource(), httpServletRequest);
         return new ResponseEntity<>(true, HttpStatus.OK);
