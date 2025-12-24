@@ -145,15 +145,21 @@ public class ApiCollectionImportService {
 
     private static void readSheet(Sheet sheet, List<ApiCollectionCardCsv> cards) {
         boolean isHeader = true;
+        List<String> headers = new ArrayList<>();
         for (Row row : sheet) {
-            if (isHeader) { // Saltar encabezado
+            if (isHeader) {
+                for (int col = 0; col < row.getLastCellNum(); col++) {
+                    headers.add(Utils.getCellString(row, col));
+                }
                 isHeader = false;
                 continue;
             }
             ApiCollectionCardCsv card = new ApiCollectionCardCsv();
-            card.setNumber(Utils.getCellInteger(row, 0));
-            card.setCardName(Utils.getCellString(row, 1));
-            cards.add(card);
+            card.setNumber(Utils.getCellInteger(row, headers.indexOf("Quantity")));
+            card.setCardName(Utils.getCellString(row, headers.indexOf("Card")));
+            if (card.getNumber() != null && card.getNumber() > 0) {
+                cards.add(card);
+            }
         }
     }
 
