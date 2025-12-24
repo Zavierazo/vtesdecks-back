@@ -13,21 +13,23 @@ import com.vtesdecks.model.api.ApiDeckHome;
 import com.vtesdecks.model.api.ApiDeckView;
 import com.vtesdecks.model.api.ApiDecks;
 import com.vtesdecks.service.DeckExportService;
+import com.vtesdecks.service.UserVisitService;
 import com.vtesdecks.util.Utils;
 import com.vtesdecks.worker.DeckFeedbackWorker;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -38,18 +40,15 @@ import java.util.List;
 @Controller
 @RequestMapping("/api/1.0/decks")
 @Slf4j
+@RequiredArgsConstructor
 public class ApiDeckController {
-    @Autowired
-    private ApiDeckService deckService;
-    @Autowired
-    private DeckExportService deckExportService;
-    @Autowired
-    private DeckFeedbackWorker deckFeedbackWorker;
-    ;
-    @Autowired
-    private UserRepository userRepository;
+    private final ApiDeckService deckService;
+    private final DeckExportService deckExportService;
+    private final DeckFeedbackWorker deckFeedbackWorker;
+    private final UserRepository userRepository;
+    private final UserVisitService userVisitService;
 
-    @RequestMapping(method = RequestMethod.GET, value = "/home", produces = {
+    @GetMapping(value = "/home", produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
@@ -83,7 +82,7 @@ public class ApiDeckController {
                 favorite, currencyCode, 0, limit);
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/{id}", produces = {
+    @GetMapping(value = "/{id}", produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
@@ -97,7 +96,7 @@ public class ApiDeckController {
     }
 
 
-    @RequestMapping(method = RequestMethod.GET, produces = {
+    @GetMapping(produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
@@ -146,14 +145,14 @@ public class ApiDeckController {
     }
 
 
-    @RequestMapping(value = "/{id}/export", method = RequestMethod.GET)
+    @GetMapping(value = "/{id}/export")
     public void getDownload(HttpServletResponse response, @PathVariable("id") String id, @RequestParam(name = "type") DeckExportType type, HttpServletRequest httpServletRequest) {
         log.debug("Deck export of {} with type {}, userAgent: '{}', ip: '{}'", id, type, httpServletRequest.getHeader("User-Agent"), Utils.getIp(httpServletRequest));
         Utils.returnFile(response, StringUtils.lowerCase(Utils.removeSpecial(id) + "_" + Utils.removeSpecial(type.name()) + ".txt"), MediaType.TEXT_PLAIN,
                 deckExportService.export(type, id));
     }
 
-    @RequestMapping(method = RequestMethod.POST, value = "/{id}/view", produces = {
+    @PostMapping(value = "/{id}/view", produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
@@ -161,13 +160,14 @@ public class ApiDeckController {
         UserEntity user = null;
         Integer userId = ApiUtils.extractUserId();
         if (userId != null) {
-            user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
+            user = userRepository.findById(userId).orElse(null);
+            userVisitService.registerVisit(userId);
         }
         deckFeedbackWorker.enqueueView(id, user, deckView.getSource(), httpServletRequest);
         return new ResponseEntity<>(true, HttpStatus.OK);
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/tags", produces = {
+    @GetMapping(value = "/tags", produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody

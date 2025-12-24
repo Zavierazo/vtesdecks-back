@@ -26,6 +26,7 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +67,7 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "warnings", ignore = true)
     @Mapping(target = "extra", ignore = true)
     @Mapping(target = "user", source = "deck", qualifiedByName = "mapDeckUser")
-    public abstract ApiDeck mapSummary(Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode);
+    public abstract ApiDeck mapSummary(Deck deck, @Context Integer userId, @Context LocalDate lastVisit, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode);
 
     @Named("map")
     @AfterMapping
@@ -110,9 +111,12 @@ public abstract class ApiDeckMapper {
 
     @Named("mapSummary")
     @AfterMapping
-    protected void afterMappingSummary(@MappingTarget ApiDeck api, Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode) {
+    protected void afterMappingSummary(@MappingTarget ApiDeck api, Deck deck, @Context Integer userId, @Context LocalDate lastVisit, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode) {
         if (userId != null) {
             afterMappingUser(api, userId, deck);
+        }
+        if (lastVisit != null && deck.getCreationDate().isAfter(lastVisit.atStartOfDay())) {
+            api.setRecentlyCreated(true);
         }
         if (deck.getExtra() != null && deck.getExtra().has("advent")) {
             api.setExtra(deck.getExtra());
