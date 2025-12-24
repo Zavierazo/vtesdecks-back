@@ -19,6 +19,9 @@ public class UserVisitService {
     private final UserVisitRepository userVisitRepository;
 
     public LocalDate getLastVisit(Integer userId) {
+        if (userId == null) {
+            return null;
+        }
         List<UserVisit> userVisitList = userVisitRepository.findByUserId(userId);
         if (isEmpty(userVisitList)) {
             return null;
