@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.Comparator;
+import java.util.List;
+
+import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 @Slf4j
 @Service
@@ -16,7 +19,11 @@ public class UserVisitService {
     private final UserVisitRepository userVisitRepository;
 
     public LocalDate getLastVisit(Integer userId) {
-        return userVisitRepository.findByUserId(userId).stream()
+        List<UserVisit> userVisitList = userVisitRepository.findByUserId(userId);
+        if (isEmpty(userVisitList)) {
+            return null;
+        }
+        return userVisitList.stream()
                 .map(UserVisit::getDate)
                 .filter(date -> !LocalDate.now().equals(date))
                 .max(Comparator.naturalOrder())
@@ -41,14 +48,17 @@ public class UserVisitService {
     }
 
     private void deleteOldVisits(Integer userId) {
-        userVisitRepository.findByUserId(userId).stream()
-                .filter(visit -> visit.getDate().isBefore(LocalDate.now().minusDays(30)))
-                .forEach(visit -> {
-                    try {
-                        userVisitRepository.delete(visit);
-                    } catch (Exception e) {
-                        log.error("Error deleting old visit {} for userId {}: {}", visit.getId(), userId, e.getMessage());
-                    }
-                });
+        List<UserVisit> userVisitList = userVisitRepository.findByUserId(userId);
+        if (!isEmpty(userVisitList)) {
+            userVisitRepository.findByUserId(userId).stream()
+                    .filter(visit -> visit.getDate().isBefore(LocalDate.now().minusDays(30)))
+                    .forEach(visit -> {
+                        try {
+                            userVisitRepository.delete(visit);
+                        } catch (Exception e) {
+                            log.error("Error deleting old visit {} for userId {}: {}", visit.getId(), userId, e.getMessage());
+                        }
+                    });
+        }
     }
 }
