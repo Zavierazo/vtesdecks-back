@@ -9,6 +9,7 @@ import java.util.Set;
 
 @Data
 public class Card {
+    private Integer id;
     private String name;
     private Set<String> nameTrigrams;
     private String aka;

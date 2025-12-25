@@ -31,7 +31,6 @@ public class Crypt extends Card {
     };
     public static final Attribute<Crypt, LocalDateTime> LAST_UPDATE_ATTRIBUTE = QueryFactory.attribute(Crypt.class, LocalDateTime.class, "last_update", Crypt::getLastUpdate);
 
-    private Integer id;
     private String type;
     private String clan;
     private String path;

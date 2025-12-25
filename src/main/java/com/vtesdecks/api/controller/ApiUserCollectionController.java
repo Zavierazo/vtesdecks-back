@@ -2,6 +2,7 @@ package com.vtesdecks.api.controller;
 
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.service.ApiCollectionService;
+import com.vtesdecks.api.service.ApiCollectionStatsService;
 import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.CryptCache;
@@ -17,6 +18,7 @@ import com.vtesdecks.model.api.ApiCollectionCard;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
 import com.vtesdecks.model.api.ApiCollectionImport;
 import com.vtesdecks.model.api.ApiCollectionPage;
+import com.vtesdecks.model.api.ApiCollectionStats;
 import com.vtesdecks.model.api.ApiDecks;
 import com.vtesdecks.util.Utils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -54,6 +56,7 @@ public class ApiUserCollectionController {
     protected static final List<String> ALLOWED_FILTERS = List.of("binderId", "cardType", "set", "cardId", "cardName");
 
     private final ApiCollectionService collectionService;
+    private final ApiCollectionStatsService apiCollectionStatsService;
     private final ApiDeckService apiDeckService;
     private final CryptCache cryptCache;
     private final LibraryCache libraryCache;
@@ -182,5 +185,10 @@ public class ApiUserCollectionController {
                 null, null, null, null, null, null, null,
                 null, 0, 10);
         return collectionService.getCardStats(id, decks, summary);
+    }
+
+    @GetMapping(value = "/stats", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiCollectionStats stats(HttpServletRequest request) throws Exception {
+        return apiCollectionStatsService.getCollectionStats(Utils.getCurrencyCode(request));
     }
 }
