@@ -10,7 +10,6 @@ import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
 
 @Data
@@ -38,7 +37,6 @@ public class Crypt extends Card {
     private Integer group;
     private Integer capacity;
     private String text;
-    private List<String> sets;
     private String title;
     private String banned;
     private String artist;

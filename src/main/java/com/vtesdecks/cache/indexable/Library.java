@@ -9,7 +9,6 @@ import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
 
 @Data
@@ -46,7 +45,6 @@ public class Library extends Card {
     private boolean burn;
     private String text;
     private String flavor;
-    private List<String> sets;
     private String requirement;
     private String banned;
     private String artist;

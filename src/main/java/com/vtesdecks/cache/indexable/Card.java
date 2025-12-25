@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -18,6 +19,7 @@ public class Card {
     private String image;
     private String cropImage;
     private Set<String> taints;
+    private List<String> sets;
     private Long deckPopularity;
     private Long cardPopularity;
     private boolean printOnDemand;
