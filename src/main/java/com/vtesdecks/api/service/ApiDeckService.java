@@ -12,13 +12,11 @@ import com.vtesdecks.model.DeckType;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDecks;
 import com.vtesdecks.service.DeckService;
-import com.vtesdecks.service.UserVisitService;
 import com.vtesdecks.util.CosineSimilarityUtils;
-import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,14 +24,17 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 @Service
-@RequiredArgsConstructor
 public class ApiDeckService {
-    private final DeckService deckService;
-    private final ApiDeckMapper mapper;
-    private final DeckRepository deckRepository;
-    private final DeckFactory deckFactory;
-    private final ApiCollectionService apiCollectionService;
-    private final UserVisitService userVisitService;
+    @Autowired
+    private DeckService deckService;
+    @Autowired
+    private ApiDeckMapper mapper;
+    @Autowired
+    private DeckRepository deckRepository;
+    @Autowired
+    private DeckFactory deckFactory;
+    @Autowired
+    private ApiCollectionService apiCollectionService;
 
     public ApiDeck getDeck(String deckId, boolean detailed, boolean collectionTracker, String currencyCode) {
         Deck deck = deckService.getDeck(deckId);
@@ -43,7 +44,7 @@ public class ApiDeckService {
         if (detailed) {
             return mapper.map(deck, ApiUtils.extractUserId(), collectionTracker, currencyCode);
         } else {
-            return mapper.mapSummary(deck, ApiUtils.extractUserId(), null, null, currencyCode);
+            return mapper.mapSummary(deck, ApiUtils.extractUserId(), null, currencyCode);
         }
     }
 
@@ -125,16 +126,15 @@ public class ApiDeckService {
                         .map(Pair::getKey);
             }
         }
-        LocalDate lastVisit = userVisitService.getLastVisit(ApiUtils.extractUserId());
         apiDecks.setDecks(deckStream
                 .skip(offset)
                 .limit(limit)
-                .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), lastVisit, cardMap, currencyCode))
+                .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap, currencyCode))
                 .toList());
         if (offset == 0 && userId != null && type == DeckType.USER) {
             apiDecks.setRestorableDecks(deckRepository.selectUserDeleted(userId).stream()
                     .map(dbDeck -> deckFactory.getDeck(dbDeck, new ArrayList<>(), new ArrayList<>()))
-                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), lastVisit, cardMap, currencyCode))
+                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap, currencyCode))
                     .toList());
         }
         return apiDecks;
