@@ -1,4 +1,4 @@
-package com.vtesdecks.scheduler;
+package com.vtesdecks.scheduler.shops;
 
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;

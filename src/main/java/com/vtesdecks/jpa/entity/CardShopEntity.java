@@ -29,7 +29,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(exclude = {"creationDate", "modificationDate"})
+@EqualsAndHashCode(exclude = {"data", "creationDate", "modificationDate"})
 public class CardShopEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

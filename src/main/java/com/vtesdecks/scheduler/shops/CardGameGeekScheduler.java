@@ -1,4 +1,4 @@
-package com.vtesdecks.scheduler;
+package com.vtesdecks.scheduler.shops;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -145,6 +145,7 @@ public class CardGameGeekScheduler {
                     if (cardsToRemove != null && cardsToRemove.isInStock()) {
                         log.warn("The card has been removed from stock: {}", cardsToRemove);
                         cardsToRemove.setInStock(false);
+                        cardShopRepository.save(cardsToRemove);
                     }
                 }
             }
@@ -296,7 +297,7 @@ public class CardGameGeekScheduler {
         if (cardName.startsWith("The ")) {
             cardName = cardName.substring(4) + ", The";
         }
-        // The handling
+        // An handling
         if (cardName.startsWith("An ")) {
             cardName = cardName.substring(4) + ", An";
         }

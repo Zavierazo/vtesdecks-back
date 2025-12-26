@@ -1,4 +1,4 @@
-package com.vtesdecks.scheduler;
+package com.vtesdecks.scheduler.shops;
 
 import com.vtesdecks.integration.DTCClient;
 import com.vtesdecks.jpa.entity.CardShopEntity;
