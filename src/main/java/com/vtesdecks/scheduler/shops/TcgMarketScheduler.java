@@ -26,6 +26,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -59,7 +60,12 @@ public class TcgMarketScheduler {
             entry("Fidai", "Fida'i"),
             entry("LEpuisette", "L'Epuisette"),
             entry("Bears Skin", "Bear's Skin"),
+            entry("Spirits Touch", "Spirit's Touch"),
+            entry("Crocodiles Tongue", "Crocodile's Tongue"),
             entry("Brothers Blood", "Brother's Blood"),
+            entry("Geminis Mirror", "Gemini's Mirror"),
+            entry("Scorpions Touch", "Scorpion's Touch"),
+            entry("Sets Call", "Set's Call"),
             entry("Giants Blood", "Giant's Blood"),
             entry("Sacre-Cour Cathedral, France", "Sacré-Cœur Cathedral, France"),
             entry("Thadius Zho, Mage", "Thadius Zho"),
@@ -88,7 +94,7 @@ public class TcgMarketScheduler {
     private final SetCache setCache;
     private final ObjectMapper objectMapper;
 
-    @Scheduled(cron = "2 0 0 * * MON")
+    @Scheduled(cron = "3 0 0 * * MON")
 //    @Scheduled(initialDelay = 0, fixedDelay = Long.MAX_VALUE)
     @Transactional
     public void scrapCards() {
@@ -131,6 +137,7 @@ public class TcgMarketScheduler {
     }
 
     private void parsePage(List<MarketResult> results, Set<Pair<Integer, String>> existingCardSets) {
+        Map<String, CardShopEntity> cardsToSave = new HashMap<>();
         for (MarketResult result : results) {
             CardShopEntity cardShopEntity = scrapCard(result).orElse(null);
             if (cardShopEntity == null) {
@@ -144,17 +151,29 @@ public class TcgMarketScheduler {
                 CardShopEntity currentCard = currentOptional.get();
                 cardShopEntity.setId(currentCard.getId());
                 if (!cardShopEntity.equals(currentCard)) {
-                    cardShopRepository.saveAndFlush(cardShopEntity);
+                    cardShopRepository.save(cardShopEntity);
                 }
             } else {
-                cardShopRepository.saveAndFlush(cardShopEntity);
+                String key = cardShopEntity.getCardId() + "-" + cardShopEntity.getSet();
+                if (cardsToSave.containsKey(key)) {
+                    log.warn("Duplicate card detected in the same scrapping session: {} VS {}", cardsToSave.get(key), cardShopEntity);
+                } else {
+                    cardsToSave.put(key, cardShopEntity);
+                }
             }
             existingCardSets.removeIf(cardSet -> Objects.equals(cardSet.getLeft(), cardShopEntity.getCardId()) && Objects.equals(cardSet.getRight(), cardShopEntity.getSet()));
         }
+        cardShopRepository.saveAll(cardsToSave.values());
         cardShopRepository.flush();
     }
 
     private Optional<CardShopEntity> scrapCard(MarketResult marketResult) {
+        if (marketResult.getMinPrice() == null) {
+            return Optional.empty();
+        }
+        if (marketResult.getVendors() == null || marketResult.getVendors() <= 0) {
+            return Optional.empty();
+        }
         if (marketResult.getEdition() != null) {
             String setName = marketResult.getEdition().getName();
             if ("Storyline".equalsIgnoreCase(setName) || "Demo".equalsIgnoreCase(setName)) {
