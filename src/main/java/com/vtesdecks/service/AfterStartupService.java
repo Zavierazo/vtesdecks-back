@@ -47,7 +47,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -306,40 +305,49 @@ public class AfterStartupService {
                     }
                     return set;
                 }).toList());
-        if (fullArtCards != null && fullArtCards.contains(id)) {
-            sets.add("PFA:1");
-        }
-        if (bcpBusinessCards != null && bcpBusinessCards.contains(id)) {
-            sets.add("BCPBC:1");
-        }
-        convertSubSetToSet(sets, "V5", "PH", "V5H");
-        convertSubSetToSet(sets, "V5", "PL", "V5L");
-        return String.join(",", sets);
-    }
-
-    private void convertSubSetToSet(List<String> sets, String oldSet, String subSet, String newSet) {
-        List<String> newSets = new ArrayList<>();
-        for (Iterator<String> it = sets.iterator(); it.hasNext(); ) {
-            String set = it.next();
+        List<String> finalSets = new ArrayList<>();
+        for (String set : sets) {
             List<String> setInfo = Splitter.on(':').splitToList(set);
             if (setInfo.size() != 2) {
+                finalSets.add(set);
                 continue;
             }
-            if (setInfo.getFirst().equals(oldSet) && setInfo.getLast().contains(subSet)) {
-                it.remove();
-                List<String> subSets = Splitter.on('/').splitToList(setInfo.getLast());
-                Optional<String> subSetOpt = subSets.stream().filter(s -> s.startsWith(subSet)).findFirst();
-                if (subSetOpt.isPresent()) {
-                    String subSetInfo = subSetOpt.get().substring(subSet.length());
-                    newSets.add(newSet + ':' + subSetInfo);
-                }
-                if (subSets.size() > 1) {
-                    List<String> otherSubSet = subSets.stream().filter(s -> !s.startsWith(subSet)).toList();
-                    newSets.add(oldSet + ':' + String.join("/", otherSubSet));
-                }
+            convertSubSetToSet(finalSets, setInfo, "V5", "PH", "V5H");
+            convertSubSetToSet(finalSets, setInfo, "V5", "PL", "V5L");
+            addAnthologyISet(finalSets, setInfo);
+        }
+        if (fullArtCards != null && fullArtCards.contains(id)) {
+            finalSets.add("PFA:1");
+        }
+        if (bcpBusinessCards != null && bcpBusinessCards.contains(id)) {
+            finalSets.add("BCPBC:1");
+        }
+        return String.join(",", finalSets);
+    }
+
+
+    private static void convertSubSetToSet(List<String> sets, List<String> setInfo, String oldSet, String subSet, String newSet) {
+        if (setInfo.getFirst().equals(oldSet) && setInfo.getLast().contains(subSet)) {
+            List<String> subSets = Splitter.on('/').splitToList(setInfo.getLast());
+            Optional<String> subSetOpt = subSets.stream().filter(s -> s.startsWith(subSet)).findFirst();
+            if (subSetOpt.isPresent()) {
+                String subSetInfo = subSetOpt.get().substring(subSet.length());
+                sets.add(newSet + ':' + subSetInfo);
+            }
+            if (subSets.size() > 1) {
+                List<String> otherSubSet = subSets.stream().filter(s -> !s.startsWith(subSet)).toList();
+                sets.add(oldSet + ':' + String.join("/", otherSubSet));
             }
         }
-        sets.addAll(newSets);
+    }
+
+    private static void addAnthologyISet(List<String> sets, List<String> setInfo) {
+        if (setInfo.getFirst().equals("Anthology") && !setInfo.getLast().startsWith("LARP")) {
+            sets.add(String.join(":", setInfo));
+            sets.add("Anthology I:" + setInfo.getLast());
+        } else {
+            sets.add(String.join(":", setInfo));
+        }
     }
 
     private void sets() {

@@ -20,19 +20,17 @@ import com.vtesdecks.util.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static java.util.Map.entry;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
@@ -85,6 +83,13 @@ public class TcgMarketScheduler {
             entry("HumbleBundle", "Promo")
     );
 
+    private static final Map<String, String> LANGUAGE_MAPPING = Map.ofEntries(
+            entry("Español", "es"),
+            entry("Francés", "fr"),
+            entry("Inglés", "en"),
+            entry("Portugués", "en")
+    );
+
 
     private final DeckCardRepository deckCardRepository;
     private final CardShopRepository cardShopRepository;
@@ -94,33 +99,30 @@ public class TcgMarketScheduler {
     private final SetCache setCache;
     private final ObjectMapper objectMapper;
 
-    @Scheduled(cron = "3 0 0 * * MON")
+    @Scheduled(cron = "4 0 0 * * MON")
 //    @Scheduled(initialDelay = 0, fixedDelay = Long.MAX_VALUE)
     @Transactional
     public void scrapCards() {
         log.info("Starting TcgMarket scrapping...");
         int page = 1;
         try {
-            Set<Pair<Integer, String>> existingCardSets = cardShopRepository.findByPlatform(PLATFORM).stream()
-                    .map(cardShopEntity -> Pair.of(cardShopEntity.getCardId(), cardShopEntity.getSet()))
-                    .collect(Collectors.toSet());
-
+            List<CardShopEntity> existingCardSets = cardShopRepository.findByPlatform(PLATFORM);
+            Set<CardShopEntity> newCards = new HashSet<>();
             MarketResponse results = getPage(page);
             do {
                 if (results != null && !isEmpty(results.getResults())) {
-                    parsePage(results.getResults(), existingCardSets);
+                    parsePage(results.getResults(), newCards, existingCardSets);
                 }
                 page++;
                 results = getPage(page);
             } while (results != null && results.getNext() != null && !results.getResults().isEmpty());
             if (!existingCardSets.isEmpty()) {
                 log.warn("The following cards are no longer available on TcgMarket and will be removed from stock: {}", existingCardSets);
-                for (Pair<Integer, String> cardSet : existingCardSets) {
-                    CardShopEntity cardsToRemove = cardShopRepository.findByCardIdAndPlatformAndSet(cardSet.getLeft(), PLATFORM, cardSet.getRight());
-                    if (cardsToRemove != null && cardsToRemove.isInStock()) {
-                        log.warn("The card has been removed from stock: {}", cardsToRemove);
-                        cardsToRemove.setInStock(false);
-                        cardShopRepository.save(cardsToRemove);
+                for (CardShopEntity cardToRemove : existingCardSets) {
+                    if (cardToRemove != null && cardToRemove.isInStock()) {
+                        log.warn("The card has been removed from stock: {}", cardToRemove);
+                        cardToRemove.setInStock(false);
+                        cardShopRepository.save(cardToRemove);
                     }
                 }
             }
@@ -136,8 +138,7 @@ public class TcgMarketScheduler {
         return tcgMarketClient.getProducts(page, 200);
     }
 
-    private void parsePage(List<MarketResult> results, Set<Pair<Integer, String>> existingCardSets) {
-        Map<String, CardShopEntity> cardsToSave = new HashMap<>();
+    private void parsePage(List<MarketResult> results, Set<CardShopEntity> newCards, List<CardShopEntity> existingCardSets) {
         for (MarketResult result : results) {
             CardShopEntity cardShopEntity = scrapCard(result).orElse(null);
             if (cardShopEntity == null) {
@@ -145,7 +146,7 @@ public class TcgMarketScheduler {
             }
             List<CardShopEntity> existingCards = cardShopRepository.findByCardIdAndPlatform(cardShopEntity.getCardId(), PLATFORM);
             Optional<CardShopEntity> currentOptional = existingCards.stream()
-                    .filter(card -> Objects.equals(card.getCardId(), cardShopEntity.getCardId()) && Objects.equals(card.getSet(), cardShopEntity.getSet()))
+                    .filter(card -> Objects.equals(card.getSet(), cardShopEntity.getSet()) && Objects.equals(card.getLocale(), cardShopEntity.getLocale()))
                     .findFirst();
             if (currentOptional.isPresent()) {
                 CardShopEntity currentCard = currentOptional.get();
@@ -154,16 +155,25 @@ public class TcgMarketScheduler {
                     cardShopRepository.save(cardShopEntity);
                 }
             } else {
-                String key = cardShopEntity.getCardId() + "-" + cardShopEntity.getSet();
-                if (cardsToSave.containsKey(key)) {
-                    log.warn("Duplicate card detected in the same scrapping session: {} VS {}", cardsToSave.get(key), cardShopEntity);
+                Optional<CardShopEntity> duplicateInNew = newCards.stream()
+                        .filter(card ->
+                                Objects.equals(card.getCardId(), cardShopEntity.getCardId()) &&
+                                        Objects.equals(card.getSet(), cardShopEntity.getSet()) &&
+                                        Objects.equals(card.getLocale(), cardShopEntity.getLocale())
+                        ).findFirst();
+                if (duplicateInNew.isPresent()) {
+                    log.warn("Duplicated card detected in the same scrapping session: {} vs {}", cardShopEntity, duplicateInNew.get());
                 } else {
-                    cardsToSave.put(key, cardShopEntity);
+                    cardShopRepository.save(cardShopEntity);
+                    newCards.add(cardShopEntity);
                 }
             }
-            existingCardSets.removeIf(cardSet -> Objects.equals(cardSet.getLeft(), cardShopEntity.getCardId()) && Objects.equals(cardSet.getRight(), cardShopEntity.getSet()));
+            existingCardSets.removeIf(card ->
+                    Objects.equals(card.getCardId(), cardShopEntity.getCardId()) &&
+                            Objects.equals(card.getSet(), cardShopEntity.getSet()) &&
+                            Objects.equals(card.getLocale(), cardShopEntity.getLocale())
+            );
         }
-        cardShopRepository.saveAll(cardsToSave.values());
         cardShopRepository.flush();
     }
 
@@ -220,7 +230,38 @@ public class TcgMarketScheduler {
         // Trim
         cardName = cardName.trim();
 
-        // Find card by name
+        // Set
+        com.vtesdecks.cache.indexable.Set set = null;
+        if (fullArt) {
+            set = setCache.get("PFA");
+        } else if (marketResult.getEdition() != null && marketResult.getEdition().getName() != null) {
+            String setName = marketResult.getEdition().getName();
+            if (EDITION_MAPPINGS.containsKey(setName)) {
+                setName = EDITION_MAPPINGS.get(setName);
+            }
+            set = setCache.get(setName);
+            if (set == null) {
+                set = setCache.getByFullName(setName);
+            }
+            if (set == null && !setName.equals("DEMO")) {
+                log.warn("Unknown set '{}' for card '{}' with url {}", setName, cardNameRaw, url);
+            }
+        }
+
+        // Locale
+        String locale = null;
+        if (marketResult.getLanguage() != null && marketResult.getLanguage().getName() != null) {
+            locale = LANGUAGE_MAPPING.get(marketResult.getLanguage().getName());
+        }
+        if (locale == null) {
+            log.warn("Unknown language '{}' with url {}", marketResult.getLanguage(), url);
+            locale = "en";
+        }
+
+        // Price info
+        BigDecimal price = marketResult.getMinPrice();
+
+        // Find card id
         Integer cardId = null;
 
         try (ResultSet<Crypt> result = cryptCache.selectByExactName(cardName)) {
@@ -261,28 +302,6 @@ public class TcgMarketScheduler {
             return Optional.empty();
         }
 
-        // Set
-        com.vtesdecks.cache.indexable.Set set = null;
-        if (fullArt) {
-            set = setCache.get("PFA");
-        } else if (marketResult.getEdition() != null && marketResult.getEdition().getName() != null) {
-            String setName = marketResult.getEdition().getName();
-            if (EDITION_MAPPINGS.containsKey(setName)) {
-                setName = EDITION_MAPPINGS.get(setName);
-            }
-            set = setCache.get(setName);
-            if (set == null) {
-                set = setCache.getByFullName(setName);
-            }
-            if (set == null && !setName.equals("DEMO")) {
-                log.warn("Unknown set '{}' for card '{}' with url {}", setName, cardNameRaw, url);
-            }
-        }
-
-
-        // Price info
-        BigDecimal price = marketResult.getMinPrice();
-
 
         // Build data object
         ObjectNode data = objectMapper.createObjectNode();
@@ -295,6 +314,7 @@ public class TcgMarketScheduler {
                 .link(url)
                 .platform(PLATFORM)
                 .set(set != null ? set.getAbbrev() : null)
+                .locale(locale)
                 .price(price)
                 .currency(EURO)
                 .inStock(true)

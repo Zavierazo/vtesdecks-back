@@ -168,6 +168,7 @@ public class DriveThruCardsScheduler {
                 .link(link)
                 .platform(PLATFORM)
                 .set(SET)
+                .locale(null)
                 .price(price)
                 .currency(DOLLAR)
                 .inStock(true)

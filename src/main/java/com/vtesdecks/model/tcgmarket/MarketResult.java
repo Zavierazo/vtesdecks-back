@@ -20,5 +20,6 @@ public class MarketResult {
     @JsonProperty("min_price")
     private BigDecimal minPrice;
     private Integer vendors;
-    private MarketEdition edition;
+    private MarketProperty edition;
+    private MarketProperty language;
 }

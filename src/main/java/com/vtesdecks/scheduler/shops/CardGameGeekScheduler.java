@@ -406,6 +406,7 @@ public class CardGameGeekScheduler {
                 .link(overrideUrl != null ? overrideUrl : url)
                 .platform(PLATFORM)
                 .set(set != null ? set.getAbbrev() : null)
+                .locale(null)
                 .price(price)
                 .currency(EURO)
                 .inStock(inStock)

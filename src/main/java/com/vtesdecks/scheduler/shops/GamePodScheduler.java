@@ -182,6 +182,7 @@ public class GamePodScheduler {
                 .link(link)
                 .platform(PLATFORM)
                 .set(SET)
+                .locale(null)
                 .price(price)
                 .currency(EURO)
                 .inStock(true)

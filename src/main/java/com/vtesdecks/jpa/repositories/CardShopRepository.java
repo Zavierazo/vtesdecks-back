@@ -15,4 +15,6 @@ public interface CardShopRepository extends JpaRepository<CardShopEntity, Intege
     List<CardShopEntity> findByCardIdAndPlatform(Integer cardId, ShopPlatform platform);
 
     CardShopEntity findByCardIdAndPlatformAndSet(Integer cardId, ShopPlatform platform, String set);
+
+    CardShopEntity findByCardIdAndPlatformAndSetAndLocale(Integer cardId, ShopPlatform platform, String set, String locale);
 }
