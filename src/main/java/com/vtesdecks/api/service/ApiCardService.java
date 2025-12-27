@@ -111,23 +111,6 @@ public class ApiCardService {
 
     public List<Object> searchCards(String query, Double minScore, Integer limit, Set<String> fields) {
         BigDecimal targetScore = minScore != null ? BigDecimal.valueOf(minScore) : MIN_TRIGRAMS_SCORE;
-        try (ResultSet<Crypt> crypt = cryptCache.selectByExactName(query)) {
-            if (crypt.isNotEmpty()) {
-                return crypt.stream()
-                        .map(card -> apiCardMapper.mapCrypt(card, null, fields, 1.0))
-                        .limit(limit != null ? limit : crypt.size())
-                        .collect(Collectors.toList());
-            }
-        }
-        try (ResultSet<Library> library = libraryCache.selectByExactName(query)) {
-            if (library.isNotEmpty()) {
-                return library.stream()
-                        .map(card -> apiCardMapper.mapLibrary(card, null, fields, 1.0))
-                        .limit(limit != null ? limit : library.size())
-                        .collect(Collectors.toList());
-            }
-        }
-
         try (ResultSet<Crypt> cryptResult = cryptCache.selectAll(null, null); ResultSet<Library> libraryResult = libraryCache.selectAll(null, null);) {
             Set<String> queryTrigrams = TrigramSimilarity.generateTrigram(query);
             return Stream.concat(cryptResult.stream(), libraryResult.stream())
