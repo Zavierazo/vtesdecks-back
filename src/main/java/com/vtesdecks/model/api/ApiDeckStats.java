@@ -28,6 +28,7 @@ public class ApiDeckStats {
     private Integer minCrypt;
     private Integer maxCrypt;
     private BigDecimal price;
+    private BigDecimal msrp;
     private String currency;
     private List<ApiDisciplineStat> cryptDisciplines;
     private List<ApiDisciplineStat> libraryDisciplines;

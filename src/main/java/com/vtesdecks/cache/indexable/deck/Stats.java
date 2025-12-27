@@ -30,6 +30,7 @@ public class Stats {
     private int minCrypt;
     private int maxCrypt;
     private BigDecimal price;
+    private BigDecimal msrp;
     private String currency;
     private List<DisciplineStat> cryptDisciplines = new ArrayList<>();
     private List<DisciplineStat> libraryDisciplines = new ArrayList<>();

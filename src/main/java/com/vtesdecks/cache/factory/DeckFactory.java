@@ -417,14 +417,14 @@ public class DeckFactory {
         deckStats.getLibraryClans().sort(Comparator.comparingInt(ClanStat::getNumber).reversed());
 
         if (deck.getPrice() != null) {
-            // If deck has an explicit price (for preconstructed decks), override calculated stats price
-            deckStats.setPrice(deck.getPrice());
-            deckStats.setCurrency(DEFAULT_CURRENCY);
-        } else if (fullPrice && price.compareTo(BigDecimal.ZERO) > 0) {
+            // If deck has an explicit price (for preconstructed decks)
+            deckStats.setMsrp(deck.getPrice());
+        }
+        if (fullPrice && price.compareTo(BigDecimal.ZERO) > 0) {
             // Set price and currency only if all cards have price
             deckStats.setPrice(price);
-            deckStats.setCurrency(DEFAULT_CURRENCY);
         }
+        deckStats.setCurrency(DEFAULT_CURRENCY);
         return deckStats;
     }
 
