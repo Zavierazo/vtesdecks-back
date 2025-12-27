@@ -71,7 +71,7 @@ public class TcgMarketScheduler {
     );
     private static final Map<String, String> EDITION_MAPPINGS = Map.ofEntries(
             entry("Anth", "Anthology"),
-            entry("Anth1", "Anthology"),
+            entry("Anth1", "Anthology I"),
             entry("SabbatV5", "SV5"),
             entry("Fifth-A", "V5A"),
             entry("Fifth", "V5"),
