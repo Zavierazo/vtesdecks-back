@@ -81,7 +81,7 @@ public class LibraryCache {
     }
 
 
-    @Scheduled(cron = "${jobs.scrappingDecks:0 55 * * * *}")
+    @Scheduled(cron = "${jobs.cache.refresh:0 55 * * * *}")
     public void refreshIndex() {
         StopWatch stopWatch = new StopWatch();
         try {
@@ -122,7 +122,7 @@ public class LibraryCache {
             }
             if (oldLibrary != null && !oldLibrary.equals(newLibrary)) {
                 cache.update(Lists.newArrayList(oldLibrary), Lists.newArrayList(newLibrary));
-            } else {
+            } else if (oldLibrary == null) {
                 cache.add(newLibrary);
             }
         } catch (Exception e) {

@@ -78,7 +78,7 @@ public class CryptCache {
     }
 
 
-    @Scheduled(cron = "${jobs.scrappingDecks:0 55 * * * *}")
+    @Scheduled(cron = "${jobs.cache.refresh:0 55 * * * *}")
     public void refreshIndex() {
         StopWatch stopWatch = new StopWatch();
         try {
@@ -110,17 +110,17 @@ public class CryptCache {
 
     private void refreshIndex(CryptEntity crypt, List<CryptI18nEntity> cryptI18nList, List<CardShopEntity> cardShopList, long deckCount, long count) {
         try {
-            Crypt oldDeck = get(crypt.getId());
-            Crypt newDeck = cryptFactory.getCrypt(crypt, cryptI18nList, cardShopList);
-            newDeck.setDeckPopularity(deckCount);
-            newDeck.setCardPopularity(count);
+            Crypt oldCrypt = get(crypt.getId());
+            Crypt newCrypt = cryptFactory.getCrypt(crypt, cryptI18nList, cardShopList);
+            newCrypt.setDeckPopularity(deckCount);
+            newCrypt.setCardPopularity(count);
             if (deckCount > 0) {
-                newDeck.getTaints().add(CryptTaint.TWD.getName());
+                newCrypt.getTaints().add(CryptTaint.TWD.getName());
             }
-            if (oldDeck != null && !oldDeck.equals(newDeck)) {
-                cache.update(Lists.newArrayList(oldDeck), Lists.newArrayList(newDeck));
-            } else {
-                cache.add(newDeck);
+            if (oldCrypt != null && !oldCrypt.equals(newCrypt)) {
+                cache.update(Lists.newArrayList(oldCrypt), Lists.newArrayList(newCrypt));
+            } else if (oldCrypt == null) {
+                cache.add(newCrypt);
             }
         } catch (Exception e) {
             log.error("Error when refresh crypt {}", crypt.getId(), e);

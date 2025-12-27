@@ -6,12 +6,14 @@ import com.googlecode.cqengine.query.QueryFactory;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.vtesdecks.util.Utils;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.Set;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 public class Library extends Card {
     public static final Attribute<Library, Integer> ID_ATTRIBUTE = QueryFactory.attribute(Library.class, Integer.class, "id", Library::getId);
     public static final Attribute<Library, String> NAME_ATTRIBUTE = QueryFactory.attribute(Library.class, String.class, "name", (Library library) -> Utils.normalizeName(StringUtils.lowerCase(library.getName())));
