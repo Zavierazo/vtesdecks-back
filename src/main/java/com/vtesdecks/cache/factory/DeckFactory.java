@@ -133,6 +133,7 @@ public class DeckFactory {
         value.setExtra(deck.getExtra());
         value.setPublished(deck.getPublished());
         value.setCollection(deck.getCollection());
+        value.setDeckArchetypeId(deck.getDeckArchetypeId());
         if (deck.getUser() != null) {
             userRepository.findById(deck.getUser()).ifPresent(user -> {
                 value.setUser(user);

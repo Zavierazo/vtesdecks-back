@@ -126,6 +126,8 @@ public class Deck {
     private Set<DeckWarning> warnings;
     private Set<String> tags;
     private Double l2Norm;
+    private Double similarityScore;
+    private Integer deckArchetypeId;
     private String path;
     private String pathIcon;
     private LocalDateTime creationDate;

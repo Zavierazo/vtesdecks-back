@@ -93,6 +93,9 @@ public class DeckEntity {
     @Column(name = "price", precision = 10, scale = 2)
     private BigDecimal price;
 
+    @Column(name = "deck_archetype_id")
+    private Integer deckArchetypeId;
+
     @CreationTimestamp
     @Column(name = "creation_date", nullable = false)
     private LocalDateTime creationDate;

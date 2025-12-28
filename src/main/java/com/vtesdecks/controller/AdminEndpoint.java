@@ -1,6 +1,7 @@
 package com.vtesdecks.controller;
 
 import com.vtesdecks.scheduler.CleanUpScheduler;
+import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.scheduler.TournamentDeckScheduler;
 import com.vtesdecks.scheduler.VtesdleTodayScheduler;
@@ -28,6 +29,7 @@ public class AdminEndpoint {
     private final CardGameGeekScheduler cardGameGeekScheduler;
     private final ProxyCardOptionScheduler proxyCardOptionScheduler;
     private final TcgMarketScheduler tcgMarketScheduler;
+    private final DeckArchetypeScheduler deckArchetypeScheduler;
 
     @GetMapping(value = "/scheduler/deck_views_clean", produces = {
             MediaType.TEXT_PLAIN_VALUE
@@ -98,6 +100,14 @@ public class AdminEndpoint {
     })
     public String proxyCardOption() {
         proxyCardOptionScheduler.proxyCardOptionScheduler();
+        return "OK";
+    }
+
+    @GetMapping(value = "/scheduler/deckArchetype", produces = {
+            MediaType.TEXT_PLAIN_VALUE
+    })
+    public String deckArchetypeScheduler() {
+        deckArchetypeScheduler.deckArchetypeScheduler();
         return "OK";
     }
 
