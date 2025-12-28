@@ -11,6 +11,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import static com.vtesdecks.util.Constants.CARDS_DELETED_HEADER;
 import static com.vtesdecks.util.Constants.CONTENT_DISPOSITION_HEADER;
+import static com.vtesdecks.util.Constants.DATE_HEADER;
 
 @Configuration
 public class WebConfiguration implements WebMvcConfigurer {
@@ -33,6 +34,6 @@ public class WebConfiguration implements WebMvcConfigurer {
         CorsRegistration cors = registry.addMapping("/**");
         cors.allowedOrigins("*");
         cors.allowedMethods("*");
-        cors.exposedHeaders(CARDS_DELETED_HEADER, CONTENT_DISPOSITION_HEADER);
+        cors.exposedHeaders(CARDS_DELETED_HEADER, CONTENT_DISPOSITION_HEADER, DATE_HEADER);
     }
 }
