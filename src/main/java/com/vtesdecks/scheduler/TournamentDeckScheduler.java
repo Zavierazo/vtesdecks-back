@@ -18,7 +18,6 @@ import com.vtesdecks.jpa.repositories.CryptRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.LibraryRepository;
-import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.util.VtesUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,10 +65,9 @@ public class TournamentDeckScheduler {
     private final CryptRepository cryptRepository;
     private final LibraryRepository libraryRepository;
     private final DeckCardRepository deckCardRepository;
-    private final MessageProducer messageProducer;
 
-    //Update tournament decks once a day at 00:00
-    @Scheduled(cron = "${jobs.scrappingDecksCron:0 0 0 * * *}")
+    //Update tournament decks once a day at 06:30
+    @Scheduled(cron = "${jobs.scrappingDecksCron:0 30 6 * * *}")
     @Transactional
     public void scrappingDecks() {
         log.info("Starting tournament decks scrapping...");
@@ -312,8 +310,8 @@ public class TournamentDeckScheduler {
                     }
                 }
                 if (updated) {
+                    deckRepository.flush();
                     deckCardRepository.flush();
-                    messageProducer.publishDeckSync(deck.getId());
                 }
             }
         }

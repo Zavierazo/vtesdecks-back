@@ -55,7 +55,7 @@ public class SetCache {
         cache.addIndex(HashIndex.onAttribute(Set.LAST_UPDATE_ATTRIBUTE));
     }
 
-    @Scheduled(cron = "${jobs.cache.refresh:0 55 * * * *}")
+    @Scheduled(cron = "${jobs.cache.set.refresh:0 45 * * * *}")
     public void refreshIndex() {
         StopWatch stopWatch = new StopWatch();
         try {

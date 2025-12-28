@@ -81,7 +81,7 @@ public class LibraryCache {
     }
 
 
-    @Scheduled(cron = "${jobs.cache.refresh:0 55 * * * *}")
+    @Scheduled(cron = "${jobs.cache.library.refresh:0 50 * * * *}")
     public void refreshIndex() {
         StopWatch stopWatch = new StopWatch();
         try {

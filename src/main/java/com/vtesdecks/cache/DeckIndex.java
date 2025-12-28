@@ -69,7 +69,6 @@ import static com.googlecode.cqengine.query.option.EngineThresholds.INDEX_ORDERI
 public class DeckIndex {
     private static final List<DeckType> ALL_DECK_TYPES = Lists.newArrayList(DeckType.TOURNAMENT, DeckType.COMMUNITY);
     private static final int CRYPT_MAIN_MIN_NUMBER = 4;
-    private static final int CRYPT_SINGLE_MIN_NUMBER = 8;
     @Autowired
     private DeckRepository deckRepository;
     @Autowired
@@ -136,7 +135,7 @@ public class DeckIndex {
     }
 
 
-    @Scheduled(cron = "${jobs.scrappingDecks:0 0 * * * *}")
+    @Scheduled(cron = "${jobs.cache.deck.refresh:0 0 * * * *}")
     public void refreshIndex() {
         StopWatch stopWatch = new StopWatch();
         ExecutorService executor = null;
@@ -154,9 +153,7 @@ public class DeckIndex {
             if (!currentKeys.isEmpty()) {
                 log.warn("Deleting form index decks {}", currentKeys);
                 for (String deleteKeys : currentKeys) {
-                    Deck deck = get(deleteKeys);
-                    decks.remove(deck);
-                    deckCardIndex.removeDeck(deck.getId());
+                    deleteDeck(deleteKeys);
                 }
             }
         } finally {
@@ -181,11 +178,7 @@ public class DeckIndex {
         if (deck.isPresent() && Boolean.FALSE.equals(deck.get().getDeleted())) {
             refreshDeck(deck.get(), getLimitedFormats());
         } else {
-            Deck deletedDeck = get(deckId);
-            if (deletedDeck != null) {
-                decks.remove(deletedDeck);
-                deckCardIndex.removeDeck(deletedDeck.getId());
-            }
+            deleteDeck(deckId);
         }
     }
 
@@ -199,12 +192,21 @@ public class DeckIndex {
         }
     }
 
+
     private synchronized void syncDeck(DeckEntity deck, Deck newDeck) {
         Deck oldDeck = get(deck.getId());
         if (oldDeck != null && !oldDeck.equals(newDeck)) {
             decks.update(Lists.newArrayList(oldDeck), Lists.newArrayList(newDeck));
         } else if (oldDeck == null) {
             decks.add(newDeck);
+        }
+    }
+
+    private synchronized void deleteDeck(String deckId) {
+        Deck deck = get(deckId);
+        if (deck != null) {
+            decks.remove(deck);
+            deckCardIndex.removeDeck(deck.getId());
         }
     }
 

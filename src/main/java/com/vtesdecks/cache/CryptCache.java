@@ -78,7 +78,7 @@ public class CryptCache {
     }
 
 
-    @Scheduled(cron = "${jobs.cache.refresh:0 55 * * * *}")
+    @Scheduled(cron = "${jobs.cache.crypt.refresh:0 55 * * * *}")
     public void refreshIndex() {
         StopWatch stopWatch = new StopWatch();
         try {
