@@ -1,6 +1,5 @@
 package com.vtesdecks.scheduler;
 
-import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.jpa.entity.DeckArchetypeEntity;
@@ -8,8 +7,6 @@ import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.repositories.DeckArchetypeRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.messaging.MessageProducer;
-import com.vtesdecks.model.DeckQuery;
-import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.util.CosineSimilarityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,14 +33,15 @@ public class DeckArchetypeScheduler {
         List<DeckArchetypeEntity> deckArchetypeList = deckArchetypeRepository.findAll();
         Map<Integer, Deck> archetypeDeckMap = getArchetypeDeckMap(deckArchetypeList);
         Map<Integer, Map<Integer, Integer>> archetypeVectorMap = getArchetypeVectorMap(deckArchetypeList, archetypeDeckMap);
-        try (ResultSet<Deck> deckResultSet = deckIndex.selectAll(DeckQuery.builder().order(DeckSort.NEWEST).build())) {
-            for (Deck deck : deckResultSet) {
-                findBestArchetypeDeck(deck, archetypeVectorMap, archetypeDeckMap);
+        for (DeckEntity deckEntity : deckRepository.findAll()) {
+            Deck deck = deckIndex.get(deckEntity.getId());
+            if (deck != null) {
+                findBestArchetypeDeck(deckEntity, deck, archetypeVectorMap, archetypeDeckMap);
             }
         }
     }
 
-    private void findBestArchetypeDeck(Deck deck, Map<Integer, Map<Integer, Integer>> archetypeVectorMap, Map<Integer, Deck> archetypeDeckMap) {
+    private void findBestArchetypeDeck(DeckEntity deckEntity, Deck deck, Map<Integer, Map<Integer, Integer>> archetypeVectorMap, Map<Integer, Deck> archetypeDeckMap) {
         Map<Integer, Integer> deckVector = CosineSimilarityUtils.getVector(deck);
         double bestSimilarity = -1.0;
         Integer bestArchetypeId = null;
@@ -60,26 +58,23 @@ public class DeckArchetypeScheduler {
         if (bestArchetypeId != null) {
             // If a best archetype is found, assign it if different from current
             if (deck.getDeckArchetypeId() == null || !deck.getDeckArchetypeId().equals(bestArchetypeId)) {
-                saveDeck(deck, bestArchetypeId);
+                saveDeck(deckEntity, bestArchetypeId);
                 log.info("Assigned deck {} to archetype {} with similarity {}", deck.getId(), bestArchetypeId, bestSimilarity);
             }
         } else {
             // If no archetype matched, remove existing archetype assignment
             if (deck.getDeckArchetypeId() != null) {
-                saveDeck(deck, null);
+                saveDeck(deckEntity, null);
                 log.info("Removed archetype assignment from deck {}", deck.getId());
             }
         }
     }
 
-    private void saveDeck(Deck deck, Integer deckArchetypeId) {
-        DeckEntity deckEntity = deckRepository.findById(deck.getId()).orElse(null);
-        if (deckEntity != null) {
-            deckEntity.setDeckArchetypeId(deckArchetypeId);
-            deckRepository.saveAndFlush(deckEntity);
-            deckRepository.flush();
-            messageProducer.publishDeckSync(deckEntity.getId());
-        }
+    private void saveDeck(DeckEntity deckEntity, Integer deckArchetypeId) {
+        deckEntity.setDeckArchetypeId(deckArchetypeId);
+        deckRepository.saveAndFlush(deckEntity);
+        deckRepository.flush();
+        messageProducer.publishDeckSync(deckEntity.getId());
     }
 
     private Map<Integer, Deck> getArchetypeDeckMap(List<DeckArchetypeEntity> deckArchetypeList) {
