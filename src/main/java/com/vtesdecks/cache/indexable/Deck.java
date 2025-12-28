@@ -126,16 +126,9 @@ public class Deck {
     private Set<DeckWarning> warnings;
     private Set<String> tags;
     private Double l2Norm;
-    private Double similarityScore;
     private Integer deckArchetypeId;
     private String path;
     private String pathIcon;
     private LocalDateTime creationDate;
     private LocalDateTime modifyDate;
-
-    public Integer getLibrarySize(String type) {
-        List<Card> libraries = libraryByType.get(type);
-        return libraries != null ? libraries.stream().mapToInt(Card::getNumber).sum() : 0;
-    }
-
 }

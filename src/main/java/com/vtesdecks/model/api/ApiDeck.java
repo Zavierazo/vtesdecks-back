@@ -45,7 +45,6 @@ public class ApiDeck {
     private Set<ApiErrata> erratas;
     private Set<ApiDeckWarning> warnings;
     private List<String> tags;
-    private Double similarityScore;
     private LocalDateTime creationDate;
     private LocalDateTime modifyDate;
 }
