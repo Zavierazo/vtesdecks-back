@@ -79,6 +79,7 @@ public class DeckArchetypeScheduler {
 
     private Map<Integer, Deck> getArchetypeDeckMap(List<DeckArchetypeEntity> deckArchetypeList) {
         return deckArchetypeList.stream()
+                .filter(archetype -> archetype.getEnabled() != null && archetype.getEnabled())
                 .filter(archetype -> archetype.getDeckId() != null)
                 .collect(
                         Collectors.toMap(
@@ -90,6 +91,7 @@ public class DeckArchetypeScheduler {
 
     private Map<Integer, Map<Integer, Integer>> getArchetypeVectorMap(List<DeckArchetypeEntity> deckArchetypeList, Map<Integer, Deck> archetypeDeckMap) {
         return deckArchetypeList.stream()
+                .filter(archetype -> archetype.getEnabled() != null && archetype.getEnabled())
                 .filter(archetype -> deckIndex.get(archetype.getDeckId()) != null)
                 .collect(
                         Collectors.toMap(

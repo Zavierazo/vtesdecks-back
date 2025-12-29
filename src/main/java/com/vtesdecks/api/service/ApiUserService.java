@@ -10,9 +10,10 @@ import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -42,8 +43,11 @@ public class ApiUserService {
     }
 
     public String getJWTToken(UserEntity user, List<String> roles, boolean expireOneDay) {
-        List<GrantedAuthority> grantedAuthorities = AuthorityUtils
-                .commaSeparatedStringToAuthorityList("USER");
+        List<GrantedAuthority> grantedAuthorities = new ArrayList<>();
+        grantedAuthorities.add(new SimpleGrantedAuthority("USER"));
+        if (user.getAdmin() != null && user.getAdmin()) {
+            grantedAuthorities.add(new SimpleGrantedAuthority("ADMIN"));
+        }
         return Jwts
                 .builder()
                 .id(user.getUsername())
