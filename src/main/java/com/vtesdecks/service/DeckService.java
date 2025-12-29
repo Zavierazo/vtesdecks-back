@@ -40,6 +40,7 @@ public interface DeckService {
                              String combat,
                              String reaction,
                              String event,
+                             Integer archetype,
                              Boolean absoluteProportion,
                              List<String> tags,
                              String limitedFormat,

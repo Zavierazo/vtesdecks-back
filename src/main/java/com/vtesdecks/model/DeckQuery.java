@@ -51,6 +51,7 @@ public class DeckQuery {
     private String limitedFormat;
     private List<String> paths;
     private Boolean favorite;
+    private Integer archetype;
 
     public boolean isStarVampire() {
         return starVampire != null && starVampire;

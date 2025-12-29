@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class DeckArchetypeScheduler {
+    private static final double MIN_SIMILARITY = 0.5;
     private final DeckIndex deckIndex;
     private final DeckRepository deckRepository;
     private final DeckArchetypeRepository deckArchetypeRepository;
@@ -30,14 +31,20 @@ public class DeckArchetypeScheduler {
     @Scheduled(cron = "${jobs.deckArchetypeScheduler:0 0 1 * * *}")
     @Transactional
     public void deckArchetypeScheduler() {
-        List<DeckArchetypeEntity> deckArchetypeList = deckArchetypeRepository.findAll();
-        Map<Integer, Deck> archetypeDeckMap = getArchetypeDeckMap(deckArchetypeList);
-        Map<Integer, Map<Integer, Integer>> archetypeVectorMap = getArchetypeVectorMap(deckArchetypeList, archetypeDeckMap);
-        for (DeckEntity deckEntity : deckRepository.findAll()) {
-            Deck deck = deckIndex.get(deckEntity.getId());
-            if (deck != null) {
-                findBestArchetypeDeck(deckEntity, deck, archetypeVectorMap, archetypeDeckMap);
+        log.info("Starting Deck Archetype scheduler...");
+        try {
+            List<DeckArchetypeEntity> deckArchetypeList = deckArchetypeRepository.findAll();
+            Map<Integer, Deck> archetypeDeckMap = getArchetypeDeckMap(deckArchetypeList);
+            Map<Integer, Map<Integer, Integer>> archetypeVectorMap = getArchetypeVectorMap(deckArchetypeList, archetypeDeckMap);
+            for (DeckEntity deckEntity : deckRepository.findAll()) {
+                Deck deck = deckIndex.get(deckEntity.getId());
+                if (deck != null) {
+                    findBestArchetypeDeck(deckEntity, deck, archetypeVectorMap, archetypeDeckMap);
+                }
             }
+            log.info("Deck Archetype scheduler completed successfully.");
+        } catch (Exception e) {
+            log.error("Error during Deck Archetype scheduler", e);
         }
     }
 
@@ -50,7 +57,7 @@ public class DeckArchetypeScheduler {
             Deck archetypeDeck = archetypeDeckMap.get(archetypeVectorEntry.getKey());
             Map<Integer, Integer> archetypeVector = archetypeVectorEntry.getValue();
             double similarity = CosineSimilarityUtils.cosineSimilarity(archetypeDeck, archetypeVector, deck, deckVector);
-            if (similarity >= 0.5 && similarity > bestSimilarity) {
+            if (similarity >= MIN_SIMILARITY && similarity > bestSimilarity) {
                 bestSimilarity = similarity;
                 bestArchetypeId = archetypeId;
             }

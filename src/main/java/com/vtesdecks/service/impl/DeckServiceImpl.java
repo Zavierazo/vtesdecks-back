@@ -51,6 +51,7 @@ public class DeckServiceImpl implements DeckService {
                                     String combat,
                                     String reaction,
                                     String event,
+                                    Integer archetype,
                                     Boolean absoluteProportion,
                                     List<String> tags,
                                     String limitedFormat,
@@ -72,7 +73,8 @@ public class DeckServiceImpl implements DeckService {
                 .favorite(favorite)
                 .cards(cards)
                 .limitedFormat(limitedFormat)
-                .paths(paths);
+                .paths(paths)
+                .archetype(archetype);
         if (cryptSize != null && cryptSize.size() == 2) {
             Integer cryptSizeMin = cryptSize.get(0);
             if (cryptSizeMin <= 12) {

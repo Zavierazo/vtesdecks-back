@@ -132,6 +132,7 @@ public class DeckIndex {
         decks.addIndex(HashIndex.onAttribute(Deck.LIMITED_FORMAT_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.PATH_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.PRICE_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(Deck.ARCHETYPE_ATTRIBUTE));
     }
 
 
@@ -470,6 +471,9 @@ public class DeckIndex {
         }
         if (CollectionUtils.isNotEmpty(deckQuery.getPaths())) {
             query = and(query, in(Deck.PATH_ATTRIBUTE, deckQuery.getPaths()));
+        }
+        if (deckQuery.getArchetype() != null) {
+            query = and(query, equal(Deck.ARCHETYPE_ATTRIBUTE, deckQuery.getArchetype()));
         }
         if (log.isDebugEnabled()) {
             log.debug("Query {} with options {}", query, queryOptions);

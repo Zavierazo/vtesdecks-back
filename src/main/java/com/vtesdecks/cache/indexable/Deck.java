@@ -90,6 +90,7 @@ public class Deck {
     public static final Attribute<Deck, String> LIMITED_FORMAT_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, String.class, "limited_format", (Deck deck) -> StringUtils.lowerCase(deck.getLimitedFormat()));
     public static final Attribute<Deck, String> PATH_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, String.class, "path", Deck::getPath);
     public static final Attribute<Deck, BigDecimal> PRICE_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, BigDecimal.class, "price", (Deck deck) -> deck.getStats().getPrice());
+    public static final Attribute<Deck, Integer> ARCHETYPE_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, Integer.class, "archetype", Deck::getDeckArchetypeId);
 
     private String id;
     private DeckType type;

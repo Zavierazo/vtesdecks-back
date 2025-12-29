@@ -79,7 +79,7 @@ public class ApiDeckController {
                 null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
                 favorite, currencyCode, 0, limit);
     }
 
@@ -135,12 +135,13 @@ public class ApiDeckController {
                                           @RequestParam(name = "limitedFormat", required = false) String limitedFormat,
                                           @RequestParam(name = "paths", required = false) List<String> paths,
                                           @RequestParam(name = "bySimilarity", required = false) String bySimilarity,
+                                          @RequestParam(name = "archetype", required = false) Integer archetype,
                                           @RequestParam(name = "collectionPercentage", required = false) Integer collectionPercentage,
                                           @RequestParam(name = "offset", required = false) Integer offset,
                                           @RequestParam(name = "limit", required = false) Integer limit) {
         ApiDecks decks = deckService.getDecks(type, order, ApiUtils.extractUserId(), name, author, exactAuthor, cardText, clans, disciplines, cards, cryptSize,
                 librarySize, group, starVampire, singleClan, singleDiscipline, year, players, master, action, political, retainer, equipment, ally,
-                modifier, combat, reaction, event, absoluteProportion, tags, limitedFormat, paths, bySimilarity, collectionPercentage, favorite,
+                modifier, combat, reaction, event, archetype, absoluteProportion, tags, limitedFormat, paths, bySimilarity, collectionPercentage, favorite,
                 Utils.getCurrencyCode(request), offset != null ? offset : 0, limit != null ? limit : 20);
         return new ResponseEntity<>(decks, HttpStatus.OK);
     }

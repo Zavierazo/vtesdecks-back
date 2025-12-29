@@ -65,7 +65,7 @@ public class ApiCardInfoService {
                 null, null, null, null, null, List.of(id + "=1"), null, null,
                 null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null,
                 null, 0, 10);
         return apiDecks != null && apiDecks.getDecks() != null ? apiDecks.getDecks() : Collections.emptyList();
     }
@@ -97,7 +97,7 @@ public class ApiCardInfoService {
                     null, null, null, null, List.of(id + "=1"), null, null, null,
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null,
                     null, 0, 10);
             collectionStats = apiCollectionService.getCardStats(id, decks, false);
         } catch (Exception e) {
