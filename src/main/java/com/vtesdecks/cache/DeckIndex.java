@@ -58,6 +58,7 @@ import static com.googlecode.cqengine.query.QueryFactory.greaterThanOrEqualTo;
 import static com.googlecode.cqengine.query.QueryFactory.has;
 import static com.googlecode.cqengine.query.QueryFactory.in;
 import static com.googlecode.cqengine.query.QueryFactory.lessThanOrEqualTo;
+import static com.googlecode.cqengine.query.QueryFactory.not;
 import static com.googlecode.cqengine.query.QueryFactory.orderBy;
 import static com.googlecode.cqengine.query.QueryFactory.queryOptions;
 import static com.googlecode.cqengine.query.QueryFactory.threshold;
@@ -465,7 +466,11 @@ public class DeckIndex {
             query = and(query, in(Deck.PATH_ATTRIBUTE, deckQuery.getPaths()));
         }
         if (deckQuery.getArchetype() != null) {
-            query = and(query, equal(Deck.ARCHETYPE_ATTRIBUTE, deckQuery.getArchetype()));
+            if (deckQuery.getArchetype() == 0) {
+                query = and(query, not(has(Deck.ARCHETYPE_ATTRIBUTE)));
+            } else {
+                query = and(query, equal(Deck.ARCHETYPE_ATTRIBUTE, deckQuery.getArchetype()));
+            }
         }
         if (deckQuery.getCreationDate() != null) {
             Long creationTimestamp = deckQuery.getCreationDate()

@@ -40,6 +40,8 @@ public class DeckArchetypeIndex {
                 deckArchetypeRedisRepository.save(deckArchetype);
                 currentKeys.remove(deckArchetype.getId());
             }
+            DeckArchetype unknownArchetype = addUnknownArchetype();
+            currentKeys.remove(unknownArchetype.getId());
             if (!currentKeys.isEmpty()) {
                 log.warn("Deleting form index deck archetypes {}", currentKeys);
                 deckArchetypeRedisRepository.deleteAllById(currentKeys);
@@ -48,6 +50,18 @@ public class DeckArchetypeIndex {
             stopWatch.stop();
             log.info("Index finished in {} ms. Colletion size is {}", stopWatch.lastTaskInfo().getTimeMillis(), deckArchetypeRedisRepository.count());
         }
+    }
+
+    private DeckArchetype addUnknownArchetype() {
+        DeckArchetypeEntity deckArchetypeEntity = new DeckArchetypeEntity();
+        deckArchetypeEntity.setId(0);
+        deckArchetypeEntity.setName("Unclassified");
+        deckArchetypeEntity.setDescription("Decks without a currently assigned archetype. This category may contain hybrid or low-sample strategies and can evolve as new archetypes are identified.");
+        deckArchetypeEntity.setDeckId(null);
+        deckArchetypeEntity.setEnabled(true);
+        DeckArchetype unknownArchetype = deckArchetypeFactory.getDeckArchetype(deckArchetypeEntity);
+        deckArchetypeRedisRepository.save(unknownArchetype);
+        return unknownArchetype;
     }
 
     public void refreshIndex(Integer id) {
