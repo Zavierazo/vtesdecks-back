@@ -51,6 +51,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -67,6 +68,7 @@ public class AfterStartupService {
     private static final String LIBRARY_I18N_FILE = "data/vteslib.i18n.csv";
     private static final String FULL_ART_CARDS_FILE = "data/fullarts.csv";
     private static final String BCP_BUSSINESS_CARDS_FILE = "data/bcp_business_cards.csv";
+    private static final Pattern BUNDLE_PATTERN = Pattern.compile("[AB]\\d");
     public static final String PROMO = "Promo";
 
     private Set<Integer> fullArtCards;
@@ -316,12 +318,12 @@ public class AfterStartupService {
             if (setInfo.getFirst().equals("V5") && (setInfo.getLast().contains("PH") || setInfo.getLast().contains("PL"))) {
                 convertSubSetToSet(finalSets, setInfo, "V5", "PH", "V5H", true);
                 convertSubSetToSet(finalSets, setInfo, "V5", "PL", "V5L", true);
-            } else if (setInfo.getFirst().equals("HttB") && (setInfo.getLast().contains("B1") || setInfo.getLast().contains("B2"))) {
-                convertSubSetToSet(finalSets, setInfo, "HttB", "B1", "HttBR", false);
-                convertSubSetToSet(finalSets, setInfo, "HttB", "B2", "HttBR", false);
-            } else if (setInfo.getFirst().equals("KoT") && (setInfo.getLast().contains("B1") || setInfo.getLast().contains("B2"))) {
-                convertSubSetToSet(finalSets, setInfo, "KoT", "B1", "KoTR", false);
-                convertSubSetToSet(finalSets, setInfo, "KoT", "B2", "KoTR", false);
+            } else if (setInfo.getFirst().equals("HttB") && BUNDLE_PATTERN.matcher(setInfo.getLast()).find()) {
+                convertSubSetToSet(finalSets, setInfo, "HttB", "A", "HttBR", false);
+                convertSubSetToSet(finalSets, setInfo, "HttB", "B", "HttBR", false);
+            } else if (setInfo.getFirst().equals("KoT") && BUNDLE_PATTERN.matcher(setInfo.getLast()).find()) {
+                convertSubSetToSet(finalSets, setInfo, "KoT", "A", "KoTR", false);
+                convertSubSetToSet(finalSets, setInfo, "KoT", "B", "KoTR", false);
             } else if (setInfo.getFirst().equals("Anthology") && !setInfo.getLast().startsWith("LARP")) {
                 finalSets.add(String.join(":", setInfo));
                 finalSets.add("Anthology I:" + setInfo.getLast());
