@@ -13,11 +13,13 @@ import com.vtesdecks.jpa.repositories.DeckArchetypeRepository;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.MetaType;
 import com.vtesdecks.model.api.ApiDeckArchetype;
+import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
 
@@ -30,6 +32,7 @@ public class DeckArchetypeService {
     private final DeckIndex deckIndex;
     private final DeckArchetypeIndex deckArchetypeIndex;
     private final DeckArchetypeRedisRepository redisRepository;
+    private final DeckArchetypeScheduler deckArchetypeScheduler;
 
     public List<ApiDeckArchetype> getAll(boolean showDisabled, MetaType metaType, String currencyCode) {
         List<DeckArchetype> deckArchetypeList = StreamSupport.stream(redisRepository.findAll().spliterator(), false).toList();
@@ -58,14 +61,15 @@ public class DeckArchetypeService {
         return entity.map(archetype -> mapper.map(archetype, getMetaTotal(MetaType.TOURNAMENT), MetaType.TOURNAMENT, currencyCode));
     }
 
-    public ApiDeckArchetype create(ApiDeckArchetype api) {
+    public Optional<ApiDeckArchetype> create(ApiDeckArchetype api, String currencyCode) {
         DeckArchetypeEntity entity = mapper.map(api);
         DeckArchetypeEntity saved = repository.save(entity);
+        deckArchetypeScheduler.updateDeckArchetype(saved.getId());
         deckArchetypeIndex.refreshIndex(saved.getId());
-        return mapper.map(saved);
+        return getById(saved.getId(), currencyCode);
     }
 
-    public Optional<ApiDeckArchetype> update(Integer id, ApiDeckArchetype api) {
+    public Optional<ApiDeckArchetype> update(Integer id, ApiDeckArchetype api, String currencyCode) {
         Optional<DeckArchetypeEntity> maybe = repository.findById(id);
         if (maybe.isEmpty()) return Optional.empty();
         DeckArchetypeEntity entity = maybe.get();
@@ -76,8 +80,11 @@ public class DeckArchetypeService {
         entity.setDeckId(api.getDeckId());
         entity.setEnabled(api.getEnabled());
         DeckArchetypeEntity saved = repository.save(entity);
+        if (!Objects.equals(api.getDeckId(), saved.getDeckId())) {
+            deckArchetypeScheduler.updateDeckArchetype(saved.getId());
+        }
         deckArchetypeIndex.refreshIndex(saved.getId());
-        return Optional.of(mapper.map(saved));
+        return getById(saved.getId(), currencyCode);
     }
 
     public boolean delete(Integer id) {

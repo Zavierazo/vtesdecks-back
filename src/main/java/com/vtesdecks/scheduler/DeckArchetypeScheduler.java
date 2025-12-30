@@ -39,7 +39,7 @@ public class DeckArchetypeScheduler {
             for (DeckEntity deckEntity : deckRepository.findAll()) {
                 Deck deck = deckIndex.get(deckEntity.getId());
                 if (deck != null) {
-                    findBestArchetypeDeck(deckEntity, deck, archetypeVectorMap, archetypeDeckMap);
+                    findBestArchetypeDeck(deckEntity, deck, null, archetypeVectorMap, archetypeDeckMap);
                 }
             }
             log.info("Deck Archetype scheduler completed successfully.");
@@ -48,18 +48,48 @@ public class DeckArchetypeScheduler {
         }
     }
 
-    private void findBestArchetypeDeck(DeckEntity deckEntity, Deck deck, Map<Integer, Map<Integer, Integer>> archetypeVectorMap, Map<Integer, Deck> archetypeDeckMap) {
+    public void updateDeckArchetype(Integer archetypeId) {
+        log.info("Starting Deck Archetype for archetypeId {}...", archetypeId);
+        try {
+            List<DeckArchetypeEntity> deckArchetypeList = deckArchetypeRepository.findAll();
+            Map<Integer, Deck> archetypeDeckMap = getArchetypeDeckMap(deckArchetypeList);
+            Map<Integer, Map<Integer, Integer>> archetypeVectorMap = getArchetypeVectorMap(deckArchetypeList, archetypeDeckMap);
+            for (DeckEntity deckEntity : deckRepository.findAll()) {
+                Deck deck = deckIndex.get(deckEntity.getId());
+                if (deck != null) {
+                    findBestArchetypeDeck(deckEntity, deck, archetypeId, archetypeVectorMap, archetypeDeckMap);
+                }
+            }
+            log.info("Deck Archetype for archetype {} completed successfully.", archetypeId);
+        } catch (Exception e) {
+            log.error("Error during Deck Archetype for archetype {}", archetypeId, e);
+        }
+    }
+
+    private void findBestArchetypeDeck(DeckEntity deckEntity, Deck deck, Integer archetypeId, Map<Integer, Map<Integer, Integer>> archetypeVectorMap, Map<Integer, Deck> archetypeDeckMap) {
         Map<Integer, Integer> deckVector = CosineSimilarityUtils.getVector(deck);
         double bestSimilarity = -1.0;
         Integer bestArchetypeId = null;
+        // If archetypeId is provided, check it first to potentially skip processing
+        if (archetypeId != null) {
+            Map<Integer, Integer> archetypeVector = archetypeVectorMap.get(archetypeId);
+            if (archetypeVector != null) {
+                Deck archetypeDeck = archetypeDeckMap.get(archetypeId);
+                double similarity = CosineSimilarityUtils.cosineSimilarity(archetypeDeck, archetypeVector, deck, deckVector);
+                if (similarity < MIN_SIMILARITY) {
+                    return;
+                }
+            }
+        }
+
         for (Map.Entry<Integer, Map<Integer, Integer>> archetypeVectorEntry : archetypeVectorMap.entrySet()) {
-            Integer archetypeId = archetypeVectorEntry.getKey();
+            Integer id = archetypeVectorEntry.getKey();
             Deck archetypeDeck = archetypeDeckMap.get(archetypeVectorEntry.getKey());
             Map<Integer, Integer> archetypeVector = archetypeVectorEntry.getValue();
             double similarity = CosineSimilarityUtils.cosineSimilarity(archetypeDeck, archetypeVector, deck, deckVector);
             if (similarity >= MIN_SIMILARITY && similarity > bestSimilarity) {
                 bestSimilarity = similarity;
-                bestArchetypeId = archetypeId;
+                bestArchetypeId = id;
             }
         }
         if (bestArchetypeId != null) {

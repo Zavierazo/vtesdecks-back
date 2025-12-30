@@ -54,15 +54,16 @@ public class ApiDeckArchetypeController {
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Secured({"ADMIN", "MANTAINER"})
-    public ResponseEntity<ApiDeckArchetype> create(@RequestBody ApiDeckArchetype api) {
-        ApiDeckArchetype created = service.create(api);
-        return ResponseEntity.ok(created);
+    public ResponseEntity<ApiDeckArchetype> create(HttpServletRequest request, @RequestBody ApiDeckArchetype api) {
+        return service.create(api, Utils.getCurrencyCode(request))
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Secured({"ADMIN", "MANTAINER"})
-    public ResponseEntity<ApiDeckArchetype> update(@PathVariable Integer id, @RequestBody ApiDeckArchetype api) {
-        return service.update(id, api)
+    public ResponseEntity<ApiDeckArchetype> update(HttpServletRequest request, @PathVariable Integer id, @RequestBody ApiDeckArchetype api) {
+        return service.update(id, api, Utils.getCurrencyCode(request))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
