@@ -47,6 +47,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -305,15 +306,17 @@ public class AfterStartupService {
                     }
                     return set;
                 }).toList());
-        List<String> finalSets = new ArrayList<>();
+        Set<String> finalSets = new LinkedHashSet<>();
         for (String set : sets) {
             List<String> setInfo = Splitter.on(':').splitToList(set);
             if (setInfo.size() != 2) {
                 finalSets.add(set);
                 continue;
             }
-            convertSubSetToSet(finalSets, setInfo, "V5", "PH", "V5H");
-            convertSubSetToSet(finalSets, setInfo, "V5", "PL", "V5L");
+            convertSubSetToSet(finalSets, setInfo, "V5", "PH", "V5H", true);
+            convertSubSetToSet(finalSets, setInfo, "V5", "PL", "V5L", true);
+            convertSubSetToSet(finalSets, setInfo, "HttB", "B1", "HttBR", false);
+            convertSubSetToSet(finalSets, setInfo, "KoT", "B1", "KoTR", false);
             addAnthologyISet(finalSets, setInfo);
         }
         if (fullArtCards != null && fullArtCards.contains(id)) {
@@ -326,12 +329,15 @@ public class AfterStartupService {
     }
 
 
-    private static void convertSubSetToSet(List<String> sets, List<String> setInfo, String oldSet, String subSet, String newSet) {
+    private static void convertSubSetToSet(Set<String> sets, List<String> setInfo, String oldSet, String subSet, String newSet, boolean splitInfo) {
         if (setInfo.getFirst().equals(oldSet) && setInfo.getLast().contains(subSet)) {
             List<String> subSets = Splitter.on('/').splitToList(setInfo.getLast());
             Optional<String> subSetOpt = subSets.stream().filter(s -> s.startsWith(subSet)).findFirst();
             if (subSetOpt.isPresent()) {
-                String subSetInfo = subSetOpt.get().substring(subSet.length());
+                String subSetInfo = subSetOpt.get();
+                if (splitInfo) {
+                    subSetInfo = subSetInfo.substring(subSet.length());
+                }
                 sets.add(newSet + ':' + subSetInfo);
             }
             if (subSets.size() > 1) {
@@ -341,11 +347,11 @@ public class AfterStartupService {
         }
     }
 
-    private static void addAnthologyISet(List<String> sets, List<String> setInfo) {
+    private static void addAnthologyISet(Set<String> sets, List<String> setInfo) {
         if (setInfo.getFirst().equals("Anthology") && !setInfo.getLast().startsWith("LARP")) {
             sets.add(String.join(":", setInfo));
             sets.add("Anthology I:" + setInfo.getLast());
-        } else {
+        } else if (setInfo.getFirst().equals("Anthology")) {
             sets.add(String.join(":", setInfo));
         }
     }
