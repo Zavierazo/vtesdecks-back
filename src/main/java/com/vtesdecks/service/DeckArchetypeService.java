@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -38,7 +37,15 @@ public class DeckArchetypeService {
         return apiDeckArchetypeList.stream()
                 .filter(deck -> showDisabled || Boolean.TRUE.equals(deck.getEnabled()))
                 .filter(deck -> deck.getMetaCount() != null && deck.getMetaCount() > 0)
-                .sorted(Comparator.comparing(ApiDeckArchetype::getMetaCount, Comparator.reverseOrder()))
+                .sorted((a, b) -> {
+                    // Put Unclassified archetype always at the end
+                    Integer aId = a.getId();
+                    Integer bId = b.getId();
+                    if (aId != null && aId == 0 && (bId == null || bId != 0)) return 1;
+                    if (bId != null && bId == 0 && (aId == null || aId != 0)) return -1;
+                    // Otherwise sort by metaCount descending (metaCount is non-null due to previous filter)
+                    return b.getMetaCount().compareTo(a.getMetaCount());
+                })
                 .toList();
     }
 
