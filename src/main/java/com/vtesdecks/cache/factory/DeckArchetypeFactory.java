@@ -31,6 +31,11 @@ public abstract class DeckArchetypeFactory {
         deckArchetype.setTournament90Count(deckCount(DeckQuery.builder().archetype(entity.getId()).type(DeckType.TOURNAMENT).creationDate(LocalDate.now().minusDays(90)).build()));
         deckArchetype.setTournament180Count(deckCount(DeckQuery.builder().archetype(entity.getId()).type(DeckType.TOURNAMENT).creationDate(LocalDate.now().minusDays(180)).build()));
         deckArchetype.setTournament365Count(deckCount(DeckQuery.builder().archetype(entity.getId()).type(DeckType.TOURNAMENT).creationDate(LocalDate.now().minusDays(365)).build()));
+        Deck deck = deckIndexRepository.get(entity.getDeckId());
+        if (deck != null && deck.getStats() != null) {
+            deckArchetype.setPrice(deck.getStats().getPrice());
+            deckArchetype.setCurrency(deck.getStats().getCurrency());
+        }
     }
 
     private long deckCount(DeckQuery query) {

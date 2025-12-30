@@ -3,6 +3,7 @@ package com.vtesdecks.model.api;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -18,6 +19,8 @@ public class ApiDeckArchetype {
     private Long deckCount;
     private Long metaCount;
     private Long metaTotal;
+    private BigDecimal price;
+    private String currency;
     private LocalDateTime creationDate;
     private LocalDateTime modificationDate;
 }

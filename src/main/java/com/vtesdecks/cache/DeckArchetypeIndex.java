@@ -26,8 +26,7 @@ public class DeckArchetypeIndex {
     private final DeckArchetypeRepository deckArchetypeRepository;
     private final DeckArchetypeFactory deckArchetypeFactory;
 
-    //    @Scheduled(cron = "${jobs.cache.deck-archetype.refresh:0 0 * * * *}")
-    @Scheduled(initialDelay = 0, fixedDelayString = "${jobs.cache.deck-archetype.refresh.fixed-delay:3600000}")
+    @Scheduled(cron = "${jobs.cache.deck-archetype.refresh:0 0 * * * *}")
     public void refreshIndex() {
         StopWatch stopWatch = new StopWatch();
         try {

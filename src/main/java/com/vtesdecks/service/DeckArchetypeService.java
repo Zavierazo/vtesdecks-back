@@ -32,9 +32,9 @@ public class DeckArchetypeService {
     private final DeckArchetypeIndex deckArchetypeIndex;
     private final DeckArchetypeRedisRepository redisRepository;
 
-    public List<ApiDeckArchetype> getAll(boolean showDisabled, MetaType metaType) {
+    public List<ApiDeckArchetype> getAll(boolean showDisabled, MetaType metaType, String currencyCode) {
         List<DeckArchetype> deckArchetypeList = StreamSupport.stream(redisRepository.findAll().spliterator(), false).toList();
-        List<ApiDeckArchetype> apiDeckArchetypeList = mapper.map(deckArchetypeList, getMetaTotal(metaType), metaType);
+        List<ApiDeckArchetype> apiDeckArchetypeList = mapper.map(deckArchetypeList, getMetaTotal(metaType), metaType, currencyCode);
         return apiDeckArchetypeList.stream()
                 .filter(deck -> showDisabled || Boolean.TRUE.equals(deck.getEnabled()))
                 .filter(deck -> deck.getMetaCount() != null && deck.getMetaCount() > 0)
@@ -42,13 +42,13 @@ public class DeckArchetypeService {
                 .toList();
     }
 
-    public Optional<ApiDeckArchetype> getById(Integer id) {
-        return redisRepository.findById(id).map(archetype -> mapper.map(archetype, getMetaTotal(MetaType.TOURNAMENT), MetaType.TOURNAMENT));
+    public Optional<ApiDeckArchetype> getById(Integer id, String currencyCode) {
+        return redisRepository.findById(id).map(archetype -> mapper.map(archetype, getMetaTotal(MetaType.TOURNAMENT), MetaType.TOURNAMENT, currencyCode));
     }
 
-    public Optional<ApiDeckArchetype> getByDeckId(String deckId) {
+    public Optional<ApiDeckArchetype> getByDeckId(String deckId, String currencyCode) {
         Optional<DeckArchetype> entity = redisRepository.findByDeckId(deckId);
-        return entity.map(archetype -> mapper.map(archetype, getMetaTotal(MetaType.TOURNAMENT), MetaType.TOURNAMENT));
+        return entity.map(archetype -> mapper.map(archetype, getMetaTotal(MetaType.TOURNAMENT), MetaType.TOURNAMENT, currencyCode));
     }
 
     public ApiDeckArchetype create(ApiDeckArchetype api) {

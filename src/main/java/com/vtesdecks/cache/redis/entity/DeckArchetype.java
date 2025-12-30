@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.redis.core.RedisHash;
 import org.springframework.data.redis.core.index.Indexed;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -30,6 +31,8 @@ public class DeckArchetype {
     private Long tournament90Count;
     private Long tournament180Count;
     private Long tournament365Count;
+    private BigDecimal price;
+    private String currency;
     private LocalDateTime creationDate;
     private LocalDateTime modificationDate;
 }

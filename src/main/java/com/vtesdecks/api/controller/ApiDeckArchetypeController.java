@@ -3,6 +3,8 @@ package com.vtesdecks.api.controller;
 import com.vtesdecks.model.MetaType;
 import com.vtesdecks.model.api.ApiDeckArchetype;
 import com.vtesdecks.service.DeckArchetypeService;
+import com.vtesdecks.util.Utils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,25 +31,25 @@ public class ApiDeckArchetypeController {
     private final DeckArchetypeService service;
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ApiDeckArchetype>> getAll(@RequestParam(required = false, defaultValue = "TOURNAMENT") MetaType metaType) {
+    public ResponseEntity<List<ApiDeckArchetype>> getAll(HttpServletRequest request, @RequestParam(required = false, defaultValue = "TOURNAMENT") MetaType metaType) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean showDisabled = auth != null && auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(role -> role.equals("ADMIN") || role.equals("MANTAINER"));
-        List<ApiDeckArchetype> result = service.getAll(showDisabled, metaType);
+        List<ApiDeckArchetype> result = service.getAll(showDisabled, metaType, Utils.getCurrencyCode(request));
         return ResponseEntity.ok(result);
     }
 
     @GetMapping(value = "/deck/{deckId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiDeckArchetype> getByDeckId(@PathVariable String deckId) {
-        return service.getByDeckId(deckId)
+    public ResponseEntity<ApiDeckArchetype> getByDeckId(HttpServletRequest request, @PathVariable String deckId) {
+        return service.getByDeckId(deckId, Utils.getCurrencyCode(request))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiDeckArchetype> getById(@PathVariable Integer id) {
-        return service.getById(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<ApiDeckArchetype> getById(HttpServletRequest request, @PathVariable Integer id) {
+        return service.getById(id, Utils.getCurrencyCode(request)).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
