@@ -313,11 +313,21 @@ public class AfterStartupService {
                 finalSets.add(set);
                 continue;
             }
-            convertSubSetToSet(finalSets, setInfo, "V5", "PH", "V5H", true);
-            convertSubSetToSet(finalSets, setInfo, "V5", "PL", "V5L", true);
-            convertSubSetToSet(finalSets, setInfo, "HttB", "B1", "HttBR", false);
-            convertSubSetToSet(finalSets, setInfo, "KoT", "B1", "KoTR", false);
-            addAnthologyISet(finalSets, setInfo);
+            if (setInfo.getFirst().equals("V5") && (setInfo.getLast().contains("PH") || setInfo.getLast().contains("PL"))) {
+                convertSubSetToSet(finalSets, setInfo, "V5", "PH", "V5H", true);
+                convertSubSetToSet(finalSets, setInfo, "V5", "PL", "V5L", true);
+            } else if (setInfo.getFirst().equals("HttB") && (setInfo.getLast().contains("B1") || setInfo.getLast().contains("B2"))) {
+                convertSubSetToSet(finalSets, setInfo, "HttB", "B1", "HttBR", false);
+                convertSubSetToSet(finalSets, setInfo, "HttB", "B2", "HttBR", false);
+            } else if (setInfo.getFirst().equals("KoT") && (setInfo.getLast().contains("B1") || setInfo.getLast().contains("B2"))) {
+                convertSubSetToSet(finalSets, setInfo, "KoT", "B1", "KoTR", false);
+                convertSubSetToSet(finalSets, setInfo, "KoT", "B2", "KoTR", false);
+            } else if (setInfo.getFirst().equals("Anthology") && !setInfo.getLast().startsWith("LARP")) {
+                finalSets.add(String.join(":", setInfo));
+                finalSets.add("Anthology I:" + setInfo.getLast());
+            } else {
+                finalSets.add(set);
+            }
         }
         if (fullArtCards != null && fullArtCards.contains(id)) {
             finalSets.add("PFA:1");
@@ -344,15 +354,6 @@ public class AfterStartupService {
                 List<String> otherSubSet = subSets.stream().filter(s -> !s.startsWith(subSet)).toList();
                 sets.add(oldSet + ':' + String.join("/", otherSubSet));
             }
-        }
-    }
-
-    private static void addAnthologyISet(Set<String> sets, List<String> setInfo) {
-        if (setInfo.getFirst().equals("Anthology") && !setInfo.getLast().startsWith("LARP")) {
-            sets.add(String.join(":", setInfo));
-            sets.add("Anthology I:" + setInfo.getLast());
-        } else if (setInfo.getFirst().equals("Anthology")) {
-            sets.add(String.join(":", setInfo));
         }
     }
 
