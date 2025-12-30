@@ -8,7 +8,7 @@ import com.vtesdecks.scheduler.VtesdleTodayScheduler;
 import com.vtesdecks.scheduler.shops.CardGameGeekScheduler;
 import com.vtesdecks.scheduler.shops.DriveThruCardsScheduler;
 import com.vtesdecks.scheduler.shops.GamePodScheduler;
-import com.vtesdecks.scheduler.shops.TcgMarketScheduler;
+import com.vtesdecks.scheduler.shops.MarketScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -28,7 +28,7 @@ public class AdminEndpoint {
     private final VtesdleTodayScheduler vtesdleTodayScheduler;
     private final CardGameGeekScheduler cardGameGeekScheduler;
     private final ProxyCardOptionScheduler proxyCardOptionScheduler;
-    private final TcgMarketScheduler tcgMarketScheduler;
+    private final MarketScheduler marketScheduler;
     private final DeckArchetypeScheduler deckArchetypeScheduler;
 
     @GetMapping(value = "/scheduler/deck_views_clean", produces = {
@@ -79,11 +79,11 @@ public class AdminEndpoint {
         return "OK";
     }
 
-    @GetMapping(value = "/scheduler/tcgMarket", produces = {
+    @GetMapping(value = "/scheduler/market", produces = {
             MediaType.TEXT_PLAIN_VALUE
     })
-    public String tcgMarketScheduler() {
-        tcgMarketScheduler.scrapCards();
+    public String marketScheduler() {
+        marketScheduler.scrapCards();
         return "OK";
     }
 

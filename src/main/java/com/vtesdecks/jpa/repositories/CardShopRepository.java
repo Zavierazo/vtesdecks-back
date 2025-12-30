@@ -4,6 +4,7 @@ import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.model.ShopPlatform;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface CardShopRepository extends JpaRepository<CardShopEntity, Integer> {
@@ -11,6 +12,8 @@ public interface CardShopRepository extends JpaRepository<CardShopEntity, Intege
     List<CardShopEntity> findByCardId(Integer cardId);
 
     List<CardShopEntity> findByPlatform(ShopPlatform platform);
+
+    List<CardShopEntity> findByPlatformIn(Collection<ShopPlatform> platform);
 
     List<CardShopEntity> findByCardIdAndPlatform(Integer cardId, ShopPlatform platform);
 

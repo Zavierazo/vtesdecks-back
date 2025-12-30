@@ -1,6 +1,6 @@
 package com.vtesdecks.integration;
 
-import com.vtesdecks.model.tcgmarket.MarketResponse;
+import com.vtesdecks.model.market.CardOffersResponse;
 import feign.Logger;
 import feign.codec.Encoder;
 import feign.form.spring.SpringFormEncoder;
@@ -14,11 +14,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-@FeignClient(name = "TcgMarketClient", url = "https://tcg-admin-277076492109.europe-west1.run.app", configuration = TcgMarketClient.Configuration.class)
-public interface TcgMarketClient {
+@FeignClient(name = "MarketBloodLibraryClient", url = "https://market.bloodlibrary.info", configuration = MarketClient.Configuration.class)
+public interface MarketClient {
 
-    @GetMapping(value = "/api/market/details?order=price&game=Vampire%20The%20Eternal%20Struggle&ptype=SINGLES", produces = APPLICATION_JSON_VALUE)
-    MarketResponse getProducts(@RequestParam(name = "page") Integer page, @RequestParam(name = "page_size") Integer pageSize);
+    @GetMapping(value = "/api/card_offers", produces = APPLICATION_JSON_VALUE)
+    CardOffersResponse getCardOffers(@RequestParam(name = "offset") Integer offset, @RequestParam(name = "limit") Integer limit);
 
     class Configuration {
         @Bean

@@ -1,15 +1,17 @@
-package com.vtesdecks.model.tcgmarket;
+package com.vtesdecks.model.market;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class MarketProperty {
-    private Integer id;
-    private String name;
+public class CardOffersResponse {
+    private Long total;
+    private List<CardOffer> offers;
 }
