@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +16,8 @@ import java.util.Map;
 @Builder
 public class DeckQuery {
     private DeckType type;
-    private DeckSort order;
+    @Builder.Default
+    private DeckSort order = DeckSort.NEWEST;
     private Integer user;
     private String name;
     private String author;
@@ -52,6 +54,7 @@ public class DeckQuery {
     private List<String> paths;
     private Boolean favorite;
     private Integer archetype;
+    private LocalDate creationDate;
 
     public boolean isStarVampire() {
         return starVampire != null && starVampire;

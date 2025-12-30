@@ -37,6 +37,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.googlecode.cqengine.query.QueryFactory.applyThresholds;
@@ -81,7 +81,7 @@ public class DeckIndex {
     private DeckCardIndex deckCardIndex;
     @Autowired
     private LimitedFormatRepository limitedFormatRepository;
-    private IndexedCollection<Deck> decks = new ConcurrentIndexedCollection<Deck>();
+    private IndexedCollection<Deck> decks = new ConcurrentIndexedCollection<>();
 
 
     @PostConstruct
@@ -101,6 +101,7 @@ public class DeckIndex {
         decks.addIndex(HashIndex.onAttribute(Deck.VIEWS_LAST_MONTH_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.COMMENTS_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.CREATION_DATE_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(Deck.CREATION_TIMESTAMP_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.MODIFY_DATE_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.CLAN_MULTI_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.DISCIPLINE_MULTI_ATTRIBUTE));
@@ -139,11 +140,10 @@ public class DeckIndex {
     @Scheduled(cron = "${jobs.cache.deck.refresh:0 0 * * * *}")
     public void refreshIndex() {
         StopWatch stopWatch = new StopWatch();
-        ExecutorService executor = null;
-        try {
+        try (ExecutorService executor = Executors.newFixedThreadPool(5)) {
             stopWatch.start();
             Set<String> currentKeys = decks.stream().map(Deck::getId).collect(Collectors.toSet());
-            executor = Executors.newFixedThreadPool(5);
+
             List<LimitedFormatPayload> limitedFormats = getLimitedFormats();
             for (DeckEntity deck : deckRepository.findAll()) {
                 if (Boolean.FALSE.equals(deck.getDeleted())) {
@@ -152,25 +152,14 @@ public class DeckIndex {
                 }
             }
             if (!currentKeys.isEmpty()) {
-                log.warn("Deleting form index decks {}", currentKeys);
+                log.warn("Deleting from index decks {}", currentKeys);
                 for (String deleteKeys : currentKeys) {
                     deleteDeck(deleteKeys);
                 }
             }
         } finally {
-            if (executor != null) {
-                try {
-                    executor.shutdown();
-                    if (!executor.awaitTermination(5, TimeUnit.MINUTES)) {
-                        executor.shutdownNow();
-                    }
-                } catch (Exception e) {
-                    log.error("Unable to finish execution", e);
-                    executor.shutdownNow();
-                }
-            }
             stopWatch.stop();
-            log.info("Index finished in {} ms. Colletion size is {}", stopWatch.lastTaskInfo().getTimeMillis(), decks.size());
+            log.info("Index finished in {} ms. Collection size is {}", stopWatch.lastTaskInfo().getTimeMillis(), decks.size());
         }
     }
 
@@ -219,8 +208,9 @@ public class DeckIndex {
 
     public Deck get(String id) {
         Query<Deck> findByKeyQuery = equal(Deck.ID_ATTRIBUTE, id);
-        ResultSet<Deck> result = decks.retrieve(findByKeyQuery);
-        return (result.size() >= 1) ? result.uniqueResult() : null;
+        try (ResultSet<Deck> result = decks.retrieve(findByKeyQuery)) {
+            return (!result.isEmpty()) ? result.uniqueResult() : null;
+        }
     }
 
     public ResultSet<Deck> selectAll(DeckQuery deckQuery) {
@@ -301,13 +291,15 @@ public class DeckIndex {
         }
         if (StringUtils.isNotBlank(deckQuery.getCardText())) {
             List<Integer> ids = new ArrayList<>();
-            ResultSet<Crypt> crypts = cryptCache.selectAll(null, deckQuery.getCardText());
-            for (Crypt crypt : crypts) {
-                ids.add(crypt.getId());
+            try (ResultSet<Crypt> crypts = cryptCache.selectAll(null, deckQuery.getCardText())) {
+                for (Crypt crypt : crypts) {
+                    ids.add(crypt.getId());
+                }
             }
-            ResultSet<Library> libraries = libraryCache.selectAll(null, deckQuery.getCardText());
-            for (Library library : libraries) {
-                ids.add(library.getId());
+            try (ResultSet<Library> libraries = libraryCache.selectAll(null, deckQuery.getCardText())) {
+                for (Library library : libraries) {
+                    ids.add(library.getId());
+                }
             }
             query = and(query, existsIn(
                     deckCardIndex.getRepository(),
@@ -474,6 +466,14 @@ public class DeckIndex {
         }
         if (deckQuery.getArchetype() != null) {
             query = and(query, equal(Deck.ARCHETYPE_ATTRIBUTE, deckQuery.getArchetype()));
+        }
+        if (deckQuery.getCreationDate() != null) {
+            Long creationTimestamp = deckQuery.getCreationDate()
+                    .atStartOfDay()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli();
+            query = and(query, greaterThanOrEqualTo(Deck.CREATION_TIMESTAMP_ATTRIBUTE, creationTimestamp));
         }
         if (log.isDebugEnabled()) {
             log.debug("Query {} with options {}", query, queryOptions);

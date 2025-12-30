@@ -15,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,6 +38,7 @@ public class Deck {
     public static final Attribute<Deck, Integer> CRYPT_SIZE_ATTRIBUTE = QueryFactory.attribute(Deck.class, Integer.class, "crypt_size", (Deck deck) -> deck.getStats().getCrypt());
     public static final Attribute<Deck, Integer> LIBRARY_SIZE_ATTRIBUTE = QueryFactory.attribute(Deck.class, Integer.class, "library_size", (Deck deck) -> deck.getStats().getLibrary());
     public static final Attribute<Deck, LocalDateTime> CREATION_DATE_ATTRIBUTE = QueryFactory.attribute(Deck.class, LocalDateTime.class, "creationDate", Deck::getCreationDate);
+    public static final Attribute<Deck, Long> CREATION_TIMESTAMP_ATTRIBUTE = QueryFactory.attribute(Deck.class, Long.class, "creationDate", (Deck deck) -> deck.getCreationDate().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
     public static final Attribute<Deck, LocalDateTime> MODIFY_DATE_ATTRIBUTE = QueryFactory.attribute(Deck.class, LocalDateTime.class, "modificationDate", Deck::getModifyDate);
     public static final Attribute<Deck, Integer> USER_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, Integer.class, "user", (Deck deck) -> deck.getUser() != null ? deck.getUser().getId() : null);
     public static final Attribute<Deck, Integer> CLAN_NUMBER_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, Integer.class, "clanNumber", (Deck deck) -> deck.getClans().size());

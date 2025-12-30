@@ -8,6 +8,7 @@ import com.vtesdecks.model.api.ApiUser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -47,6 +48,9 @@ public class ApiUserService {
         grantedAuthorities.add(new SimpleGrantedAuthority("USER"));
         if (user.getAdmin() != null && user.getAdmin()) {
             grantedAuthorities.add(new SimpleGrantedAuthority("ADMIN"));
+        }
+        for (String role : roles) {
+            grantedAuthorities.add(new SimpleGrantedAuthority(StringUtils.upperCase(role)));
         }
         return Jwts
                 .builder()

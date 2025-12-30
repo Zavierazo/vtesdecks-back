@@ -1,5 +1,6 @@
 package com.vtesdecks.api.controller;
 
+import com.vtesdecks.model.MetaType;
 import com.vtesdecks.model.api.ApiDeckArchetype;
 import com.vtesdecks.service.DeckArchetypeService;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -24,16 +26,15 @@ import java.util.List;
 @RequestMapping("/api/1.0/deck-archetype")
 @RequiredArgsConstructor
 public class ApiDeckArchetypeController {
-
     private final DeckArchetypeService service;
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ApiDeckArchetype>> getAll() {
+    public ResponseEntity<List<ApiDeckArchetype>> getAll(@RequestParam(required = false, defaultValue = "TOURNAMENT") MetaType metaType) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isAdmin = auth != null && auth.getAuthorities().stream()
+        boolean showDisabled = auth != null && auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch("ADMIN"::equals);
-        List<ApiDeckArchetype> result = isAdmin ? service.getAll() : service.getAllActive();
+                .anyMatch(role -> role.equals("ADMIN") || role.equals("MANTAINER"));
+        List<ApiDeckArchetype> result = service.getAll(showDisabled, metaType);
         return ResponseEntity.ok(result);
     }
 
@@ -50,14 +51,14 @@ public class ApiDeckArchetypeController {
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @Secured({"ADMIN"})
+    @Secured({"ADMIN", "MANTAINER"})
     public ResponseEntity<ApiDeckArchetype> create(@RequestBody ApiDeckArchetype api) {
         ApiDeckArchetype created = service.create(api);
         return ResponseEntity.ok(created);
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @Secured({"ADMIN"})
+    @Secured({"ADMIN", "MANTAINER"})
     public ResponseEntity<ApiDeckArchetype> update(@PathVariable Integer id, @RequestBody ApiDeckArchetype api) {
         return service.update(id, api)
                 .map(ResponseEntity::ok)
@@ -65,7 +66,7 @@ public class ApiDeckArchetypeController {
     }
 
     @DeleteMapping(value = "/{id}")
-    @Secured({"ADMIN"})
+    @Secured({"ADMIN", "MANTAINER"})
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         boolean deleted = service.delete(id);
         if (!deleted) return ResponseEntity.notFound().build();

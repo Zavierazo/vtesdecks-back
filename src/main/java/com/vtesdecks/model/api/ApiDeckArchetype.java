@@ -15,6 +15,9 @@ public class ApiDeckArchetype {
     private String description;
     private String deckId;
     private Boolean enabled;
+    private Long deckCount;
+    private Long metaCount;
+    private Long metaTotal;
     private LocalDateTime creationDate;
     private LocalDateTime modificationDate;
 }
