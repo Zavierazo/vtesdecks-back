@@ -11,16 +11,22 @@ import com.vtesdecks.cache.redis.repositories.DeckArchetypeRedisRepository;
 import com.vtesdecks.jpa.entity.DeckArchetypeEntity;
 import com.vtesdecks.jpa.repositories.DeckArchetypeRepository;
 import com.vtesdecks.model.DeckQuery;
+import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.MetaType;
 import com.vtesdecks.model.api.ApiDeckArchetype;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
+import com.vtesdecks.util.CosineSimilarityUtils;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.StreamSupport;
 
 @Service
@@ -104,6 +110,50 @@ public class DeckArchetypeService {
                     deckCount(DeckQuery.builder().type(DeckType.TOURNAMENT).creationDate(LocalDate.now().minusDays(365)).build());
             default -> deckCount(DeckQuery.builder().type(DeckType.TOURNAMENT).build());
         };
+    }
+
+
+    public List<ApiDeckArchetype> getSuggestions() {
+        Set<String> visitedDeckIds = new java.util.HashSet<>();
+        List<ApiDeckArchetype> apiDeckArchetypes = new ArrayList<>();
+        try (ResultSet<Deck> deckResultSet = deckIndex.selectAll(DeckQuery.builder()
+                .type(DeckType.TOURNAMENT)
+                .order(DeckSort.PLAYERS)
+                .archetype(0)
+                .minPlayers(20)
+                .creationDate(LocalDate.now().minusDays(365))
+                .build())) {
+            for (Deck candidateDeck : deckResultSet) {
+                if (visitedDeckIds.contains(candidateDeck.getId())) {
+                    continue;
+                }
+                Map<Integer, Integer> candidateVector = CosineSimilarityUtils.getVector(candidateDeck);
+                try (ResultSet<Deck> tournamentResultSet = deckIndex.selectAll(DeckQuery.builder()
+                        .type(DeckType.TOURNAMENT)
+                        .minPlayers(20)
+                        .creationDate(LocalDate.now().minusDays(365))
+                        .build())) {
+                    List<Deck> similarTournamentDecks = tournamentResultSet.stream()
+                            .filter(target -> !target.getId().equals(candidateDeck.getId()))
+                            .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(candidateDeck, candidateVector, target, CosineSimilarityUtils.getVector(target))))
+                            .filter(pair -> pair.getValue() >= 0.5)
+                            .map(Pair::getKey)
+                            .toList();
+                    visitedDeckIds.addAll(similarTournamentDecks.stream().map(Deck::getId).toList());
+                    if (similarTournamentDecks.size() >= 3 || similarTournamentDecks.stream().anyMatch(deck -> deck.getPlayers() >= 50)) {
+                        apiDeckArchetypes.add(ApiDeckArchetype.builder()
+                                .name("Suggestion: " + candidateDeck.getName())
+                                .description("Auto-generated suggestion based on similar decks in the last year.")
+                                .deckId(candidateDeck.getId())
+                                .enabled(true)
+                                .metaCount((long) similarTournamentDecks.size())
+                                .metaTotal(getMetaTotal(MetaType.TOURNAMENT_365))
+                                .build());
+                    }
+                }
+            }
+        }
+        return apiDeckArchetypes;
     }
 
     private long deckCount(DeckQuery query) {

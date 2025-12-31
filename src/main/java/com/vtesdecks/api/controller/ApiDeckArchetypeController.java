@@ -52,6 +52,12 @@ public class ApiDeckArchetypeController {
         return service.getById(id, Utils.getCurrencyCode(request)).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @GetMapping(value = "/suggestions", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ApiDeckArchetype>> getSuggestions(HttpServletRequest request) {
+        List<ApiDeckArchetype> result = service.getSuggestions();
+        return ResponseEntity.ok(result);
+    }
+
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Secured({"ADMIN", "MANTAINER"})
     public ResponseEntity<ApiDeckArchetype> create(HttpServletRequest request, @RequestBody ApiDeckArchetype api) {
