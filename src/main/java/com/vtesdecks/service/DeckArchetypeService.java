@@ -126,7 +126,7 @@ public class DeckArchetypeService {
                 .order(DeckSort.PLAYERS)
                 .archetype(0)
                 .minPlayers(20)
-                .creationDate(LocalDate.now().minusDays(365))
+                .creationDate(LocalDate.now().minusYears(3))
                 .build())) {
             for (Deck candidateDeck : deckResultSet) {
                 if (visitedDeckIds.contains(candidateDeck.getId())) {
@@ -135,8 +135,8 @@ public class DeckArchetypeService {
                 Map<Integer, Integer> candidateVector = CosineSimilarityUtils.getVector(candidateDeck);
                 try (ResultSet<Deck> tournamentResultSet = deckIndex.selectAll(DeckQuery.builder()
                         .type(DeckType.TOURNAMENT)
-                        .minPlayers(20)
-                        .creationDate(LocalDate.now().minusDays(365))
+                        .minPlayers(10)
+                        .creationDate(LocalDate.now().minusYears(3))
                         .build())) {
                     List<Deck> similarTournamentDecks = tournamentResultSet.stream()
                             .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(candidateDeck, candidateVector, target, CosineSimilarityUtils.getVector(target))))
@@ -144,14 +144,14 @@ public class DeckArchetypeService {
                             .map(Pair::getKey)
                             .toList();
                     visitedDeckIds.addAll(similarTournamentDecks.stream().map(Deck::getId).toList());
-                    if (similarTournamentDecks.size() >= 4 || similarTournamentDecks.stream().anyMatch(deck -> deck.getPlayers() >= 50)) {
+                    if (similarTournamentDecks.stream().filter(deck -> deck.getPlayers() >= 20).count() > 2 && (similarTournamentDecks.size() >= 4 || similarTournamentDecks.stream().anyMatch(deck -> deck.getPlayers() >= 50))) {
                         apiDeckArchetypes.add(ApiDeckArchetype.builder()
                                 .name("Suggestion: " + candidateDeck.getName())
                                 .description("Auto-generated suggestion based on similar decks in the last year.")
                                 .deckId(candidateDeck.getId())
                                 .enabled(true)
                                 .metaCount((long) similarTournamentDecks.size())
-                                .metaTotal(getMetaTotal(MetaType.TOURNAMENT_365))
+                                .metaTotal(getMetaTotal(MetaType.TOURNAMENT))
                                 .build());
                     }
                 }
