@@ -53,7 +53,9 @@ public class DeckArchetypeService {
                     if (aId != null && aId == 0 && (bId == null || bId != 0)) return 1;
                     if (bId != null && bId == 0 && (aId == null || aId != 0)) return -1;
                     // Otherwise sort by metaCount descending (metaCount is non-null due to previous filter)
-                    return b.getMetaCount().compareTo(a.getMetaCount());
+                    int comparison = b.getMetaCount().compareTo(a.getMetaCount());
+                    if (comparison != 0) return comparison;
+                    return b.getDeckCount().compareTo(a.getDeckCount());
                 })
                 .toList();
     }
