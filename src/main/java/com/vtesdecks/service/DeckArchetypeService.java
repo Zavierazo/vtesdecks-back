@@ -45,7 +45,7 @@ public class DeckArchetypeService {
         List<ApiDeckArchetype> apiDeckArchetypeList = mapper.map(deckArchetypeList, getMetaTotal(metaType), metaType, currencyCode);
         return apiDeckArchetypeList.stream()
                 .filter(deck -> showDisabled || Boolean.TRUE.equals(deck.getEnabled()))
-                .filter(deck -> showDisabled || deck.getMetaCount() != null && deck.getMetaCount() > 0)
+                .filter(deck -> deck.getMetaCount() != null && deck.getMetaCount() > 0)
                 .sorted((a, b) -> {
                     // Put Unclassified archetype always at the end
                     Integer aId = a.getId();
