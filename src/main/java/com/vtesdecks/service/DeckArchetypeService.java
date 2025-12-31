@@ -72,6 +72,7 @@ public class DeckArchetypeService {
         DeckArchetypeEntity saved = repository.save(entity);
         deckArchetypeScheduler.updateDeckArchetype(saved.getId());
         deckArchetypeIndex.refreshIndex(saved.getId());
+        deckIndex.refreshIndex(saved.getDeckId());
         return getById(saved.getId(), currencyCode);
     }
 
@@ -88,14 +89,18 @@ public class DeckArchetypeService {
         DeckArchetypeEntity saved = repository.save(entity);
         if (!Objects.equals(api.getDeckId(), saved.getDeckId())) {
             deckArchetypeScheduler.updateDeckArchetype(saved.getId());
+            deckIndex.refreshIndex(api.getDeckId());
+            deckIndex.refreshIndex(saved.getDeckId());
         }
         deckArchetypeIndex.refreshIndex(saved.getId());
         return getById(saved.getId(), currencyCode);
     }
 
     public boolean delete(Integer id) {
-        if (!repository.existsById(id)) return false;
+        Optional<DeckArchetypeEntity> deleteEntity = repository.findById(id);
+        if (deleteEntity.isEmpty()) return false;
         repository.deleteById(id);
+        deckIndex.refreshIndex(deleteEntity.get().getDeckId());
         deckArchetypeIndex.refreshIndex(id);
         return true;
     }
