@@ -140,13 +140,13 @@ public class DeckArchetypeService {
                             .map(Pair::getKey)
                             .toList();
                     visitedDeckIds.addAll(similarTournamentDecks.stream().map(Deck::getId).toList());
-                    if (similarTournamentDecks.size() >= 3 || similarTournamentDecks.stream().anyMatch(deck -> deck.getPlayers() >= 50)) {
+                    if (candidateDeck.getPlayers() >= 50 || similarTournamentDecks.size() >= 3 || similarTournamentDecks.stream().anyMatch(deck -> deck.getPlayers() >= 50)) {
                         apiDeckArchetypes.add(ApiDeckArchetype.builder()
                                 .name("Suggestion: " + candidateDeck.getName())
                                 .description("Auto-generated suggestion based on similar decks in the last year.")
                                 .deckId(candidateDeck.getId())
                                 .enabled(true)
-                                .metaCount((long) similarTournamentDecks.size())
+                                .metaCount((long) similarTournamentDecks.size() + 1)
                                 .metaTotal(getMetaTotal(MetaType.TOURNAMENT_365))
                                 .build());
                     }
