@@ -113,6 +113,8 @@ public class DeckArchetypeService {
                     deckCount(DeckQuery.builder().type(DeckType.TOURNAMENT).creationDate(LocalDate.now().minusDays(180)).build());
             case TOURNAMENT_365 ->
                     deckCount(DeckQuery.builder().type(DeckType.TOURNAMENT).creationDate(LocalDate.now().minusDays(365)).build());
+            case TOURNAMENT_730 ->
+                    deckCount(DeckQuery.builder().type(DeckType.TOURNAMENT).creationDate(LocalDate.now().minusDays(730)).build());
             default -> deckCount(DeckQuery.builder().type(DeckType.TOURNAMENT).build());
         };
     }

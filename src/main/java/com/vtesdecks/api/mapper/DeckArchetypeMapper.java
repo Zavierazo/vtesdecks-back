@@ -37,6 +37,9 @@ public abstract class DeckArchetypeMapper {
             case TOURNAMENT_365:
                 api.setMetaCount(entity.getTournament365Count());
                 break;
+            case TOURNAMENT_730:
+                api.setMetaCount(entity.getTournament730Count());
+                break;
             case TOURNAMENT:
             default:
                 api.setMetaCount(entity.getTournamentCount());

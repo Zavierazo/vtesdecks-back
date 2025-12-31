@@ -31,6 +31,7 @@ public class DeckArchetype {
     private Long tournament90Count;
     private Long tournament180Count;
     private Long tournament365Count;
+    private Long tournament730Count;
     private BigDecimal price;
     private String currency;
     private LocalDateTime creationDate;

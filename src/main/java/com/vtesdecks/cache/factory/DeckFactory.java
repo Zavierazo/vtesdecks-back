@@ -58,6 +58,7 @@ public class DeckFactory {
     private static final List<String> DOMAIN_IGNORED = Lists.newArrayList("localhost", "beta.vtesdecks.com");
     private static final List<String> VIEWS_IGNORED =
             Lists.newArrayList("https://vtesdecks.com/",
+                    "https://vtesdecks.com/archetypes",
                     "https://vtesdecks.com/decks",
                     "https://vtesdecks.com/decks?order=NEWEST",
                     "https://vtesdecks.com/decks?order=POPULAR",
@@ -71,6 +72,7 @@ public class DeckFactory {
                     "https://vtesdecks.com/decks?type=COMMUNITY&order=POPULAR",
                     "https://vtesdecks.com/decks?type=COMMUNITY",
                     "/",
+                    "/archetypes",
                     "/decks",
                     "/decks?order=NEWEST",
                     "/decks?order=POPULAR",
