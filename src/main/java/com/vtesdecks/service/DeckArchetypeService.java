@@ -139,19 +139,18 @@ public class DeckArchetypeService {
                         .creationDate(LocalDate.now().minusDays(365))
                         .build())) {
                     List<Deck> similarTournamentDecks = tournamentResultSet.stream()
-                            .filter(target -> !target.getId().equals(candidateDeck.getId()))
                             .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(candidateDeck, candidateVector, target, CosineSimilarityUtils.getVector(target))))
                             .filter(pair -> pair.getValue() >= 0.5)
                             .map(Pair::getKey)
                             .toList();
                     visitedDeckIds.addAll(similarTournamentDecks.stream().map(Deck::getId).toList());
-                    if (candidateDeck.getPlayers() >= 50 || similarTournamentDecks.size() >= 3 || similarTournamentDecks.stream().anyMatch(deck -> deck.getPlayers() >= 50)) {
+                    if (similarTournamentDecks.size() >= 4 || similarTournamentDecks.stream().anyMatch(deck -> deck.getPlayers() >= 50)) {
                         apiDeckArchetypes.add(ApiDeckArchetype.builder()
                                 .name("Suggestion: " + candidateDeck.getName())
                                 .description("Auto-generated suggestion based on similar decks in the last year.")
                                 .deckId(candidateDeck.getId())
                                 .enabled(true)
-                                .metaCount((long) similarTournamentDecks.size() + 1)
+                                .metaCount((long) similarTournamentDecks.size())
                                 .metaTotal(getMetaTotal(MetaType.TOURNAMENT_365))
                                 .build());
                     }
