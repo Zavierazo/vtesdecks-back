@@ -15,6 +15,7 @@ import com.vtesdecks.model.api.ApiShop;
 import com.vtesdecks.model.api.ApiShopResult;
 import com.vtesdecks.util.TrigramSimilarity;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.Strings;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -25,6 +26,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static com.vtesdecks.util.Utils.normalizeName;
 
 @Service
 @RequiredArgsConstructor
@@ -115,9 +118,18 @@ public class ApiCardService {
             Set<String> queryTrigrams = TrigramSimilarity.generateTrigram(query);
             return Stream.concat(cryptResult.stream(), libraryResult.stream())
                     .map((Card card) -> {
-                        BigDecimal trigramsScore = TrigramSimilarity.trigramSimilarity(card.getName(), query, card.getNameTrigrams(), queryTrigrams);
+                        BigDecimal trigramsScore = BigDecimal.ZERO;
+                        if (Strings.CI.equals(query, card.getName())
+                                || Strings.CI.equals(query, card.getAka())
+                                || Strings.CI.equals(normalizeName(query), normalizeName(card.getName()))
+                                || Strings.CI.equals(normalizeName(query), normalizeName(card.getAka()))) {
+                            trigramsScore = BigDecimal.ONE;
+                        }
                         if (trigramsScore.compareTo(targetScore) < 0) {
-                            trigramsScore = TrigramSimilarity.trigramSimilarity(card.getAka(), query, card.getAkaTrigrams(), queryTrigrams);
+                            trigramsScore = TrigramSimilarity.trigramSimilarity(card.getName(), query, card.getNameTrigrams(), queryTrigrams);
+                            if (trigramsScore.compareTo(targetScore) < 0) {
+                                trigramsScore = TrigramSimilarity.trigramSimilarity(card.getAka(), query, card.getAkaTrigrams(), queryTrigrams);
+                            }
                         }
                         if (trigramsScore.compareTo(targetScore) > 0) {
                             if (card instanceof Crypt crypt) {

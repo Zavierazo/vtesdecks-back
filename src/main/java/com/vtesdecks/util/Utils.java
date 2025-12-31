@@ -146,6 +146,9 @@ public class Utils {
     }
 
     public static String normalizeName(String name) {
+        if (name == null) {
+            return null;
+        }
         return AnyAscii.transliterate(StringUtils.trim(name)).replaceAll("[/\\\\]", "");
     }
 }
