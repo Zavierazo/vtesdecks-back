@@ -171,6 +171,7 @@ public abstract class ApiDeckMapper {
 
 
     @Mapping(target = "id", source = "cardId")
+    @Mapping(target = "cardId", source = "cardId")
     @Mapping(target = "name", source = "cardId", qualifiedByName = "mapCardName")
     protected abstract ApiErrata mapErrata(CardErrataEntity cardErrata);
 
