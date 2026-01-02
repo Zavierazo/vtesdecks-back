@@ -19,13 +19,13 @@ import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.entity.DeckViewEntity;
+import com.vtesdecks.jpa.repositories.CardErrataRepository;
 import com.vtesdecks.jpa.repositories.CommentRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.jpa.repositories.DeckViewRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.DeckTag;
 import com.vtesdecks.model.DeckWarningLabel;
-import com.vtesdecks.model.Errata;
 import com.vtesdecks.model.limitedformat.LimitedFormatPayload;
 import com.vtesdecks.util.CosineSimilarityUtils;
 import com.vtesdecks.util.VtesUtils;
@@ -99,6 +99,8 @@ public class DeckFactory {
     private UserRepository userRepository;
     @Autowired
     private CommentRepository commentRepository;
+    @Autowired
+    private CardErrataRepository cardErrataRepository;
 
     public Deck getDeck(DeckEntity deck, List<DeckCard> deckCards, List<LimitedFormatPayload> limitedFormats) {
         Deck value = new Deck();
@@ -250,16 +252,12 @@ public class DeckFactory {
         value.setCreationDate(deck.getCreationDate());
         value.setModifyDate(deck.getModificationDate());
         LocalDate deckDate = value.getType() == DeckType.COMMUNITY && value.getModifyDate() != null ? value.getModifyDate().toLocalDate() : value.getCreationDate().toLocalDate();
-        value.setErratas(cards
-                .stream()
-                .map(Card::getId)
-                .map(id -> Errata.findErrata(id, deckDate))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet()));
+        value.setErratas(cardErrataRepository.findByEffectiveDateAfterAndRequiresWarningTrueAndCardIdIn(deckDate, cards.stream().map(Card::getId).toList()));
         value.setTags(getDeckTags(value, limitedFormats));
         value.setL2Norm(CosineSimilarityUtils.computeL2Norm(CosineSimilarityUtils.getVector(value)));
         return value;
     }
+
 
     private void fillWarnings(Set<DeckWarning> warnings, String banned, List<String> sets) {
         if (!isEmpty(banned)) {

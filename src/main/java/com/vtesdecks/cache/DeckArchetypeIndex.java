@@ -26,7 +26,7 @@ public class DeckArchetypeIndex {
     private final DeckArchetypeRepository deckArchetypeRepository;
     private final DeckArchetypeFactory deckArchetypeFactory;
 
-    @Scheduled(cron = "${jobs.cache.deck-archetype.refresh:0 0 * * * *}")
+    @Scheduled(initialDelay = 0L, fixedDelayString = "${vtesdecks.cache.refresh-delay-ms:300000}")
     public void refreshIndex() {
         StopWatch stopWatch = new StopWatch();
         try {

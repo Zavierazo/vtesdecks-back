@@ -12,4 +12,5 @@ public class ApiErrata {
     private String name;
     private LocalDate effectiveDate;
     private String description;
+    private Boolean requiresWarning;
 }

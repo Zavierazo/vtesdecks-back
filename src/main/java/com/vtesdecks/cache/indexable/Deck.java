@@ -8,8 +8,8 @@ import com.googlecode.cqengine.query.option.QueryOptions;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.Stats;
 import com.vtesdecks.cache.indexable.deck.card.Card;
+import com.vtesdecks.jpa.entity.CardErrataEntity;
 import com.vtesdecks.jpa.entity.UserEntity;
-import com.vtesdecks.model.Errata;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 
@@ -125,7 +125,7 @@ public class Deck {
     private Set<Integer> groups;
     private Set<String> disciplines;
     private Stats stats;
-    private Set<Errata> erratas;
+    private List<CardErrataEntity> erratas;
     private Set<DeckWarning> warnings;
     private Set<String> tags;
     private Double l2Norm;

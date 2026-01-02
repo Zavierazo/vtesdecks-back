@@ -8,9 +8,9 @@ import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.CollectionTracker;
 import com.vtesdecks.cache.indexable.deck.card.Card;
+import com.vtesdecks.jpa.entity.CardErrataEntity;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
-import com.vtesdecks.model.Errata;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDeckStats;
@@ -162,23 +162,32 @@ public abstract class ApiDeckMapper {
         }
     }
 
-    protected abstract ApiErrata map(Errata errata);
-
-    @AfterMapping
-    protected void afterMapping(@MappingTarget ApiErrata api) {
-        if (VtesUtils.isLibrary(api.getId())) {
-            Library library = libraryCache.get(api.getId());
-            api.setName(library.getName());
-        } else {
-            Crypt crypt = cryptCache.get(api.getId());
-            api.setName(crypt.getName());
-        }
-    }
-
     private void convertPriceCurrency(ApiDeckStats stats, String currencyCode) {
         if (stats.getPrice() != null && currencyCode != null && !currencyCode.equalsIgnoreCase(DEFAULT_CURRENCY)) {
             stats.setPrice(currencyExchangeService.convert(stats.getPrice(), DEFAULT_CURRENCY, currencyCode));
             stats.setCurrency(currencyCode);
+        }
+    }
+
+
+    @Mapping(target = "id", source = "cardId")
+    @Mapping(target = "name", source = "cardId", qualifiedByName = "mapCardName")
+    protected abstract ApiErrata mapErrata(CardErrataEntity cardErrata);
+
+    @Named("mapCardName")
+    protected String mapCardName(Integer cardId) {
+        if (VtesUtils.isLibrary(cardId)) {
+            Library library = libraryCache.get(cardId);
+            if (library == null) {
+                return null;
+            }
+            return library.getName();
+        } else {
+            Crypt crypt = cryptCache.get(cardId);
+            if (crypt == null) {
+                return null;
+            }
+            return crypt.getName();
         }
     }
 }
