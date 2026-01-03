@@ -81,9 +81,8 @@ public class ApiDeckController {
                 .order(order)
                 .user(ApiUtils.extractUserId())
                 .favorite(favorite)
-                .currencyCode(currencyCode)
                 .build();
-        return deckService.getDecks(deckQuery, 0, limit);
+        return deckService.getDecks(deckQuery, null, null, currencyCode, 0, limit);
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/{id}", produces = {
@@ -177,10 +176,8 @@ public class ApiDeckController {
                 .combat(DeckQuery.CardProportion.fromValue(combat))
                 .reaction(DeckQuery.CardProportion.fromValue(reaction))
                 .event(DeckQuery.CardProportion.fromValue(event))
-                .collectionPercentage(collectionPercentage)
-                .bySimilarity(bySimilarity)
                 .build();
-        ApiDecks decks = deckService.getDecks(deckQuery, offset != null ? offset : 0, limit != null ? limit : 20);
+        ApiDecks decks = deckService.getDecks(deckQuery, collectionPercentage, bySimilarity, Utils.getCurrencyCode(request), offset != null ? offset : 0, limit != null ? limit : 20);
         return new ResponseEntity<>(decks, HttpStatus.OK);
     }
 

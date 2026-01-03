@@ -185,7 +185,7 @@ public class ApiUserCollectionController {
                 .user(ApiUtils.extractUserId())
                 .cards(List.of(id + "=1"))
                 .build();
-        ApiDecks decks = apiDeckService.getDecks(deckQuery, 0, 10);
+        ApiDecks decks = apiDeckService.getDecks(deckQuery, null, null, null, 0, 10);
         return collectionService.getCardStats(id, decks, summary);
     }
 

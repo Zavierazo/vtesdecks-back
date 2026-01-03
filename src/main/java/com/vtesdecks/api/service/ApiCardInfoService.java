@@ -47,7 +47,7 @@ public class ApiCardInfoService {
         Integer userId = ApiUtils.extractUserId();
         ApiCardInfo cardInfo = new ApiCardInfo();
         fillShopInfo(id, cardInfo);
-        cardInfo.setPreconstructedDecks(getPreconstructedDecks(id));
+        cardInfo.setPreconstructedDecks(getPreconstructedDecks(id, currencyCode));
         cardInfo.setCollectionStats(getCollectionStats(id, userId));
         fillPriceInfo(cardInfo, id, currencyCode);
         cardInfo.setRulingList(rulingService.getRulings(id));
@@ -76,13 +76,13 @@ public class ApiCardInfoService {
         return rulings != null ? rulings : Collections.emptyList();
     }
 
-    private List<ApiDeck> getPreconstructedDecks(Integer id) {
+    private List<ApiDeck> getPreconstructedDecks(Integer id, String currencyCode) {
         DeckQuery deckQuery = DeckQuery.builder()
                 .apiType(ApiDeckType.PRECONSTRUCTED)
                 .order(DeckSort.NEWEST)
                 .cards(List.of(id + "=1"))
                 .build();
-        ApiDecks apiDecks = apiDeckService.getDecks(deckQuery, 0, 10);
+        ApiDecks apiDecks = apiDeckService.getDecks(deckQuery, null, null, currencyCode, 0, 10);
         return apiDecks != null && apiDecks.getDecks() != null ? apiDecks.getDecks() : Collections.emptyList();
     }
 
@@ -115,7 +115,7 @@ public class ApiCardInfoService {
                     .user(userId)
                     .cards(List.of(id + "=1"))
                     .build();
-            ApiDecks decks = apiDeckService.getDecks(deckQuery, 0, 10);
+            ApiDecks decks = apiDeckService.getDecks(deckQuery, null, null, null, 0, 10);
             collectionStats = apiCollectionService.getCardStats(id, decks, false);
         } catch (Exception e) {
             log.warn("Unable to fetch collection stats for card id {}", id, e);

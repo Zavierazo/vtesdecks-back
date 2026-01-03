@@ -47,7 +47,7 @@ public class ApiDeckService {
         }
     }
 
-    public ApiDecks getDecks(DeckQuery deckQuery, int offset, int limit) {
+    public ApiDecks getDecks(DeckQuery deckQuery, Integer collectionPercentage, String bySimilarity, String currencyCode, int offset, int limit) {
         ResultSet<Deck> decks = deckService.getDecks(deckQuery);
         ApiDecks apiDecks = new ApiDecks();
         apiDecks.setTotal(decks.size());
@@ -55,17 +55,17 @@ public class ApiDeckService {
 
         Stream<Deck> deckStream = decks.stream();
         // Filter by collection percentage
-        if (deckQuery.getCollectionPercentage() != null && deckQuery.getCollectionPercentage() > 0) {
+        if (collectionPercentage != null && collectionPercentage > 0) {
             Map<Integer, Integer> collectionMap = apiCollectionService.getCollectionCardsMap();
-            deckStream = deckStream.filter(deck -> matchCollectionPercentage(deck, collectionMap, deckQuery.getCollectionPercentage()));
+            deckStream = deckStream.filter(deck -> matchCollectionPercentage(deck, collectionMap, collectionPercentage));
         }
         // Sort by similarity if requested
-        if (deckQuery.getBySimilarity() != null) {
-            Deck queryDeck = deckService.getDeck(deckQuery.getBySimilarity());
+        if (bySimilarity != null) {
+            Deck queryDeck = deckService.getDeck(bySimilarity);
             if (queryDeck != null) {
                 Map<Integer, Integer> queryVector = CosineSimilarityUtils.getVector(queryDeck);
                 deckStream = deckStream
-                        .filter(target -> !target.getId().equals(deckQuery.getBySimilarity()))
+                        .filter(target -> !target.getId().equals(bySimilarity))
                         .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(queryDeck, queryVector, target, CosineSimilarityUtils.getVector(target))))
                         .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                         .map(Pair::getKey);
@@ -74,12 +74,12 @@ public class ApiDeckService {
         apiDecks.setDecks(deckStream
                 .skip(offset)
                 .limit(limit)
-                .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), deckQuery.getCards(), deckQuery.getCurrencyCode()))
+                .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), deckQuery.getCards(), currencyCode))
                 .toList());
         if (offset == 0 && deckQuery.getUser() != null && deckQuery.getType() == DeckType.USER) {
             apiDecks.setRestorableDecks(deckRepository.selectUserDeleted(deckQuery.getUser()).stream()
                     .map(dbDeck -> deckFactory.getDeck(dbDeck, new ArrayList<>(), new ArrayList<>()))
-                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), deckQuery.getCards(), deckQuery.getCurrencyCode()))
+                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), deckQuery.getCards(), currencyCode))
                     .toList());
         }
         return apiDecks;

@@ -41,7 +41,6 @@ public class DeckQuery {
     private Integer maxYear;
     private Integer minPlayers;
     private Integer maxPlayers;
-    private Integer collectionPercentage;
     private ProportionType proportionType;
     private CardProportion master;
     private CardProportion action;
@@ -59,8 +58,6 @@ public class DeckQuery {
     private Boolean favorite;
     private Integer archetype;
     private LocalDate creationDate;
-    private String bySimilarity;
-    private String currencyCode;
 
     public boolean isStarVampire() {
         return starVampire != null && starVampire;
