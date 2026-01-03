@@ -2,15 +2,15 @@ package com.vtesdecks.api.service;
 
 import com.vtesdecks.api.mapper.ApiUserNotificationMapper;
 import com.vtesdecks.api.util.ApiUtils;
-import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.enums.UserNotificationType;
 import com.vtesdecks.jpa.entity.CommentEntity;
 import com.vtesdecks.jpa.entity.UserNotificationEntity;
 import com.vtesdecks.jpa.repositories.UserNotificationRepository;
 import com.vtesdecks.model.api.ApiUserNotification;
+import com.vtesdecks.service.DeckService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -18,15 +18,13 @@ import java.util.List;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ApiUserNotificationService {
     private static final int NOTIFICATION_MAX_LENGTH = 1000;
     public static final String NEW_LINE = "<br/>";
-    @Autowired
-    private UserNotificationRepository userNotificationRepository;
-    @Autowired
-    private ApiUserNotificationMapper apiUserNotificationMapper;
-    @Autowired
-    private DeckIndex deckIndex;
+    private final UserNotificationRepository userNotificationRepository;
+    private final ApiUserNotificationMapper apiUserNotificationMapper;
+    private final DeckService deckService;
 
     public Integer notificationUnreadCount(Integer userId) {
         if (userId == null) {
@@ -65,7 +63,7 @@ public class ApiUserNotificationService {
     }
 
     public void processCommentNotification(String deckId, CommentEntity comment, List<CommentEntity> commentList) {
-        Deck deck = deckIndex.get(deckId);
+        Deck deck = deckService.getDeck(deckId);
         if (deck != null) {
             /* Case 1: Notify deck owner
              *  Exceptions:

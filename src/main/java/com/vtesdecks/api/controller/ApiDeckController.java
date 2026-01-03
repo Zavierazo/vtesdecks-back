@@ -4,10 +4,11 @@ import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
+import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.DeckExportType;
+import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckTag;
-import com.vtesdecks.model.DeckType;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDeckHome;
 import com.vtesdecks.model.api.ApiDeckView;
@@ -56,31 +57,33 @@ public class ApiDeckController {
     public ResponseEntity<ApiDeckHome> home(HttpServletRequest request) {
         String currencyCode = Utils.getCurrencyCode(request);
         ApiDeckHome apiDeckHome = new ApiDeckHome();
-        apiDeckHome.setPreConstructedTotal(decks(0, DeckType.PRECONSTRUCTED, DeckSort.NEWEST, null, currencyCode).getTotal());
+        apiDeckHome.setPreConstructedTotal(decks(0, ApiDeckType.PRECONSTRUCTED, DeckSort.NEWEST, null, currencyCode).getTotal());
         if (ApiUtils.extractUserId() != null) {
-            apiDeckHome.setUserTotal(decks(0, DeckType.USER, DeckSort.NEWEST, null, currencyCode).getTotal());
-            apiDeckHome.setFavoriteTotal(decks(0, DeckType.ALL, DeckSort.NEWEST, Boolean.TRUE, currencyCode).getTotal());
+            apiDeckHome.setUserTotal(decks(0, ApiDeckType.USER, DeckSort.NEWEST, null, currencyCode).getTotal());
+            apiDeckHome.setFavoriteTotal(decks(0, ApiDeckType.ALL, DeckSort.NEWEST, Boolean.TRUE, currencyCode).getTotal());
         }
-        ApiDecks tournamentPopular = decks(6, DeckType.TOURNAMENT, DeckSort.POPULAR, null, currencyCode);
+        ApiDecks tournamentPopular = decks(6, ApiDeckType.TOURNAMENT, DeckSort.POPULAR, null, currencyCode);
         apiDeckHome.setTournamentPopular(tournamentPopular.getDecks());
-        ApiDecks tournamentNewest = decks(6, DeckType.TOURNAMENT, DeckSort.NEWEST, null, currencyCode);
+        ApiDecks tournamentNewest = decks(6, ApiDeckType.TOURNAMENT, DeckSort.NEWEST, null, currencyCode);
         apiDeckHome.setTournamentNewest(tournamentNewest.getDecks());
-        ApiDecks communityPopular = decks(6, DeckType.COMMUNITY, DeckSort.POPULAR, null, currencyCode);
+        ApiDecks communityPopular = decks(6, ApiDeckType.COMMUNITY, DeckSort.POPULAR, null, currencyCode);
         apiDeckHome.setCommunityPopular(communityPopular.getDecks());
-        ApiDecks communityNewest = decks(6, DeckType.COMMUNITY, DeckSort.NEWEST, null, currencyCode);
+        ApiDecks communityNewest = decks(6, ApiDeckType.COMMUNITY, DeckSort.NEWEST, null, currencyCode);
         apiDeckHome.setCommunityNewest(communityNewest.getDecks());
         apiDeckHome.setTournamentTotal(tournamentPopular.getTotal());
         apiDeckHome.setCommunityTotal(communityPopular.getTotal());
         return new ResponseEntity<>(apiDeckHome, HttpStatus.OK);
     }
 
-    private ApiDecks decks(Integer limit, DeckType type, DeckSort order, Boolean favorite, String currencyCode) {
-        return deckService.getDecks(type, order, ApiUtils.extractUserId(), null, null, null,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null,
-                favorite, currencyCode, 0, limit);
+    private ApiDecks decks(Integer limit, ApiDeckType type, DeckSort order, Boolean favorite, String currencyCode) {
+        DeckQuery deckQuery = DeckQuery.builder()
+                .apiType(type)
+                .order(order)
+                .user(ApiUtils.extractUserId())
+                .favorite(favorite)
+                .currencyCode(currencyCode)
+                .build();
+        return deckService.getDecks(deckQuery, 0, limit);
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/{id}", produces = {
@@ -102,7 +105,7 @@ public class ApiDeckController {
     })
     @ResponseBody
     public ResponseEntity<ApiDecks> decks(HttpServletRequest request,
-                                          @RequestParam(name = "type", required = false, defaultValue = "ALL") DeckType type,
+                                          @RequestParam(name = "type", required = false, defaultValue = "ALL") ApiDeckType type,
                                           @RequestParam(name = "order", required = false, defaultValue = "NEWEST") DeckSort order,
                                           @RequestParam(name = "name", required = false) String name,
                                           @RequestParam(name = "author", required = false) String author,
@@ -139,10 +142,45 @@ public class ApiDeckController {
                                           @RequestParam(name = "collectionPercentage", required = false) Integer collectionPercentage,
                                           @RequestParam(name = "offset", required = false) Integer offset,
                                           @RequestParam(name = "limit", required = false) Integer limit) {
-        ApiDecks decks = deckService.getDecks(type, order, ApiUtils.extractUserId(), name, author, exactAuthor, cardText, clans, disciplines, cards, cryptSize,
-                librarySize, group, starVampire, singleClan, singleDiscipline, year, players, master, action, political, retainer, equipment, ally,
-                modifier, combat, reaction, event, archetype, absoluteProportion, tags, limitedFormat, paths, bySimilarity, collectionPercentage, favorite,
-                Utils.getCurrencyCode(request), offset != null ? offset : 0, limit != null ? limit : 20);
+        DeckQuery deckQuery = DeckQuery.builder()
+                .apiType(type)
+                .order(order)
+                .user(ApiUtils.extractUserId())
+                .name(name)
+                .author(author)
+                .exactAuthor(exactAuthor)
+                .cardText(cardText)
+                .clans(clans)
+                .disciplines(disciplines)
+                .starVampire(starVampire)
+                .singleClan(singleClan)
+                .singleDiscipline(singleDiscipline)
+                .tags(tags)
+                .favorite(favorite)
+                .cards(cards)
+                .limitedFormat(limitedFormat)
+                .paths(paths)
+                .archetype(archetype)
+                .cryptSize(cryptSize)
+                .librarySize(librarySize)
+                .group(group)
+                .year(year)
+                .players(players)
+                .absoluteProportion(absoluteProportion)
+                .master(DeckQuery.CardProportion.fromValue(master))
+                .action(DeckQuery.CardProportion.fromValue(action))
+                .political(DeckQuery.CardProportion.fromValue(political))
+                .retainer(DeckQuery.CardProportion.fromValue(retainer))
+                .equipment(DeckQuery.CardProportion.fromValue(equipment))
+                .ally(DeckQuery.CardProportion.fromValue(ally))
+                .modifier(DeckQuery.CardProportion.fromValue(modifier))
+                .combat(DeckQuery.CardProportion.fromValue(combat))
+                .reaction(DeckQuery.CardProportion.fromValue(reaction))
+                .event(DeckQuery.CardProportion.fromValue(event))
+                .collectionPercentage(collectionPercentage)
+                .bySimilarity(bySimilarity)
+                .build();
+        ApiDecks decks = deckService.getDecks(deckQuery, offset != null ? offset : 0, limit != null ? limit : 20);
         return new ResponseEntity<>(decks, HttpStatus.OK);
     }
 

@@ -5,8 +5,9 @@ import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.jpa.repositories.CardErrataRepository;
+import com.vtesdecks.model.ApiDeckType;
+import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
-import com.vtesdecks.model.DeckType;
 import com.vtesdecks.model.api.ApiCardErrata;
 import com.vtesdecks.model.api.ApiCardInfo;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
@@ -76,12 +77,12 @@ public class ApiCardInfoService {
     }
 
     private List<ApiDeck> getPreconstructedDecks(Integer id) {
-        ApiDecks apiDecks = apiDeckService.getDecks(DeckType.PRECONSTRUCTED, DeckSort.NEWEST, null, null,
-                null, null, null, null, null, List.of(id + "=1"), null, null,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null,
-                null, 0, 10);
+        DeckQuery deckQuery = DeckQuery.builder()
+                .apiType(ApiDeckType.PRECONSTRUCTED)
+                .order(DeckSort.NEWEST)
+                .cards(List.of(id + "=1"))
+                .build();
+        ApiDecks apiDecks = apiDeckService.getDecks(deckQuery, 0, 10);
         return apiDecks != null && apiDecks.getDecks() != null ? apiDecks.getDecks() : Collections.emptyList();
     }
 
@@ -108,12 +109,13 @@ public class ApiCardInfoService {
         }
         ApiCollectionCardStats collectionStats = null;
         try {
-            ApiDecks decks = apiDeckService.getDecks(DeckType.USER, DeckSort.NEWEST, userId, null, null,
-                    null, null, null, null, List.of(id + "=1"), null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null,
-                    null, 0, 10);
+            DeckQuery deckQuery = DeckQuery.builder()
+                    .apiType(ApiDeckType.USER)
+                    .order(DeckSort.NEWEST)
+                    .user(userId)
+                    .cards(List.of(id + "=1"))
+                    .build();
+            ApiDecks decks = apiDeckService.getDecks(deckQuery, 0, 10);
             collectionStats = apiCollectionService.getCardStats(id, decks, false);
         } catch (Exception e) {
             log.warn("Unable to fetch collection stats for card id {}", id, e);
