@@ -3,13 +3,13 @@ package com.vtesdecks.service;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.DeckArchetypeMapper;
 import com.vtesdecks.cache.DeckArchetypeIndex;
-import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.redis.entity.DeckArchetype;
 import com.vtesdecks.cache.redis.repositories.DeckArchetypeRedisRepository;
 import com.vtesdecks.jpa.entity.DeckArchetypeEntity;
 import com.vtesdecks.jpa.repositories.DeckArchetypeRepository;
+import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.MetaType;
@@ -35,10 +35,11 @@ public class DeckArchetypeService {
 
     private final DeckArchetypeRepository repository;
     private final DeckArchetypeMapper mapper;
-    private final DeckIndex deckIndex;
+    private final DeckService deckService;
     private final DeckArchetypeIndex deckArchetypeIndex;
     private final DeckArchetypeRedisRepository redisRepository;
     private final DeckArchetypeScheduler deckArchetypeScheduler;
+    private final MessageProducer messageProducer;
 
     public List<ApiDeckArchetype> getAll(boolean showDisabled, MetaType metaType, String currencyCode) {
         List<DeckArchetype> deckArchetypeList = StreamSupport.stream(redisRepository.findAll().spliterator(), false).toList();
@@ -74,7 +75,7 @@ public class DeckArchetypeService {
         DeckArchetypeEntity saved = repository.save(entity);
         deckArchetypeScheduler.updateDeckArchetype(saved.getId());
         deckArchetypeIndex.refreshIndex(saved.getId());
-        deckIndex.refreshIndex(saved.getDeckId());
+        messageProducer.publishDeckSync(saved.getDeckId());
         return getById(saved.getId(), currencyCode);
     }
 
@@ -91,8 +92,8 @@ public class DeckArchetypeService {
         DeckArchetypeEntity saved = repository.save(entity);
         if (!Objects.equals(api.getDeckId(), saved.getDeckId())) {
             deckArchetypeScheduler.updateDeckArchetype(saved.getId());
-            deckIndex.refreshIndex(api.getDeckId());
-            deckIndex.refreshIndex(saved.getDeckId());
+            messageProducer.publishDeckSync(api.getDeckId());
+            messageProducer.publishDeckSync(saved.getDeckId());
         }
         deckArchetypeIndex.refreshIndex(saved.getId());
         return getById(saved.getId(), currencyCode);
@@ -102,7 +103,7 @@ public class DeckArchetypeService {
         Optional<DeckArchetypeEntity> deleteEntity = repository.findById(id);
         if (deleteEntity.isEmpty()) return false;
         repository.deleteById(id);
-        deckIndex.refreshIndex(deleteEntity.get().getDeckId());
+        messageProducer.publishDeckSync(deleteEntity.get().getDeckId());
         deckArchetypeIndex.refreshIndex(id);
         return true;
     }
@@ -125,7 +126,7 @@ public class DeckArchetypeService {
     public List<ApiDeckArchetype> getSuggestions() {
         Set<String> visitedDeckIds = new java.util.HashSet<>();
         List<ApiDeckArchetype> apiDeckArchetypes = new ArrayList<>();
-        try (ResultSet<Deck> deckResultSet = deckIndex.selectAll(DeckQuery.builder()
+        try (ResultSet<Deck> deckResultSet = deckService.getDecks(DeckQuery.builder()
                 .type(DeckType.TOURNAMENT)
                 .order(DeckSort.PLAYERS)
                 .archetype(0)
@@ -137,7 +138,7 @@ public class DeckArchetypeService {
                     continue;
                 }
                 Map<Integer, Integer> candidateVector = CosineSimilarityUtils.getVector(candidateDeck);
-                try (ResultSet<Deck> tournamentResultSet = deckIndex.selectAll(DeckQuery.builder()
+                try (ResultSet<Deck> tournamentResultSet = deckService.getDecks(DeckQuery.builder()
                         .type(DeckType.TOURNAMENT)
                         .minPlayers(10)
                         .creationDate(LocalDate.now().minusYears(3))
@@ -165,7 +166,7 @@ public class DeckArchetypeService {
     }
 
     private long deckCount(DeckQuery query) {
-        try (ResultSet<Deck> deckResultSet = deckIndex.selectAll(query)) {
+        try (ResultSet<Deck> deckResultSet = deckService.getDecks(query)) {
             return deckResultSet.stream().count();
         }
     }

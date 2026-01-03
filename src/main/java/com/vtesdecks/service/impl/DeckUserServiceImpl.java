@@ -1,7 +1,6 @@
 package com.vtesdecks.service.impl;
 
 import com.googlecode.cqengine.resultset.ResultSet;
-import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
@@ -9,6 +8,7 @@ import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
+import com.vtesdecks.service.DeckService;
 import com.vtesdecks.service.DeckUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DeckUserServiceImpl implements DeckUserService {
     private final DeckUserRepository deckUserRepository;
-    private final DeckIndex deckIndex;
+    private final DeckService deckService;
     private final MessageProducer messageProducer;
 
     @Override
@@ -91,7 +91,7 @@ public class DeckUserServiceImpl implements DeckUserService {
 
     @Override
     public void refreshUserDecks(Integer userId) {
-        ResultSet<Deck> deckUsers = deckIndex.selectAll(DeckQuery
+        ResultSet<Deck> deckUsers = deckService.getDecks(DeckQuery
                 .builder()
                 .type(DeckType.USER)
                 .order(DeckSort.NEWEST)
@@ -105,7 +105,7 @@ public class DeckUserServiceImpl implements DeckUserService {
     @Override
     @Deprecated
     public List<String> getUserDecks(Integer userId) {
-        ResultSet<Deck> deckUsers = deckIndex.selectAll(DeckQuery
+        ResultSet<Deck> deckUsers = deckService.getDecks(DeckQuery
                 .builder()
                 .type(DeckType.USER)
                 .order(DeckSort.NEWEST)

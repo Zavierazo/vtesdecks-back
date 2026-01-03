@@ -9,9 +9,10 @@ import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Library;
+import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.CollectionType;
+import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
-import com.vtesdecks.model.DeckType;
 import com.vtesdecks.model.api.ApiCollection;
 import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
@@ -172,23 +173,24 @@ public class ApiUserCollectionController {
     }
 
     @PostMapping(value = "/cards/import/{type}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiCollectionImport importCards(@PathVariable CollectionType type, @RequestParam("file") MultipartFile file, @RequestParam(required = false) Integer binderId) throws Exception {
+    public ApiCollectionImport importCards(@PathVariable CollectionType type, @RequestParam("file") MultipartFile file, @RequestParam(required = false) Integer binderId) {
         return collectionService.importCards(type, file, binderId);
     }
 
     @GetMapping(value = "/cards/{id}/stats", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiCollectionCardStats cardStats(@PathVariable Integer id, @RequestParam(defaultValue = "false") Boolean summary) throws Exception {
-        ApiDecks decks = apiDeckService.getDecks(DeckType.USER, DeckSort.NEWEST, ApiUtils.extractUserId(), null, null, null,
-                null, null, null, List.of(id + "=1"), null, null, null, null,
-                null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, 0, 10);
+        DeckQuery deckQuery = DeckQuery.builder()
+                .apiType(ApiDeckType.USER)
+                .order(DeckSort.NEWEST)
+                .user(ApiUtils.extractUserId())
+                .cards(List.of(id + "=1"))
+                .build();
+        ApiDecks decks = apiDeckService.getDecks(deckQuery, 0, 10);
         return collectionService.getCardStats(id, decks, summary);
     }
 
     @GetMapping(value = "/stats", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiCollectionStats stats(HttpServletRequest request) throws Exception {
+    public ApiCollectionStats stats(HttpServletRequest request) {
         return apiCollectionStatsService.getCollectionStats(Utils.getCurrencyCode(request));
     }
 }

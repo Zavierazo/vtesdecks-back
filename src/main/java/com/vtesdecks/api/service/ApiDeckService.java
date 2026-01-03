@@ -5,10 +5,10 @@ import com.vtesdecks.api.mapper.ApiDeckMapper;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.factory.DeckFactory;
 import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.jpa.repositories.DeckRepository;
-import com.vtesdecks.model.DeckSort;
-import com.vtesdecks.model.DeckType;
+import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDecks;
 import com.vtesdecks.service.DeckService;
@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -48,80 +47,25 @@ public class ApiDeckService {
         }
     }
 
-    public ApiDecks getDecks(DeckType type,
-                             DeckSort order,
-                             Integer userId,
-                             String name,
-                             String author,
-                             Boolean exactAuthor,
-                             String cardText,
-                             List<String> clans,
-                             List<String> disciplines,
-                             List<String> cards,
-                             List<Integer> cryptSize,
-                             List<Integer> librarySize,
-                             List<Integer> group,
-                             Boolean starVampire,
-                             Boolean singleClan,
-                             Boolean singleDiscipline,
-                             List<Integer> year,
-                             List<Integer> players,
-                             String master,
-                             String action,
-                             String political,
-                             String retainer,
-                             String equipment,
-                             String ally,
-                             String modifier,
-                             String combat,
-                             String reaction,
-                             String event,
-                             Integer archetype,
-                             Boolean absoluteProportion,
-                             List<String> tags,
-                             String limitedFormat,
-                             List<String> paths,
-                             String bySimilarity,
-                             Integer collectionPercentage,
-                             Boolean favorite,
-                             String currencyCode,
-                             Integer offset,
-                             Integer limit) {
-        final Map<Integer, Integer> cardMap = new HashMap<>();
-        if (cards != null && !cards.isEmpty()) {
-            for (String card : cards) {
-                int indexEqual = card.indexOf('=');
-                int number = 1;
-                int id;
-                if (indexEqual > 0) {
-                    id = Integer.parseInt(card.substring(0, indexEqual));
-                    number = Integer.parseInt(card.substring(indexEqual + 1));
-                } else {
-                    id = Integer.parseInt(card);
-                }
-                cardMap.put(id, number);
-            }
-        }
-        ResultSet<Deck> decks = deckService.getDecks(type, order, userId, name, author, exactAuthor, cardText, clans, disciplines,
-                cardMap, cryptSize, librarySize, group, starVampire, singleClan, singleDiscipline, year, players, master, action, political, retainer,
-                equipment, ally, modifier, combat, reaction, event, archetype, absoluteProportion, tags, limitedFormat, paths, favorite);
+    public ApiDecks getDecks(DeckQuery deckQuery, int offset, int limit) {
+        ResultSet<Deck> decks = deckService.getDecks(deckQuery);
         ApiDecks apiDecks = new ApiDecks();
         apiDecks.setTotal(decks.size());
         apiDecks.setOffset(offset);
 
         Stream<Deck> deckStream = decks.stream();
         // Filter by collection percentage
-        if (collectionPercentage != null && collectionPercentage > 0) {
+        if (deckQuery.getCollectionPercentage() != null && deckQuery.getCollectionPercentage() > 0) {
             Map<Integer, Integer> collectionMap = apiCollectionService.getCollectionCardsMap();
-            deckStream = deckStream.filter(deck -> matchCollectionPercentage(deck, collectionMap, collectionPercentage));
+            deckStream = deckStream.filter(deck -> matchCollectionPercentage(deck, collectionMap, deckQuery.getCollectionPercentage()));
         }
         // Sort by similarity if requested
-        if (bySimilarity != null) {
-            Deck queryDeck = deckService.getDeck(bySimilarity);
+        if (deckQuery.getBySimilarity() != null) {
+            Deck queryDeck = deckService.getDeck(deckQuery.getBySimilarity());
             if (queryDeck != null) {
                 Map<Integer, Integer> queryVector = CosineSimilarityUtils.getVector(queryDeck);
                 deckStream = deckStream
-                        .filter(target -> !target.getId().equals(bySimilarity))
+                        .filter(target -> !target.getId().equals(deckQuery.getBySimilarity()))
                         .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(queryDeck, queryVector, target, CosineSimilarityUtils.getVector(target))))
                         .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                         .map(Pair::getKey);
@@ -130,12 +74,12 @@ public class ApiDeckService {
         apiDecks.setDecks(deckStream
                 .skip(offset)
                 .limit(limit)
-                .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap, currencyCode))
+                .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), deckQuery.getCards(), deckQuery.getCurrencyCode()))
                 .toList());
-        if (offset == 0 && userId != null && type == DeckType.USER) {
-            apiDecks.setRestorableDecks(deckRepository.selectUserDeleted(userId).stream()
+        if (offset == 0 && deckQuery.getUser() != null && deckQuery.getType() == DeckType.USER) {
+            apiDecks.setRestorableDecks(deckRepository.selectUserDeleted(deckQuery.getUser()).stream()
                     .map(dbDeck -> deckFactory.getDeck(dbDeck, new ArrayList<>(), new ArrayList<>()))
-                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), cardMap, currencyCode))
+                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), deckQuery.getCards(), deckQuery.getCurrencyCode()))
                     .toList());
         }
         return apiDecks;

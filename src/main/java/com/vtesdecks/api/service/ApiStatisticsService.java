@@ -4,9 +4,10 @@ import com.google.common.collect.Lists;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.model.ApiDeckType;
+import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckTag;
-import com.vtesdecks.model.DeckType;
 import com.vtesdecks.model.api.ApiHistoricStatistic;
 import com.vtesdecks.model.api.ApiStatistic;
 import com.vtesdecks.model.api.ApiYearStatistic;
@@ -33,7 +34,7 @@ public class ApiStatisticsService {
     private static final List<String> TAGS_ORDER = Stream.of(DeckTag.values()).map(DeckTag::getTag).collect(Collectors.toList());
     private final DeckService deckService;
 
-    public ApiYearStatistic getYearStatistic(DeckType type, Integer year) {
+    public ApiYearStatistic getYearStatistic(ApiDeckType type, Integer year) {
         ApiYearStatistic apiYearStatistic = new ApiYearStatistic();
 
         ResultSet<Deck> decks = getDecks(type, year);
@@ -89,7 +90,7 @@ public class ApiStatisticsService {
     }
 
 
-    public List<ApiHistoricStatistic> getHistoricTagStatistic(DeckType type) {
+    public List<ApiHistoricStatistic> getHistoricTagStatistic(ApiDeckType type) {
         List<ApiHistoricStatistic> apiHistoricStatistic = new ArrayList<>();
         ResultSet<Deck> decks = getDecks(type, null);
         Map<String, Map<Integer, ApiStatistic>> years = new HashMap<>();
@@ -117,7 +118,7 @@ public class ApiStatisticsService {
         return apiHistoricStatistic;
     }
 
-    public List<ApiHistoricStatistic> getHistoricClanStatistic(DeckType type) {
+    public List<ApiHistoricStatistic> getHistoricClanStatistic(ApiDeckType type) {
         List<ApiHistoricStatistic> apiHistoricStatistic = new ArrayList<>();
         ResultSet<Deck> decks = getDecks(type, null);
         Map<String, Map<Integer, ApiStatistic>> years = new HashMap<>();
@@ -145,7 +146,7 @@ public class ApiStatisticsService {
         return apiHistoricStatistic;
     }
 
-    public List<ApiHistoricStatistic> getHistoricDisciplineStatistic(DeckType type) {
+    public List<ApiHistoricStatistic> getHistoricDisciplineStatistic(ApiDeckType type) {
         List<ApiHistoricStatistic> apiHistoricStatistic = new ArrayList<>();
         ResultSet<Deck> decks = getDecks(type, null);
         Map<String, Map<Integer, ApiStatistic>> years = new HashMap<>();
@@ -173,12 +174,14 @@ public class ApiStatisticsService {
         return apiHistoricStatistic;
     }
 
-    private ResultSet<Deck> getDecks(DeckType type, Integer year) {
-        return deckService.getDecks(type, DeckSort.NEWEST, ApiUtils.extractUserId(), null, null, null, null,
-                null, null, null, null, null, null, null,
-                null, null, year != null ? Lists.newArrayList(year, year) : null, null, null, null, null,
-                null, null, null, null, null, null, null,
-                null, null, null, null, null, null);
+    private ResultSet<Deck> getDecks(ApiDeckType type, Integer year) {
+        DeckQuery deckQuery = DeckQuery.builder()
+                .apiType(type)
+                .order(DeckSort.NEWEST)
+                .user(ApiUtils.extractUserId())
+                .year(year != null ? Lists.newArrayList(year, year) : null)
+                .build();
+        return deckService.getDecks(deckQuery);
     }
 
     private static BigDecimal getPercentage(Integer count, int size) {

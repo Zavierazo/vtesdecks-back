@@ -1,6 +1,6 @@
 package com.vtesdecks.model;
 
-public enum DeckType {
+public enum ApiDeckType {
     ALL,
     TOURNAMENT,
     COMMUNITY,

@@ -1,12 +1,12 @@
 package com.vtesdecks.scheduler;
 
-import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.jpa.entity.DeckArchetypeEntity;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.repositories.DeckArchetypeRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.messaging.MessageProducer;
+import com.vtesdecks.service.DeckService;
 import com.vtesdecks.util.CosineSimilarityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DeckArchetypeScheduler {
     private static final double MIN_SIMILARITY = 0.5;
-    private final DeckIndex deckIndex;
+    private final DeckService deckService;
     private final DeckRepository deckRepository;
     private final DeckArchetypeRepository deckArchetypeRepository;
     private final MessageProducer messageProducer;
@@ -37,7 +37,7 @@ public class DeckArchetypeScheduler {
             Map<Integer, Deck> archetypeDeckMap = getArchetypeDeckMap(deckArchetypeList);
             Map<Integer, Map<Integer, Integer>> archetypeVectorMap = getArchetypeVectorMap(deckArchetypeList, archetypeDeckMap);
             for (DeckEntity deckEntity : deckRepository.findAll()) {
-                Deck deck = deckIndex.get(deckEntity.getId());
+                Deck deck = deckService.getDeck(deckEntity.getId());
                 if (deck != null) {
                     findBestArchetypeDeck(deckEntity, deck, null, archetypeVectorMap, archetypeDeckMap);
                 }
@@ -55,7 +55,7 @@ public class DeckArchetypeScheduler {
             Map<Integer, Deck> archetypeDeckMap = getArchetypeDeckMap(deckArchetypeList);
             Map<Integer, Map<Integer, Integer>> archetypeVectorMap = getArchetypeVectorMap(deckArchetypeList, archetypeDeckMap);
             for (DeckEntity deckEntity : deckRepository.findAll()) {
-                Deck deck = deckIndex.get(deckEntity.getId());
+                Deck deck = deckService.getDeck(deckEntity.getId());
                 if (deck != null) {
                     findBestArchetypeDeck(deckEntity, deck, archetypeId, archetypeVectorMap, archetypeDeckMap);
                 }
@@ -120,14 +120,14 @@ public class DeckArchetypeScheduler {
                 .collect(
                         Collectors.toMap(
                                 DeckArchetypeEntity::getId,
-                                archetype -> deckIndex.get(archetype.getDeckId())
+                                archetype -> deckService.getDeck(archetype.getDeckId())
                         )
                 );
     }
 
     private Map<Integer, Map<Integer, Integer>> getArchetypeVectorMap(List<DeckArchetypeEntity> deckArchetypeList, Map<Integer, Deck> archetypeDeckMap) {
         return deckArchetypeList.stream()
-                .filter(archetype -> deckIndex.get(archetype.getDeckId()) != null)
+                .filter(archetype -> deckService.getDeck(archetype.getDeckId()) != null)
                 .collect(
                         Collectors.toMap(
                                 DeckArchetypeEntity::getId,

@@ -1,12 +1,12 @@
 package com.vtesdecks.cache.factory;
 
 import com.googlecode.cqengine.resultset.ResultSet;
-import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.redis.entity.DeckArchetype;
 import com.vtesdecks.jpa.entity.DeckArchetypeEntity;
 import com.vtesdecks.model.DeckQuery;
+import com.vtesdecks.service.DeckService;
 import lombok.extern.slf4j.Slf4j;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
@@ -20,7 +20,7 @@ import java.time.LocalDate;
 public abstract class DeckArchetypeFactory {
 
     @Autowired
-    private DeckIndex deckIndexRepository;
+    private DeckService deckService;
 
     public abstract DeckArchetype getDeckArchetype(DeckArchetypeEntity deckArchetypeEntity);
 
@@ -33,7 +33,7 @@ public abstract class DeckArchetypeFactory {
         deckArchetype.setTournament365Count(deckCount(DeckQuery.builder().archetype(entity.getId()).type(DeckType.TOURNAMENT).creationDate(LocalDate.now().minusDays(365)).build()));
         deckArchetype.setTournament730Count(deckCount(DeckQuery.builder().archetype(entity.getId()).type(DeckType.TOURNAMENT).creationDate(LocalDate.now().minusDays(730)).build()));
         if (entity.getDeckId() != null) {
-            Deck deck = deckIndexRepository.get(entity.getDeckId());
+            Deck deck = deckService.getDeck(entity.getDeckId());
             if (deck != null && deck.getStats() != null) {
                 deckArchetype.setPrice(deck.getStats().getPrice());
                 deckArchetype.setCurrency(deck.getStats().getCurrency());
@@ -42,7 +42,7 @@ public abstract class DeckArchetypeFactory {
     }
 
     private long deckCount(DeckQuery query) {
-        try (ResultSet<Deck> deckResultSet = deckIndexRepository.selectAll(query)) {
+        try (ResultSet<Deck> deckResultSet = deckService.getDecks(query)) {
             return deckResultSet.stream().count();
         }
     }
