@@ -227,52 +227,72 @@ public class DeckQuery {
         }
 
         public DeckQueryBuilder master(DeckQuery.CardProportion master) {
-            this.master = master;
+            if (master != null) {
+                this.master = master;
+            }
             return this;
         }
 
         public DeckQueryBuilder action(DeckQuery.CardProportion action) {
-            this.action = action;
+            if (action != null) {
+                this.action = action;
+            }
             return this;
         }
 
         public DeckQueryBuilder political(DeckQuery.CardProportion political) {
-            this.political = political;
+            if (political != null) {
+                this.political = political;
+            }
             return this;
         }
 
         public DeckQueryBuilder retainer(DeckQuery.CardProportion retainer) {
-            this.retainer = retainer;
+            if (retainer != null) {
+                this.retainer = retainer;
+            }
             return this;
         }
 
         public DeckQueryBuilder equipment(DeckQuery.CardProportion equipment) {
-            this.equipment = equipment;
+            if (equipment != null) {
+                this.equipment = equipment;
+            }
             return this;
         }
 
         public DeckQueryBuilder ally(DeckQuery.CardProportion ally) {
-            this.ally = ally;
+            if (ally != null) {
+                this.ally = ally;
+            }
             return this;
         }
 
         public DeckQueryBuilder modifier(DeckQuery.CardProportion modifier) {
-            this.modifier = modifier;
+            if (modifier != null) {
+                this.modifier = modifier;
+            }
             return this;
         }
 
         public DeckQueryBuilder combat(DeckQuery.CardProportion combat) {
-            this.combat = combat;
+            if (combat != null) {
+                this.combat = combat;
+            }
             return this;
         }
 
         public DeckQueryBuilder reaction(DeckQuery.CardProportion reaction) {
-            this.reaction = reaction;
+            if (reaction != null) {
+                this.reaction = reaction;
+            }
             return this;
         }
 
         public DeckQueryBuilder event(DeckQuery.CardProportion event) {
-            this.event = event;
+            if (event != null) {
+                this.event = event;
+            }
             return this;
         }
 
