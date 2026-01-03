@@ -13,6 +13,7 @@ public class ApiCardInfo {
     private List<ApiShop> shopList;
     private Boolean hasMoreShops;
     private List<ApiRuling> rulingList;
+    private List<ApiCardErrata> errataList;
     private ApiCollectionCardStats collectionStats;
     private BigDecimal minPrice;
     private BigDecimal maxPrice;

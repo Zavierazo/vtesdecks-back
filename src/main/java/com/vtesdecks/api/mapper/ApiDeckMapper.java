@@ -1,20 +1,16 @@
 package com.vtesdecks.api.mapper;
 
 import com.vtesdecks.api.service.ApiCollectionService;
-import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
-import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.CollectionTracker;
 import com.vtesdecks.cache.indexable.deck.card.Card;
-import com.vtesdecks.jpa.entity.CardErrataEntity;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDeckStats;
-import com.vtesdecks.model.api.ApiErrata;
 import com.vtesdecks.service.CurrencyExchangeService;
 import com.vtesdecks.util.VtesUtils;
 import org.mapstruct.AfterMapping;
@@ -35,15 +31,13 @@ import java.util.Optional;
 import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 import static com.vtesdecks.util.VtesUtils.isCrypt;
 
-@Mapper(componentModel = "spring", uses = {ApiPublicUserMapper.class})
+@Mapper(componentModel = "spring", uses = {ApiPublicUserMapper.class, ApiCardErrataMapper.class})
 public abstract class ApiDeckMapper {
 
     @Autowired
     private DeckUserRepository deckUserRepository;
     @Autowired
     private LibraryCache libraryCache;
-    @Autowired
-    private CryptCache cryptCache;
     @Autowired
     private ApiCollectionService apiCollectionService;
     @Autowired
@@ -166,29 +160,6 @@ public abstract class ApiDeckMapper {
         if (stats.getPrice() != null && currencyCode != null && !currencyCode.equalsIgnoreCase(DEFAULT_CURRENCY)) {
             stats.setPrice(currencyExchangeService.convert(stats.getPrice(), DEFAULT_CURRENCY, currencyCode));
             stats.setCurrency(currencyCode);
-        }
-    }
-
-
-    @Mapping(target = "id", source = "cardId")
-    @Mapping(target = "cardId", source = "cardId")
-    @Mapping(target = "name", source = "cardId", qualifiedByName = "mapCardName")
-    protected abstract ApiErrata mapErrata(CardErrataEntity cardErrata);
-
-    @Named("mapCardName")
-    protected String mapCardName(Integer cardId) {
-        if (VtesUtils.isLibrary(cardId)) {
-            Library library = libraryCache.get(cardId);
-            if (library == null) {
-                return null;
-            }
-            return library.getName();
-        } else {
-            Crypt crypt = cryptCache.get(cardId);
-            if (crypt == null) {
-                return null;
-            }
-            return crypt.getName();
         }
     }
 }

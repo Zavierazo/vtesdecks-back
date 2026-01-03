@@ -1,10 +1,13 @@
 package com.vtesdecks.api.service;
 
+import com.vtesdecks.api.mapper.ApiCardErrataMapper;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
+import com.vtesdecks.jpa.repositories.CardErrataRepository;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckType;
+import com.vtesdecks.model.api.ApiCardErrata;
 import com.vtesdecks.model.api.ApiCardInfo;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
 import com.vtesdecks.model.api.ApiDeck;
@@ -19,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +39,8 @@ public class ApiCardInfoService {
     private final ApiCollectionService apiCollectionService;
     private final CurrencyExchangeService currencyExchangeService;
     private final RulingService rulingService;
+    private final CardErrataRepository cardErrataRepository;
+    private final ApiCardErrataMapper apiCardErrataMapper;
 
     public ApiCardInfo getCardInfo(Integer id, String currencyCode) {
         Integer userId = ApiUtils.extractUserId();
@@ -44,7 +50,16 @@ public class ApiCardInfoService {
         cardInfo.setCollectionStats(getCollectionStats(id, userId));
         fillPriceInfo(cardInfo, id, currencyCode);
         cardInfo.setRulingList(rulingService.getRulings(id));
+        cardInfo.setErrataList(getCardErrata(id));
         return cardInfo;
+    }
+
+    private List<ApiCardErrata> getCardErrata(Integer id) {
+        return cardErrataRepository.findByCardId(id)
+                .stream()
+                .map(apiCardErrataMapper::mapCardErrata)
+                .sorted(Comparator.comparing(ApiCardErrata::getEffectiveDate).reversed())
+                .toList();
     }
 
     private void fillShopInfo(Integer id, ApiCardInfo cardInfo) {
