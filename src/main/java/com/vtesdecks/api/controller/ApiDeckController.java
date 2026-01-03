@@ -163,7 +163,7 @@ public class ApiDeckController {
                 .archetype(archetype)
                 .cryptSize(cryptSize)
                 .librarySize(librarySize)
-                .groups(group)
+                .group(group)
                 .year(year)
                 .players(players)
                 .absoluteProportion(absoluteProportion)

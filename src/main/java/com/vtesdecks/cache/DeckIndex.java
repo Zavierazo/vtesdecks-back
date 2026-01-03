@@ -362,9 +362,9 @@ public class DeckIndex {
                 query = and(query, contains(Deck.AUTHOR_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getAuthor())));
             }
         }
-        if (deckQuery.getGroups() != null) {
+        if (deckQuery.getGroup() != null) {
             Query<Deck> groupQuery = null;
-            for (Integer group : deckQuery.getGroups()) {
+            for (Integer group : deckQuery.getGroup()) {
                 groupQuery = or(groupQuery, in(Deck.GROUP_MULTI_ATTRIBUTE, group));
             }
             query = and(query, groupQuery);

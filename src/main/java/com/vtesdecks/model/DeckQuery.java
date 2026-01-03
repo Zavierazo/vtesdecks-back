@@ -33,7 +33,7 @@ public class DeckQuery {
     private Integer cryptSizeMax;
     private Integer librarySizeMin;
     private Integer librarySizeMax;
-    private List<Integer> groups;
+    private List<Integer> group;
     private Boolean starVampire;
     private Boolean singleClan;
     private Boolean singleDiscipline;
@@ -154,7 +154,7 @@ public class DeckQuery {
                     librarySizeMin = null;
                 }
                 Integer librarySizeMax = librarySize.get(1);
-                if (librarySizeMax >= 240) {
+                if (librarySizeMax >= 90) {
                     librarySizeMax = null;
                 }
                 this.librarySizeMin = librarySizeMin;
@@ -182,7 +182,7 @@ public class DeckQuery {
                 for (int i = minGroup; i <= maxGroup; i++) {
                     groups.add(i);
                 }
-                this.groups = groups;
+                this.group = groups;
             }
             return this;
         }
