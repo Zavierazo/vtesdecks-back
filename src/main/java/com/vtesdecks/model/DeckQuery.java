@@ -87,14 +87,16 @@ public class DeckQuery {
         private Integer min;
         private Integer max;
 
-        public CardProportion(String value) {
-            this();
+        public static CardProportion fromValue(String value) {
+            if (value == null || value.isEmpty()) {
+                return null;
+            }
             try {
                 String[] percentageSplit = value.split(",");
-                this.min = Integer.parseInt(percentageSplit[0]);
-                this.max = Integer.parseInt(percentageSplit[1]);
+                return new CardProportion(Integer.parseInt(percentageSplit[0]), Integer.parseInt(percentageSplit[1]));
             } catch (Exception e) {
                 log.error("Unable to parse percentage with value {}", value, e);
+                return null;
             }
         }
 
