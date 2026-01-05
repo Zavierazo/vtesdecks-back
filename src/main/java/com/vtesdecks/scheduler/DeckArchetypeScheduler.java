@@ -28,7 +28,7 @@ public class DeckArchetypeScheduler {
     private final DeckArchetypeRepository deckArchetypeRepository;
     private final MessageProducer messageProducer;
 
-    @Scheduled(cron = "${jobs.deckArchetypeScheduler:0 0 1 * * *}")
+    @Scheduled(cron = "${jobs.deckArchetypeScheduler:0 30 * * * *}")
     @Transactional
     public void deckArchetypeScheduler() {
         log.info("Starting Deck Archetype scheduler...");

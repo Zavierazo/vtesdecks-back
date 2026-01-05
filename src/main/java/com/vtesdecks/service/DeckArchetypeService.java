@@ -149,7 +149,9 @@ public class DeckArchetypeService {
                             .map(Pair::getKey)
                             .toList();
                     visitedDeckIds.addAll(similarTournamentDecks.stream().map(Deck::getId).toList());
-                    if (similarTournamentDecks.stream().filter(deck -> deck.getPlayers() >= 20).count() > 2 && (similarTournamentDecks.size() >= 4 || similarTournamentDecks.stream().anyMatch(deck -> deck.getPlayers() >= 50))) {
+                    if (similarTournamentDecks.stream().filter(deck -> deck.getDeckArchetypeId() == null).count() >= 2
+                            && similarTournamentDecks.stream().filter(deck -> deck.getPlayers() >= 20).count() >= 2
+                            && (similarTournamentDecks.size() >= 4 || similarTournamentDecks.stream().anyMatch(deck -> deck.getPlayers() >= 50))) {
                         apiDeckArchetypes.add(ApiDeckArchetype.builder()
                                 .name("Suggestion: " + candidateDeck.getName())
                                 .description("Auto-generated suggestion based on similar decks in the last year.")
