@@ -67,6 +67,7 @@ public class ApiDeckService {
                 deckStream = deckStream
                         .filter(target -> !target.getId().equals(bySimilarity))
                         .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(queryDeck, queryVector, target, CosineSimilarityUtils.getVector(target))))
+                        .filter(pair -> pair.getValue() >= 0.5)
                         .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                         .map(Pair::getKey);
             }
