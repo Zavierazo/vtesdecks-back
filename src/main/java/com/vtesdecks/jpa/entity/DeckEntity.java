@@ -15,7 +15,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
@@ -96,9 +95,9 @@ public class DeckEntity {
     @Column(name = "deck_archetype_id")
     private Integer deckArchetypeId;
 
-    @CreationTimestamp
     @Column(name = "creation_date", nullable = false)
     private LocalDateTime creationDate;
+    
     @UpdateTimestamp
     @Column(name = "modification_date", nullable = false)
     private LocalDateTime modificationDate;
