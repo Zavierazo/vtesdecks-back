@@ -8,6 +8,7 @@ import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiComment;
 import com.vtesdecks.model.api.ApiFavoriteDeck;
+import com.vtesdecks.model.api.ApiFollowUser;
 import com.vtesdecks.model.api.ApiRateDeck;
 import com.vtesdecks.model.api.ApiResponse;
 import com.vtesdecks.model.api.ApiUser;
@@ -20,7 +21,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -189,6 +192,24 @@ public class ApiUserController {
             response.setMessage("Invalid reset password link!");
         }
         return response;
+    }
+
+    @PostMapping(value = "/follow", produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public Boolean followUser(@RequestBody ApiFollowUser followUser) {
+        log.debug("User follow action {} by user {}", followUser, ApiUtils.extractUserId());
+        return userService.followUser(ApiUtils.extractUserId(), followUser.getUser(), followUser.getFollow());
+    }
+
+    @GetMapping(value = "/follow/{user}", produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public Boolean isFollowing(@PathVariable String user) {
+        log.debug("Check if user {} follows user {}", ApiUtils.extractUserId(), user);
+        return userService.isFollowing(ApiUtils.extractUserId(), user);
     }
 
 }

@@ -74,7 +74,7 @@ public class ApiCommentService {
             if ((user.getAdmin() != null && user.getAdmin()) || commentEntity.getUser().equals(user.getId())) {
                 commentEntity.setContent(comment.getContent());
                 commentRepository.save(commentEntity);
-                userNotificationService.updateNotification(comment.getId(), comment.getContent());
+                userNotificationService.updateCommentNotification(comment.getId(), comment.getContent());
                 return getComment(user, commentRepository.findById(commentEntity.getId()));
             }
         }
@@ -92,7 +92,7 @@ public class ApiCommentService {
             if ((user.getAdmin() != null && user.getAdmin()) || commentEntity.getUser().equals(user.getId())) {
                 commentEntity.setDeleted(true);
                 commentRepository.save(commentEntity);
-                userNotificationService.deleteNotification(commentEntity.getId());
+                userNotificationService.deleteCommentNotification(commentEntity.getId());
                 return true;
             }
         }

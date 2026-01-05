@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Iterables;
 import com.vtesdecks.api.util.ApiUtils;
-import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.DeckType;
@@ -48,9 +47,9 @@ public class ApiDeckBuilderService {
     private final KRCGClient krcgClient;
     private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
-    private final DeckIndex deckIndex;
     private final LimitedFormatRepository limitedFormatRepository;
     private final MessageProducer messageProducer;
+    private final ApiUserNotificationService apiUserNotificationService;
 
 
     public ApiDeckBuilder getDeck(String deckId) {
@@ -116,6 +115,7 @@ public class ApiDeckBuilderService {
             UserEntity user = userRepository.findById(userId).orElse(null);
             deckId = "user-" + StringUtils.lowerCase(user.getUsername()) + "-" + UUID.randomUUID().toString().replace("-", "");
         }
+        boolean isUpdated = false;
         if (deck == null) {
             deck = new DeckEntity();
             deck.setId(deckId);
@@ -123,12 +123,16 @@ public class ApiDeckBuilderService {
             deck.setUser(userId);
             deck.setVerified(true);
             deck.setCreationDate(LocalDateTime.now());
+            isUpdated = true;
         } else if (!isOwnerOrAdmin(deck, userId)) {
             log.warn("Deck {} is not valid for user {}", apiDeckBuilder.getId(), userId);
             throw new IllegalArgumentException("Deck " + apiDeckBuilder.getId() + " is not valid for user " + userId);
         }
         deck.setName(apiDeckBuilder.getName());
         deck.setDescription(apiDeckBuilder.getDescription());
+        if (apiDeckBuilder.isPublished() && Boolean.FALSE.equals(deck.getPublished())) {
+            isUpdated = true;
+        }
         deck.setPublished(apiDeckBuilder.isPublished());
         if (deck.getType() == DeckType.COMMUNITY) {
             deck.setExtra(apiDeckBuilder.getExtra());
@@ -149,9 +153,11 @@ public class ApiDeckBuilderService {
                     dbCard.getId().setDeckId(deck.getId());
                     dbCard.setNumber(card.getNumber());
                     deckCardRepository.save(dbCard);
+                    isUpdated = true;
                 } else if (!dbCard.getNumber().equals(card.getNumber())) {
                     dbCard.setNumber(card.getNumber());
                     deckCardRepository.save(dbCard);
+                    isUpdated = true;
                 }
             }
         }
@@ -161,6 +167,7 @@ public class ApiDeckBuilderService {
                 Integer deckCard = deckCards.stream().map(ApiCard::getId).filter(id -> id.equals(card.getId().getCardId())).findFirst().orElse(null);
                 if (deckCard == null) {
                     deckCardRepository.delete(card);
+                    isUpdated = true;
                 }
             } catch (Exception e) {
                 log.error("Unable to delete card {}", card, e);
@@ -168,6 +175,13 @@ public class ApiDeckBuilderService {
         }
         //Enqueue indexation of new deck
         messageProducer.publishDeckSync(deck.getId());
+        if (Boolean.TRUE.equals(deck.getPublished())) {
+            if (isUpdated) {
+                apiUserNotificationService.deckUpdateNotifications(deck);
+            }
+        } else {
+            apiUserNotificationService.deckDeleteNotifications(deck.getId());
+        }
         return getDeck(deckId);
 
     }
@@ -183,6 +197,7 @@ public class ApiDeckBuilderService {
         deckRepository.save(deck);
         //Enqueue indexation of new deck
         messageProducer.publishDeckSync(deck.getId());
+        apiUserNotificationService.deckDeleteNotifications(deck.getId());
         return true;
     }
 
@@ -199,6 +214,9 @@ public class ApiDeckBuilderService {
         deckRepository.save(deck);
         //Enqueue indexation of new deck
         messageProducer.publishDeckSync(deck.getId());
+        if (Boolean.TRUE.equals(deck.getPublished())) {
+            apiUserNotificationService.deckUpdateNotifications(deck);
+        }
         return true;
     }
 

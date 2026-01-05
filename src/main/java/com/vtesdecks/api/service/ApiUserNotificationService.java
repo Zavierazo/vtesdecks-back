@@ -5,16 +5,25 @@ import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.enums.UserNotificationType;
 import com.vtesdecks.jpa.entity.CommentEntity;
+import com.vtesdecks.jpa.entity.DeckEntity;
+import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.entity.UserFollowerEntity;
 import com.vtesdecks.jpa.entity.UserNotificationEntity;
+import com.vtesdecks.jpa.repositories.UserFollowerRepository;
 import com.vtesdecks.jpa.repositories.UserNotificationRepository;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiUserNotification;
 import com.vtesdecks.service.DeckService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 @Slf4j
 @Service
@@ -25,6 +34,8 @@ public class ApiUserNotificationService {
     private final UserNotificationRepository userNotificationRepository;
     private final ApiUserNotificationMapper apiUserNotificationMapper;
     private final DeckService deckService;
+    private final UserFollowerRepository userFollowerRepository;
+    private final UserRepository userRepository;
 
     public Integer notificationUnreadCount(Integer userId) {
         if (userId == null) {
@@ -89,7 +100,7 @@ public class ApiUserNotificationService {
     private void addCommentNotification(CommentEntity comment, Deck deck, Integer notifyUserId) {
         UserNotificationEntity userNotification = new UserNotificationEntity();
         userNotification.setUser(notifyUserId);
-        userNotification.setReferenceId(comment.getId());
+        userNotification.setReferenceId(String.valueOf(comment.getId()));
         userNotification.setRead(false);
         userNotification.setType(UserNotificationType.COMMENT);
         userNotification.setNotification(fixLimit("<strong>New comment on \"" + deck.getName() + "\":</strong>" + NEW_LINE + comment.getContent()));
@@ -98,10 +109,13 @@ public class ApiUserNotificationService {
     }
 
 
-    public void updateNotification(Integer referenceId, String notification) {
+    public void updateCommentNotification(Integer commentReferenceId, String notification) {
         try {
-            UserNotificationEntity userNotification = userNotificationRepository.findByReferenceId(referenceId);
-            if (userNotification != null) {
+            List<UserNotificationEntity> userNotificationList = userNotificationRepository.findByReferenceId(String.valueOf(commentReferenceId));
+            if (userNotificationList == null) {
+                return;
+            }
+            for (UserNotificationEntity userNotification : userNotificationList) {
                 int fixedPart = userNotification.getNotification().indexOf(NEW_LINE);
                 if (fixedPart > 0) {
                     userNotification.setNotification(fixLimit(new StringBuilder()
@@ -115,12 +129,12 @@ public class ApiUserNotificationService {
                 userNotificationRepository.save(userNotification);
             }
         } catch (Exception e) {
-            log.error("Unexpected error editing comment notification with referenceId {} and new notification {}", referenceId, notification, e);
+            log.error("Unexpected error editing comment notification with referenceId {} and new notification {}", commentReferenceId, notification, e);
         }
     }
 
-    public void deleteNotification(Integer referenceId) {
-        userNotificationRepository.deleteByReferenceId(referenceId);
+    public void deleteCommentNotification(Integer commentReferenceId) {
+        userNotificationRepository.deleteByReferenceId(String.valueOf(commentReferenceId));
     }
 
     private static String fixLimit(String notification) {
@@ -133,7 +147,7 @@ public class ApiUserNotificationService {
     public void welcomeNotifications(Integer userId) {
         UserNotificationEntity userNotification = new UserNotificationEntity();
         userNotification.setUser(userId);
-        userNotification.setReferenceId(0);
+        userNotification.setReferenceId("0");
         userNotification.setRead(false);
         userNotification.setType(UserNotificationType.LINK);
         userNotification.setNotification("<strong>Support VTESDecks on Patreon\uD83E\uDD87</strong><br/>Help us cover server costs and keep improving the site.");
@@ -141,5 +155,53 @@ public class ApiUserNotificationService {
         userNotificationRepository.save(userNotification);
 
     }
+
+    public void deckUpdateNotifications(DeckEntity deck) {
+        try {
+            List<UserNotificationEntity> userNotificationList = userNotificationRepository.findByReferenceId(deck.getId());
+            if (userNotificationList == null) {
+                userNotificationList = new ArrayList<>();
+            }
+            for (UserFollowerEntity follower : userFollowerRepository.findByIdFollowedId(deck.getUser())) {
+                UserNotificationEntity userNotification = userNotificationList.stream()
+                        .filter(un -> un.getUser().equals(follower.getId().getUserId()))
+                        .findFirst()
+                        .orElse(null);
+                if (userNotification == null) {
+                    userNotification = new UserNotificationEntity();
+                    userNotification.setUser(follower.getId().getUserId());
+                    userNotification.setReferenceId(deck.getId());
+                    userNotification.setType(UserNotificationType.DECK);
+                    userNotification.setLink("/deck/" + deck.getId());
+                    userNotification.setNotification(fixLimit("<strong>New deck added by " + getAuthor(deck.getUser()) + ":</strong>" + NEW_LINE + deck.getName()));
+                } else if (Boolean.TRUE.equals(userNotification.getRead())) {
+                    userNotification.setNotification(fixLimit("<strong>Deck updated by " + getAuthor(deck.getUser()) + ":</strong>" + NEW_LINE + deck.getName()));
+                }
+                userNotification.setRead(false);
+                userNotification.setCreationDate(LocalDateTime.now());
+                userNotificationRepository.save(userNotification);
+                log.info("New notification for follower {} about new deck {}", userNotification.getUser(), deck.getId());
+            }
+        } catch (Exception e) {
+            log.error("Unexpected error editing deck notification {}", deck, e);
+        }
+    }
+
+    public void deckDeleteNotifications(String deckId) {
+        try {
+            List<UserNotificationEntity> userNotificationList = userNotificationRepository.findByReferenceId(deckId);
+            if (!isEmpty(userNotificationList)) {
+                userNotificationRepository.deleteByReferenceId(deckId);
+                log.info("Deleted {} notifications for deck {}", userNotificationList.size(), deckId);
+            }
+        } catch (Exception e) {
+            log.error("Unexpected error deleting deck notification {}", deckId, e);
+        }
+    }
+
+    private String getAuthor(Integer user) {
+        return userRepository.findById(user).map(UserEntity::getDisplayName).orElse("unknown");
+    }
+
 
 }

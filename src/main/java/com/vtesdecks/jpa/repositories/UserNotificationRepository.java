@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface UserNotificationRepository extends JpaRepository<UserNotificationEntity, Integer> {
 
-    UserNotificationEntity findByReferenceId(Integer referenceId);
+    List<UserNotificationEntity> findByReferenceId(String referenceId);
 
     @Query(value = "SELECT COUNT(1) FROM user_notification WHERE user = :user AND `read` IS FALSE", nativeQuery = true)
     int countUnreadByUser(Integer user);
@@ -24,5 +24,5 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
 
     @Modifying
     @Transactional
-    void deleteByReferenceId(Integer referenceId);
+    void deleteByReferenceId(String referenceId);
 }

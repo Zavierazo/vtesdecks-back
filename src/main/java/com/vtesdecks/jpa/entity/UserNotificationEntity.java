@@ -25,7 +25,7 @@ public class UserNotificationEntity {
     private Integer id;
 
     @Column(name = "reference_id")
-    private Integer referenceId;
+    private String referenceId;
 
     @Column(name = "user")
     private Integer user;
@@ -44,6 +44,6 @@ public class UserNotificationEntity {
     private String link;
 
     @CreationTimestamp
-    @Column(name = "creation_date", nullable = false, insertable = false, updatable = false)
+    @Column(name = "creation_date", nullable = false, insertable = false)
     private LocalDateTime creationDate;
 }
