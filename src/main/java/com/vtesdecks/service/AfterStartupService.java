@@ -329,6 +329,12 @@ public class AfterStartupService {
                 finalSets.add(String.join(":", setInfo));
                 finalSets.add("Anthology I:" + setInfo.getLast());
                 converted = true;
+            } else if (setInfo.getFirst().equals("TU")) {
+                converted |= divideUnleashed(finalSets, setInfo, "TU");
+            } else if (setInfo.getFirst().equals("AU")) {
+                converted |= divideUnleashed(finalSets, setInfo, "AU");
+            } else if (setInfo.getFirst().equals("DM")) {
+                converted |= divideUnleashed(finalSets, setInfo, "DM");
             }
             if (!converted) {
                 finalSets.add(set);
@@ -343,23 +349,38 @@ public class AfterStartupService {
         return String.join(",", finalSets);
     }
 
+    private static boolean divideUnleashed(Set<String> finalSets, List<String> setInfo, String oldSet) {
+        boolean converted = false;
+        List<String> subSets = Splitter.on('/').splitToList(setInfo.getLast());
+        for (String subSet : subSets) {
+            if (subSet.equals("C")) {
+                finalSets.add(oldSet + ":" + subSet);
+                converted = true;
+            } else {
+                finalSets.add("KSU:" + oldSet + subSet);
+                converted = true;
+            }
+        }
+        return converted;
+    }
+
 
     private static boolean convertSubSetToSet(Set<String> sets, List<String> setInfo, String oldSet, String subSet, String newSet, boolean splitInfo) {
         boolean converted = false;
         if (setInfo.getFirst().equals(oldSet) && setInfo.getLast().contains(subSet)) {
             List<String> subSets = Splitter.on('/').splitToList(setInfo.getLast());
             Optional<String> subSetOpt = subSets.stream().filter(s -> s.startsWith(subSet)).findFirst();
+            if (subSets.size() > 1) {
+                List<String> otherSubSet = subSets.stream().filter(s -> !s.startsWith(subSet)).toList();
+                sets.add(oldSet + ':' + String.join("/", otherSubSet));
+                converted = true;
+            }
             if (subSetOpt.isPresent()) {
                 String subSetInfo = subSetOpt.get();
                 if (splitInfo) {
                     subSetInfo = subSetInfo.substring(subSet.length());
                 }
                 sets.add(newSet + ':' + subSetInfo);
-                converted = true;
-            }
-            if (subSets.size() > 1) {
-                List<String> otherSubSet = subSets.stream().filter(s -> !s.startsWith(subSet)).toList();
-                sets.add(oldSet + ':' + String.join("/", otherSubSet));
                 converted = true;
             }
         }
