@@ -14,6 +14,7 @@ public class ApiComment {
     private ZonedDateTime modified;
     private String content;
     private String fullName;
+    private String username;
     private String profileImage;
     private boolean createdByAdmin = false;
     private boolean createdBySupporter = false;

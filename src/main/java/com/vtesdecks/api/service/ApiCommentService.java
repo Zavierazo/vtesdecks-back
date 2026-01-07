@@ -122,6 +122,7 @@ public class ApiCommentService {
         if (commentUser != null) {
             List<String> roles = userRepository.selectRolesByUserId(commentUser.getId());
             comment.setFullName(commentUser.getDisplayName());
+            comment.setUsername(commentUser.getUsername());
             comment.setProfileImage(getProfileImage(commentUser));
             comment.setCreatedByAdmin(commentUser.getAdmin() != null && commentUser.getAdmin());
             comment.setCreatedBySupporter(roles.contains(SUPPORTER_ROLE));
