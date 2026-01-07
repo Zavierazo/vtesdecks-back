@@ -182,7 +182,7 @@ public class ApiUserCollectionController {
         DeckQuery deckQuery = DeckQuery.builder()
                 .apiType(ApiDeckType.USER)
                 .order(DeckSort.NEWEST)
-                .user(ApiUtils.extractUserId())
+                .userId(ApiUtils.extractUserId())
                 .cards(List.of(id + "=1"))
                 .build();
         ApiDecks decks = apiDeckService.getDecks(deckQuery, null, null, null, 0, 10);

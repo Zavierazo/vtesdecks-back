@@ -95,7 +95,7 @@ public class DeckUserServiceImpl implements DeckUserService {
                 .builder()
                 .type(DeckType.USER)
                 .order(DeckSort.NEWEST)
-                .user(userId)
+                .userId(userId)
                 .build());
         if (deckUsers != null) {
             deckUsers.forEach(deck -> messageProducer.publishDeckSync(deck.getId()));
@@ -109,7 +109,7 @@ public class DeckUserServiceImpl implements DeckUserService {
                 .builder()
                 .type(DeckType.USER)
                 .order(DeckSort.NEWEST)
-                .user(userId)
+                .userId(userId)
                 .build());
         if (deckUsers != null && deckUsers.isNotEmpty()) {
             return deckUsers.stream().map(Deck::getId).collect(Collectors.toList());

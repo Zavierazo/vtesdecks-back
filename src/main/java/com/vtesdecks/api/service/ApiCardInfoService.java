@@ -112,7 +112,7 @@ public class ApiCardInfoService {
             DeckQuery deckQuery = DeckQuery.builder()
                     .apiType(ApiDeckType.USER)
                     .order(DeckSort.NEWEST)
-                    .user(userId)
+                    .userId(userId)
                     .cards(List.of(id + "=1"))
                     .build();
             ApiDecks decks = apiDeckService.getDecks(deckQuery, null, null, null, 0, 10);

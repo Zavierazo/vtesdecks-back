@@ -21,9 +21,11 @@ public class DeckQuery {
     private DeckType type;
     @Builder.Default
     private DeckSort order = DeckSort.NEWEST;
-    private Integer user;
+    private Integer userId;
     private String name;
     private String author;
+    private String username;
+    @Deprecated(since = "Frontend 2.62.0", forRemoval = true)
     private Boolean exactAuthor;
     private String cardText;
     private List<String> clans;

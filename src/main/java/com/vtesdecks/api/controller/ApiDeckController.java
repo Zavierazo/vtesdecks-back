@@ -79,7 +79,7 @@ public class ApiDeckController {
         DeckQuery deckQuery = DeckQuery.builder()
                 .apiType(type)
                 .order(order)
-                .user(ApiUtils.extractUserId())
+                .userId(ApiUtils.extractUserId())
                 .favorite(favorite)
                 .build();
         return deckService.getDecks(deckQuery, null, null, currencyCode, 0, limit);
@@ -108,6 +108,7 @@ public class ApiDeckController {
                                           @RequestParam(name = "order", required = false, defaultValue = "NEWEST") DeckSort order,
                                           @RequestParam(name = "name", required = false) String name,
                                           @RequestParam(name = "author", required = false) String author,
+                                          @RequestParam(name = "username", required = false) String username,
                                           @RequestParam(name = "exactAuthor", required = false) Boolean exactAuthor,
                                           @RequestParam(name = "cardText", required = false) String cardText,
                                           @RequestParam(name = "clans", required = false) List<String> clans,
@@ -144,9 +145,10 @@ public class ApiDeckController {
         DeckQuery deckQuery = DeckQuery.builder()
                 .apiType(type)
                 .order(order)
-                .user(ApiUtils.extractUserId())
+                .userId(ApiUtils.extractUserId())
                 .name(name)
                 .author(author)
+                .username(username)
                 .exactAuthor(exactAuthor)
                 .cardText(cardText)
                 .clans(clans)

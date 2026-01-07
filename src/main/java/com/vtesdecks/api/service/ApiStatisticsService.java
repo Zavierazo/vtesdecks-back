@@ -178,7 +178,7 @@ public class ApiStatisticsService {
         DeckQuery deckQuery = DeckQuery.builder()
                 .apiType(type)
                 .order(DeckSort.NEWEST)
-                .user(ApiUtils.extractUserId())
+                .userId(ApiUtils.extractUserId())
                 .year(year != null ? Lists.newArrayList(year, year) : null)
                 .build();
         return deckService.getDecks(deckQuery);

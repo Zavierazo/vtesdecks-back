@@ -22,8 +22,10 @@ import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.LimitedFormatEntity;
+import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.LimitedFormatRepository;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.limitedformat.LimitedFormatPayload;
 import jakarta.annotation.PostConstruct;
@@ -82,6 +84,8 @@ public class DeckIndex {
     private DeckCardIndex deckCardIndex;
     @Autowired
     private LimitedFormatRepository limitedFormatRepository;
+    @Autowired
+    private UserRepository userRepository;
     private IndexedCollection<Deck> decks = new ConcurrentIndexedCollection<>();
 
 
@@ -273,10 +277,16 @@ public class DeckIndex {
                 queryOptions = queryOptions(orderBy(descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
         }
         Equal<Deck, Boolean> published = QueryFactory.equal(Deck.PUBLISHED_ATTRIBUTE, true);
-        if (deckQuery.getUser() != null) {
-            query = and(query, or(equal(Deck.USER_ATTRIBUTE, deckQuery.getUser()), published));
+        if (deckQuery.getUserId() != null) {
+            query = and(query, or(equal(Deck.USER_ATTRIBUTE, deckQuery.getUserId()), published));
         } else {
             query = and(query, published);
+        }
+        if (deckQuery.getUsername() != null) {
+            UserEntity filterUser = userRepository.findByUsername(deckQuery.getUsername());
+            if (filterUser != null) {
+                query = and(query, equal(Deck.USER_ATTRIBUTE, filterUser.getId()));
+            }
         }
         if (deckQuery.getCards() != null && !deckQuery.getCards().isEmpty()) {
             for (Map.Entry<Integer, Integer> card : deckQuery.getCards().entrySet()) {
@@ -344,8 +354,8 @@ public class DeckIndex {
             query = and(query, lessThanOrEqualTo(Deck.LIBRARY_SIZE_ATTRIBUTE, deckQuery.getLibrarySizeMax()));
         }
         if (deckQuery.getType() != null) {
-            if (deckQuery.getUser() != null && deckQuery.getType() == DeckType.USER) {
-                query = and(query, equal(Deck.USER_ATTRIBUTE, deckQuery.getUser()));
+            if (deckQuery.getUserId() != null && deckQuery.getType() == DeckType.USER) {
+                query = and(query, equal(Deck.USER_ATTRIBUTE, deckQuery.getUserId()));
             } else {
                 query = and(query, equal(Deck.TYPE_ATTRIBUTE, deckQuery.getType()));
             }
@@ -456,8 +466,8 @@ public class DeckIndex {
                 query = and(query, in(Deck.TAG_MULTI_ATTRIBUTE, tag));
             }
         }
-        if (deckQuery.isFavorite() && deckQuery.getUser() != null) {
-            query = and(query, in(Deck.FAVORITE_MULTI_ATTRIBUTE, deckQuery.getUser()));
+        if (deckQuery.isFavorite() && deckQuery.getUserId() != null) {
+            query = and(query, in(Deck.FAVORITE_MULTI_ATTRIBUTE, deckQuery.getUserId()));
         }
         if (deckQuery.getLimitedFormat() != null) {
             query = and(query, contains(Deck.LIMITED_FORMAT_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getLimitedFormat())));
