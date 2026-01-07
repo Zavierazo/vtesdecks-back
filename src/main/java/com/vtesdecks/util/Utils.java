@@ -151,4 +151,95 @@ public class Utils {
         }
         return AnyAscii.transliterate(StringUtils.trim(name)).replaceAll("[/\\\\]", "");
     }
+
+    private static final int MAX_URL_LENGTH = 250;
+    private static final int MAX_IMAGE_SIZE_BYTES = 512 * 1024; // 512 KB
+    private static final int MAX_IMAGE_DIMENSION = 1024;
+    private static final List<String> ALLOWED_EXTENSIONS = List.of("jpg", "jpeg", "png", "gif", "webp");
+
+    /**
+     * Verify if the image URL is valid.
+     * Scheme: only HTTPS
+     * Max length: 250 characters
+     * Extension: jpg, jpeg, png, gif, webp
+     * Max size: 512 KB
+     * Max dimensions: 512x512 pixels
+     *
+     * @param imageUrl the URL of the image to validate
+     * @return string indicating the validation error, or null if valid
+     */
+    public static String isValidImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return null;
+        }
+
+        // Check max length
+        if (imageUrl.length() > MAX_URL_LENGTH) {
+            return "exceeds maximum length of " + MAX_URL_LENGTH + " characters";
+        }
+
+        // Check HTTPS scheme
+        if (!imageUrl.toLowerCase().startsWith("https://")) {
+            return "must use HTTPS scheme";
+        }
+
+        // Check extension
+        String lowerUrl = imageUrl.toLowerCase();
+        // Remove query parameters for extension check
+        String urlPath = lowerUrl.contains("?") ? lowerUrl.substring(0, lowerUrl.indexOf("?")) : lowerUrl;
+        boolean hasValidExtension = ALLOWED_EXTENSIONS.stream()
+                .anyMatch(ext -> urlPath.endsWith("." + ext));
+        if (!hasValidExtension) {
+            return "must have a valid extension: " + String.join(", ", ALLOWED_EXTENSIONS);
+        }
+
+        // Check image size and dimensions by fetching the image
+        try {
+            java.net.URI uri = java.net.URI.create(imageUrl);
+            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) uri.toURL().openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
+            connection.setRequestProperty("User-Agent", "VTESDecks Image Validator");
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode != 200) {
+                return "unable to access image URL, HTTP status: " + responseCode;
+            }
+
+            // Check content length if available
+            int contentLength = connection.getContentLength();
+            if (contentLength > MAX_IMAGE_SIZE_BYTES) {
+                return "size exceeds maximum of 512 KB";
+            }
+
+            // Read the image and validate size and dimensions
+            try (InputStream inputStream = connection.getInputStream()) {
+                byte[] imageBytes = inputStream.readNBytes(MAX_IMAGE_SIZE_BYTES + 1);
+                if (imageBytes.length > MAX_IMAGE_SIZE_BYTES) {
+                    return "size exceeds maximum of 512 KB";
+                }
+
+                // Check dimensions
+                try (ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes)) {
+                    javax.imageio.ImageIO.setUseCache(false);
+                    java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(bais);
+                    if (image == null) {
+                        return "unable to read image from URL";
+                    }
+                    if (image.getWidth() > MAX_IMAGE_DIMENSION || image.getHeight() > MAX_IMAGE_DIMENSION) {
+                        return "dimensions exceed maximum of " + MAX_IMAGE_DIMENSION + "x" + MAX_IMAGE_DIMENSION + " pixels";
+                    }
+                }
+            }
+
+            connection.disconnect();
+        } catch (IllegalArgumentException | java.net.MalformedURLException e) {
+            return "image URL format";
+        } catch (java.io.IOException e) {
+            log.warn("Error validating image URL: {}", imageUrl, e);
+            return "unable to validate image URL";
+        }
+        return null;
+    }
 }

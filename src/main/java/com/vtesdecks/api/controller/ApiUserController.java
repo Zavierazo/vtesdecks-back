@@ -15,6 +15,7 @@ import com.vtesdecks.model.api.ApiUser;
 import com.vtesdecks.model.api.ApiUserPassword;
 import com.vtesdecks.model.api.ApiUserSettings;
 import com.vtesdecks.service.DeckUserService;
+import com.vtesdecks.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -143,6 +144,17 @@ public class ApiUserController {
         UserEntity user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
         if (user != null) {
             boolean requireDeckRefresh = false;
+            if (StringUtils.isNotBlank(apiUserSettings.getProfileImage())) {
+                String validationImage = Utils.isValidImage(apiUserSettings.getProfileImage());
+                if (validationImage != null) {
+                    response.setSuccessful(false);
+                    response.setMessage("Invalid profile image: " + validationImage);
+                    return response;
+                }
+                user.setProfileImage(apiUserSettings.getProfileImage());
+            } else {
+                user.setProfileImage(null);
+            }
             if (StringUtils.isNotBlank(apiUserSettings.getDisplayName())) {
                 user.setDisplayName(apiUserSettings.getDisplayName());
                 response.setSuccessful(true);
