@@ -70,16 +70,4 @@ public class ApiProxyController {
     public ResponseEntity<List<ApiProxyCardOption>> getMissingProxyOptions() {
         return new ResponseEntity<>(proxyService.getMissingProxyOptions(), HttpStatus.OK);
     }
-
-    @Deprecated
-    @RequestMapping(
-            value = "/options/{id}/{set}",
-            method = RequestMethod.GET, produces = {
-            MediaType.APPLICATION_JSON_VALUE
-    })
-    @ResponseBody
-    public ResponseEntity<ApiProxyCardOption> getProxyOption(@PathVariable Integer id, @PathVariable String set) {
-        log.warn("calling deprecated endpoint for proxy option with id: {}, set: {}", id, set);
-        return new ResponseEntity<>(proxyService.getProxyOption(id, set), HttpStatus.OK);
-    }
 }

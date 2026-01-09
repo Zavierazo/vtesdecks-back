@@ -3,8 +3,6 @@ package com.vtesdecks.api.controller;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.redis.entity.AiChatTask;
 import com.vtesdecks.enums.AsyncAiStatus;
-import com.vtesdecks.model.api.ApiAiAskRequest;
-import com.vtesdecks.model.api.ApiAiAskResponse;
 import com.vtesdecks.model.api.ApiAiAsyncRequest;
 import com.vtesdecks.model.api.ApiAiAsyncResponse;
 import com.vtesdecks.model.api.ApiAiAsyncStatusResponse;
@@ -27,16 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class ApiAiController {
     private final AiService aiService;
     private final AsyncAiService asyncAiService;
-
-
-    @Deprecated
-    @PostMapping(value = "/ask", produces = {
-            MediaType.APPLICATION_JSON_VALUE
-    })
-    public ApiAiAskResponse ask(@RequestBody ApiAiAskRequest aiRequest) {
-        log.warn("Synchronous AI ask endpoint is deprecated.");
-        return aiService.ask(aiRequest, ApiUtils.extractUserId());
-    }
 
     @PostMapping(value = "/ask/async", produces = {
             MediaType.APPLICATION_JSON_VALUE

@@ -12,12 +12,7 @@ import com.vtesdecks.service.DeckService;
 import com.vtesdecks.service.DeckUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections.CollectionUtils;
 import org.springframework.stereotype.Service;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -81,15 +76,6 @@ public class DeckUserServiceImpl implements DeckUserService {
     }
 
     @Override
-    public List<String> getFavoriteDecks(Integer userId) {
-        List<DeckUserEntity> deckUsers = deckUserRepository.findFavoriteTrueByIdUserOrderByModificationDateDesc(userId);
-        if (CollectionUtils.isNotEmpty(deckUsers)) {
-            return deckUsers.stream().map(deckUserEntity -> deckUserEntity.getId().getDeckId()).collect(Collectors.toList());
-        }
-        return Collections.emptyList();
-    }
-
-    @Override
     public void refreshUserDecks(Integer userId) {
         ResultSet<Deck> deckUsers = deckService.getDecks(DeckQuery
                 .builder()
@@ -101,20 +87,4 @@ public class DeckUserServiceImpl implements DeckUserService {
             deckUsers.forEach(deck -> messageProducer.publishDeckSync(deck.getId()));
         }
     }
-
-    @Override
-    @Deprecated
-    public List<String> getUserDecks(Integer userId) {
-        ResultSet<Deck> deckUsers = deckService.getDecks(DeckQuery
-                .builder()
-                .type(DeckType.USER)
-                .order(DeckSort.NEWEST)
-                .userId(userId)
-                .build());
-        if (deckUsers != null && deckUsers.isNotEmpty()) {
-            return deckUsers.stream().map(Deck::getId).collect(Collectors.toList());
-        }
-        return Collections.emptyList();
-    }
-
 }

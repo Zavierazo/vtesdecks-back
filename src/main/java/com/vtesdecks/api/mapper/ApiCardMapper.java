@@ -60,7 +60,6 @@ public abstract class ApiCardMapper {
 
     public abstract List<ApiShop> mapCardShop(List<CardShopEntity> entity);
 
-    @Mapping(target = "platform", source = "platform")
     @Mapping(target = "shopInfo", source = "platform")
     public abstract ApiShop mapCardShop(CardShopEntity entity);
 
