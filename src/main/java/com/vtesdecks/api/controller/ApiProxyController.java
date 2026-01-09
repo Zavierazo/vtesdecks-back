@@ -52,13 +52,13 @@ public class ApiProxyController {
     }
 
     @RequestMapping(
-            value = "/options/{id}",
+            value = "/options/{ids}",
             method = RequestMethod.GET, produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<List<ApiProxyCardOption>> getProxyOptions(@PathVariable Integer id) {
-        return new ResponseEntity<>(proxyService.getProxyOptions(id), HttpStatus.OK);
+    public ResponseEntity<List<ApiProxyCardOption>> getProxyOptions(@PathVariable List<Integer> ids) {
+        return new ResponseEntity<>(proxyService.getProxyOptions(ids), HttpStatus.OK);
     }
 
     @RequestMapping(

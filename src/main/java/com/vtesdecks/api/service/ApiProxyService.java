@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +33,7 @@ public class ApiProxyService {
     public byte[] generatePDF(List<ApiProxyCard> cards) throws IOException, DocumentException {
         Map<Integer, List<ApiProxyCardOption>> cardOptions = new HashMap<>();
         for (ApiProxyCard card : cards) {
-            List<ApiProxyCardOption> options = getProxyOptions(card.getCardId());
+            List<ApiProxyCardOption> options = getProxyOptions(List.of(card.getCardId()));
             if (options != null) {
                 cardOptions.put(card.getCardId(), options);
             }
@@ -48,11 +48,16 @@ public class ApiProxyService {
                 .orElse(null);
     }
 
-    public List<ApiProxyCardOption> getProxyOptions(Integer cardId) {
-        ProxyCardOption proxyCardOption = proxyCardOptionRepository.findById(cardId).orElse(null);
-        if (proxyCardOption == null) {
-            return Collections.emptyList();
+    public List<ApiProxyCardOption> getProxyOptions(List<Integer> cardId) {
+        Iterable<ProxyCardOption> proxyCardOptions = proxyCardOptionRepository.findAllById(cardId);
+        List<ApiProxyCardOption> resultList = new ArrayList<>();
+        for (ProxyCardOption proxyCardOption : proxyCardOptions) {
+            resultList.addAll(getProxyOptions(proxyCardOption));
         }
+        return resultList;
+    }
+
+    public List<ApiProxyCardOption> getProxyOptions(ProxyCardOption proxyCardOption) {
         return proxyCardOption.getSets()
                 .stream()
                 .map(set -> map(proxyCardOption, set))
