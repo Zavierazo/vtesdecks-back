@@ -26,5 +26,6 @@ public class Card {
     private boolean unreleased;
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
+    private Set<Integer> limitedFormats;
     private LocalDateTime lastUpdate;
 }

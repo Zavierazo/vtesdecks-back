@@ -40,6 +40,7 @@ public class ApiCrypt {
     private Boolean printOnDemand;
     private Boolean unreleased;
     private BigDecimal minPrice;
+    private Set<Integer> limitedFormats;
     private Double score;
     private LocalDateTime lastUpdate;
 }

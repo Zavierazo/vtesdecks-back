@@ -1,9 +1,11 @@
 package com.vtesdecks.util;
 
 import com.google.common.base.Splitter;
+import com.vtesdecks.cache.indexable.Card;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.CryptEntity;
 import com.vtesdecks.jpa.entity.LibraryEntity;
+import com.vtesdecks.jpa.entity.LimitedFormatEntity;
 import com.vtesdecks.model.CardType;
 import com.vtesdecks.model.Clan;
 import com.vtesdecks.model.CryptTaint;
@@ -13,6 +15,7 @@ import com.vtesdecks.model.LibraryTitle;
 import com.vtesdecks.model.Path;
 import com.vtesdecks.model.Sect;
 import com.vtesdecks.model.ShopPlatform;
+import com.vtesdecks.model.limitedformat.LimitedFormatPayload;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -273,5 +276,42 @@ public class VtesUtils {
             return sets.getFirst().startsWith("Spoiler:");
         }
         return false;
+    }
+
+    public static Set<Integer> getLimitedFormats(Card card, List<LimitedFormatEntity> limitedFormats) {
+        Set<Integer> cardFormats = new HashSet<>();
+        String cardId = String.valueOf(card.getId());
+
+        for (LimitedFormatEntity limitedFormatEntity : limitedFormats) {
+            LimitedFormatPayload limitedFormat = limitedFormatEntity.getFormat();
+            if (limitedFormat == null) {
+                continue;
+            }
+
+            // Skip if card is banned
+            boolean isBanned = limitedFormat.getBanned() != null &&
+                    (limitedFormat.getBanned().getCrypt().containsKey(cardId) ||
+                            limitedFormat.getBanned().getLibrary().containsKey(cardId));
+
+            if (!isBanned) {
+                // Check if card is explicitly allowed
+                boolean isAllowed = limitedFormat.getAllowed() != null &&
+                        (limitedFormat.getAllowed().getCrypt().containsKey(cardId) ||
+                                limitedFormat.getAllowed().getLibrary().containsKey(cardId));
+
+                // Check if card is in allowed sets
+                boolean isInAllowedSets = limitedFormat.getSets() != null &&
+                        !limitedFormat.getSets().isEmpty() &&
+                        card.getSets() != null &&
+                        card.getSets().stream()
+                                .map(set -> set.split(":")[0])
+                                .anyMatch(set -> limitedFormat.getSets().containsKey(set));
+
+                if (isAllowed || isInAllowedSets) {
+                    cardFormats.add(limitedFormat.getId());
+                }
+            }
+        }
+        return cardFormats;
     }
 }

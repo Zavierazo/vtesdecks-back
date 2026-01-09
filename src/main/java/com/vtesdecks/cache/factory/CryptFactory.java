@@ -7,6 +7,7 @@ import com.vtesdecks.cache.indexable.I18n;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.CryptEntity;
 import com.vtesdecks.jpa.entity.CryptI18nEntity;
+import com.vtesdecks.jpa.entity.LimitedFormatEntity;
 import com.vtesdecks.model.CryptTaint;
 import com.vtesdecks.service.CurrencyExchangeService;
 import com.vtesdecks.util.TrigramSimilarity;
@@ -37,10 +38,10 @@ public abstract class CryptFactory {
 
     @Mapping(target = "disciplines", ignore = true)
     @Mapping(target = "path", source = "dbCrypt.path", qualifiedByName = "mapNonEmpty")
-    public abstract Crypt getCrypt(CryptEntity dbCrypt, @Context List<CryptI18nEntity> cryptI18nList, @Context List<CardShopEntity> cardShopList);
+    public abstract Crypt getCrypt(CryptEntity dbCrypt, @Context List<CryptI18nEntity> cryptI18nList, @Context List<CardShopEntity> cardShopList, @Context List<LimitedFormatEntity> limitedFormats);
 
     @AfterMapping
-    protected void afterMapping(@MappingTarget Crypt crypt, CryptEntity dbCrypt, @Context List<CryptI18nEntity> cryptI18nList, @Context List<CardShopEntity> cardShopList) {
+    protected void afterMapping(@MappingTarget Crypt crypt, CryptEntity dbCrypt, @Context List<CryptI18nEntity> cryptI18nList, @Context List<CardShopEntity> cardShopList, @Context List<LimitedFormatEntity> limitedFormats) {
         crypt.setImage("/img/cards/" + dbCrypt.getId() + ".jpg");
         crypt.setCropImage("/img/cards/crop/" + dbCrypt.getId() + ".jpg");
         crypt.setClanIcon(VtesUtils.getClanIcon(dbCrypt.getClan()));
@@ -104,6 +105,7 @@ public abstract class CryptFactory {
             }
             crypt.setI18n(i18nMap);
         }
+        crypt.setLimitedFormats(VtesUtils.getLimitedFormats(crypt, limitedFormats));
     }
 
     @Named("mapNonEmpty")

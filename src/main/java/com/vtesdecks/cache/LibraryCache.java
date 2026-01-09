@@ -15,17 +15,19 @@ import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.LibraryEntity;
 import com.vtesdecks.jpa.entity.LibraryI18nEntity;
+import com.vtesdecks.jpa.entity.LimitedFormatEntity;
 import com.vtesdecks.jpa.entity.extra.DeckCardCount;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.LibraryI18nRepository;
 import com.vtesdecks.jpa.repositories.LibraryRepository;
+import com.vtesdecks.jpa.repositories.LimitedFormatRepository;
 import com.vtesdecks.model.LibraryTaint;
 import com.vtesdecks.util.Utils;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -51,18 +53,15 @@ import static com.googlecode.cqengine.query.option.EngineThresholds.INDEX_ORDERI
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
+@RequiredArgsConstructor
 public class LibraryCache {
-    private IndexedCollection<Library> cache = new ConcurrentIndexedCollection<Library>();
-    @Autowired
-    private LibraryRepository libraryRepository;
-    @Autowired
-    private LibraryI18nRepository libraryI18nRepository;
-    @Autowired
-    private DeckCardRepository deckCardRepository;
-    @Autowired
-    private CardShopRepository cardShopRepository;
-    @Autowired
-    private LibraryFactory libraryFactory;
+    private final LibraryRepository libraryRepository;
+    private final LibraryI18nRepository libraryI18nRepository;
+    private final DeckCardRepository deckCardRepository;
+    private final CardShopRepository cardShopRepository;
+    private final LibraryFactory libraryFactory;
+    private final LimitedFormatRepository limitedFormatRepository;
+    private final IndexedCollection<Library> cache = new ConcurrentIndexedCollection<>();
 
 
     @PostConstruct
@@ -91,10 +90,12 @@ public class LibraryCache {
             List<DeckCardCount> deckCountByCard = deckCardRepository.selectDeckCountByCard();
             List<CardShopEntity> cardShopList = cardShopRepository.findAll();
             List<LibraryI18nEntity> libraryI18nList = libraryI18nRepository.findAll();
+            List<LimitedFormatEntity> limitedFormats = limitedFormatRepository.findAll();
             for (LibraryEntity library : libraryRepository.findAll()) {
                 refreshIndex(library,
                         libraryI18nList.stream().filter(libraryI18n -> libraryI18n.getId().getCardId().equals(library.getId())).toList(),
                         cardShopList.stream().filter(cardShop -> cardShop.getCardId().equals(library.getId())).toList(),
+                        limitedFormats,
                         deckCountByCard.stream().filter(count -> count.getId().equals(library.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum(),
                         countByCard.stream().filter(count -> count.getId().equals(library.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum());
                 currentKeys.remove(library.getId());
@@ -111,10 +112,10 @@ public class LibraryCache {
         }
     }
 
-    private void refreshIndex(LibraryEntity library, List<LibraryI18nEntity> libraryI18nList, List<CardShopEntity> cardShopList, Long deckCount, Long count) {
+    private void refreshIndex(LibraryEntity library, List<LibraryI18nEntity> libraryI18nList, List<CardShopEntity> cardShopList, List<LimitedFormatEntity> limitedFormats, Long deckCount, Long count) {
         try {
             Library oldLibrary = get(library.getId());
-            Library newLibrary = libraryFactory.getLibrary(library, libraryI18nList, cardShopList);
+            Library newLibrary = libraryFactory.getLibrary(library, libraryI18nList, cardShopList, limitedFormats);
             newLibrary.setDeckPopularity(deckCount);
             newLibrary.setCardPopularity(count);
             if (deckCount > 0) {

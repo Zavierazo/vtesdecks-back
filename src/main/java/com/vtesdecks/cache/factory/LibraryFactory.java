@@ -8,6 +8,7 @@ import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.LibraryEntity;
 import com.vtesdecks.jpa.entity.LibraryI18nEntity;
+import com.vtesdecks.jpa.entity.LimitedFormatEntity;
 import com.vtesdecks.model.LibraryTaint;
 import com.vtesdecks.model.LibraryTitle;
 import com.vtesdecks.service.CurrencyExchangeService;
@@ -42,10 +43,10 @@ public abstract class LibraryFactory {
 
     @Mapping(target = "types", ignore = true)
     @Mapping(target = "path", source = "dbLibrary.path", qualifiedByName = "mapNonEmpty")
-    public abstract Library getLibrary(LibraryEntity dbLibrary, @Context List<LibraryI18nEntity> libraryI18nList, @Context List<CardShopEntity> cardShopList);
+    public abstract Library getLibrary(LibraryEntity dbLibrary, @Context List<LibraryI18nEntity> libraryI18nList, @Context List<CardShopEntity> cardShopList, @Context List<LimitedFormatEntity> limitedFormats);
 
     @AfterMapping
-    protected void afterMapping(@MappingTarget Library library, LibraryEntity dbLibrary, @Context List<LibraryI18nEntity> libraryI18nList, @Context List<CardShopEntity> cardShopList) {
+    protected void afterMapping(@MappingTarget Library library, LibraryEntity dbLibrary, @Context List<LibraryI18nEntity> libraryI18nList, @Context List<CardShopEntity> cardShopList, @Context List<LimitedFormatEntity> limitedFormats) {
         library.setImage("/img/cards/" + +dbLibrary.getId() + ".jpg");
         library.setCropImage("/img/cards/crop/" + +dbLibrary.getId() + ".jpg");
         library.setTypes(getTypes(dbLibrary));
@@ -99,6 +100,7 @@ public abstract class LibraryFactory {
                     library.setLastUpdate(cardShopCreationDate);
                 }
             }
+            library.setLimitedFormats(VtesUtils.getLimitedFormats(library, limitedFormats));
         }
 
         //Library i18n

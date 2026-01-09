@@ -15,17 +15,19 @@ import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.CryptEntity;
 import com.vtesdecks.jpa.entity.CryptI18nEntity;
+import com.vtesdecks.jpa.entity.LimitedFormatEntity;
 import com.vtesdecks.jpa.entity.extra.DeckCardCount;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
 import com.vtesdecks.jpa.repositories.CryptI18nRepository;
 import com.vtesdecks.jpa.repositories.CryptRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
+import com.vtesdecks.jpa.repositories.LimitedFormatRepository;
 import com.vtesdecks.model.CryptTaint;
 import com.vtesdecks.util.Utils;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -51,18 +53,15 @@ import static com.googlecode.cqengine.query.option.EngineThresholds.INDEX_ORDERI
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
+@RequiredArgsConstructor
 public class CryptCache {
-    private IndexedCollection<Crypt> cache = new ConcurrentIndexedCollection<Crypt>();
-    @Autowired
-    private CryptRepository cryptRepository;
-    @Autowired
-    private CryptI18nRepository cryptI18nRepository;
-    @Autowired
-    private DeckCardRepository deckCardRepository;
-    @Autowired
-    private CardShopRepository cardShopRepository;
-    @Autowired
-    private CryptFactory cryptFactory;
+    private final CryptRepository cryptRepository;
+    private final CryptI18nRepository cryptI18nRepository;
+    private final DeckCardRepository deckCardRepository;
+    private final CardShopRepository cardShopRepository;
+    private final CryptFactory cryptFactory;
+    private final LimitedFormatRepository limitedFormatRepository;
+    private final IndexedCollection<Crypt> cache = new ConcurrentIndexedCollection<>();
 
     @PostConstruct
     public void setUp() {
@@ -88,10 +87,12 @@ public class CryptCache {
             List<DeckCardCount> deckCountByCard = deckCardRepository.selectDeckCountByCard();
             List<CardShopEntity> cardShopList = cardShopRepository.findAll();
             List<CryptI18nEntity> cryptI18nList = cryptI18nRepository.findAll();
+            List<LimitedFormatEntity> limitedFormats = limitedFormatRepository.findAll();
             for (CryptEntity crypt : cryptRepository.findAll()) {
                 refreshIndex(crypt,
                         cryptI18nList.stream().filter(cryptI18n -> cryptI18n.getId().getCardId().equals(crypt.getId())).toList(),
                         cardShopList.stream().filter(cardShop -> cardShop.getCardId().equals(crypt.getId())).toList(),
+                        limitedFormats,
                         deckCountByCard.stream().filter(count -> count.getId().equals(crypt.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum(),
                         countByCard.stream().filter(count -> count.getId().equals(crypt.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum());
                 currentKeys.remove(crypt.getId());
@@ -108,10 +109,10 @@ public class CryptCache {
         }
     }
 
-    private void refreshIndex(CryptEntity crypt, List<CryptI18nEntity> cryptI18nList, List<CardShopEntity> cardShopList, long deckCount, long count) {
+    private void refreshIndex(CryptEntity crypt, List<CryptI18nEntity> cryptI18nList, List<CardShopEntity> cardShopList, List<LimitedFormatEntity> limitedFormats, long deckCount, long count) {
         try {
             Crypt oldCrypt = get(crypt.getId());
-            Crypt newCrypt = cryptFactory.getCrypt(crypt, cryptI18nList, cardShopList);
+            Crypt newCrypt = cryptFactory.getCrypt(crypt, cryptI18nList, cardShopList, limitedFormats);
             newCrypt.setDeckPopularity(deckCount);
             newCrypt.setCardPopularity(count);
             if (deckCount > 0) {
