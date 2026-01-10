@@ -1,7 +1,7 @@
 package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.ApiPublicUserService;
-import com.vtesdecks.model.api.ApiUser;
+import com.vtesdecks.model.api.ApiPublicUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -20,7 +20,7 @@ public class ApiPublicUserController {
     @GetMapping(value = "/{username}", produces = {
             MediaType.APPLICATION_JSON_VALUE
     })
-    public ApiUser getPublicUser(@PathVariable String username) {
+    public ApiPublicUser getPublicUser(@PathVariable String username) {
         return apiPublicUserService.getPublicUser(username);
     }
 }

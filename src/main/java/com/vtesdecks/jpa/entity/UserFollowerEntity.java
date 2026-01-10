@@ -3,6 +3,9 @@ package com.vtesdecks.jpa.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,6 +24,15 @@ public class UserFollowerEntity {
 
     @EmbeddedId
     private UserFollowerId id;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", referencedColumnName = "id", insertable = false, updatable = false)
+    private UserEntity user;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "followed_id", referencedColumnName = "id", insertable = false, updatable = false)
+    private UserEntity followed;
+
 
     @CreationTimestamp
     @Column(name = "creation_date", nullable = false, insertable = false, updatable = false)

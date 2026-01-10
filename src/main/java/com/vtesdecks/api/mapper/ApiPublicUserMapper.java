@@ -3,6 +3,7 @@ package com.vtesdecks.api.mapper;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.model.api.ApiPublicUser;
 import com.vtesdecks.model.api.ApiUser;
 import org.mapstruct.Mapper;
 import org.mapstruct.Named;
@@ -22,6 +23,19 @@ public abstract class ApiPublicUserMapper {
             return null;
         }
         ApiUser apiUser = new ApiUser();
+        apiUser.setUser(user.getUsername());
+        apiUser.setDisplayName(user.getDisplayName());
+        apiUser.setProfileImage(ApiUtils.getProfileImage(user));
+        apiUser.setAdmin(user.getAdmin());
+        apiUser.setRoles(roles);
+        return apiUser;
+    }
+
+    public ApiPublicUser mapPublicUser(UserEntity user, List<String> roles) {
+        if (user == null) {
+            return null;
+        }
+        ApiPublicUser apiUser = new ApiPublicUser();
         apiUser.setUser(user.getUsername());
         apiUser.setDisplayName(user.getDisplayName());
         apiUser.setProfileImage(ApiUtils.getProfileImage(user));

@@ -9,6 +9,8 @@ public interface UserFollowerRepository extends JpaRepository<UserFollowerEntity
 
     boolean existsByIdUserIdAndIdFollowedId(Integer userId, Integer followedId);
 
+    List<UserFollowerEntity> findByIdUserId(Integer userId);
+    
     List<UserFollowerEntity> findByIdFollowedId(Integer followedId);
 }
 
