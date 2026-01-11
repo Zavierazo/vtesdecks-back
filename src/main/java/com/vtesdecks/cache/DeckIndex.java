@@ -286,6 +286,8 @@ public class DeckIndex {
             UserEntity filterUser = userRepository.findByUsername(deckQuery.getUsername());
             if (filterUser != null) {
                 query = and(query, equal(Deck.USER_ATTRIBUTE, filterUser.getId()));
+            } else {
+                query = and(query, equal(Deck.USER_ATTRIBUTE, -1));
             }
         }
         if (deckQuery.getCards() != null && !deckQuery.getCards().isEmpty()) {
