@@ -10,7 +10,8 @@ public enum ShopPlatform {
     DTC("DriveThruCards", "https://drivethrucards.com", true, true, true),
     GP("GamePod", "https://gamepod.es", true, true, true),
     CGG("CardGameGeek", "https://shop.cardgamegeek.com", true, false, false),
-    TCG_MKT("TCG Market", "https://tcgmarket.es", true, false, false);;
+    TCG_MKT("TCG Market", "https://tcgmarket.es", true, false, false),
+    EBAY("Ebay", "https://ebay.com", true, false, false);
 
     @Getter
     private String fullName;

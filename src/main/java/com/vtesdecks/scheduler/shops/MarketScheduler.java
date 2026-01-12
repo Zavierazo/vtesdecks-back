@@ -15,10 +15,14 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 
@@ -28,7 +32,8 @@ import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 public class MarketScheduler {
     private static final Integer LIMIT = 1000;
     private static final Map<String, ShopPlatform> PLATFORM_MAP = Map.of(
-            "tcgmarket", ShopPlatform.TCG_MKT
+            "tcgmarket", ShopPlatform.TCG_MKT,
+            "ebay", ShopPlatform.EBAY
     );
 
     private final CardShopRepository cardShopRepository;
@@ -44,18 +49,15 @@ public class MarketScheduler {
         try {
             List<CardShopEntity> existingCardSets = cardShopRepository.findByPlatformIn(PLATFORM_MAP.values());
             CardOffersResponse cardOffersResponse = getPage(offset);
+            List<CardOffer> offers = new ArrayList<>();
             do {
                 if (cardOffersResponse != null && !isEmpty(cardOffersResponse.getOffers())) {
-                    try {
-                        parsePage(cardOffersResponse.getOffers(), existingCardSets);
-                    } catch (Exception e) {
-                        log.error("Error scrapping Blood Library  offset {}", offset, e);
-                    }
-
+                    offers.addAll(cardOffersResponse.getOffers());
                 }
                 offset += LIMIT;
                 cardOffersResponse = getPage(offset);
             } while (cardOffersResponse != null && cardOffersResponse.getOffers() != null && !cardOffersResponse.getOffers().isEmpty());
+            parseOffers(offers, existingCardSets);
             if (!existingCardSets.isEmpty()) {
                 log.warn("The following cards are no longer available on Blood Library Market and will be removed: {}", existingCardSets);
                 cardShopRepository.deleteAll(existingCardSets);
@@ -72,9 +74,27 @@ public class MarketScheduler {
         return marketClient.getCardOffers(offset, LIMIT);
     }
 
-    private void parsePage(List<CardOffer> offers, List<CardShopEntity> existingCardSets) {
+    private record CompositeKey(ShopPlatform platform, Integer cardId, String set, String locale) {
+    }
+
+    private void parseOffers(List<CardOffer> offers, List<CardShopEntity> existingCardSets) {
+        List<CardOffer> cheaperOffers = offers.stream()
+                .filter(offer -> offer.getPrice() != null && offer.getPrice().compareTo(BigDecimal.ZERO) > 0)
+                .collect(Collectors.groupingBy(
+                        offer -> new CompositeKey(
+                                PLATFORM_MAP.get(offer.getMarket()),
+                                offer.getCardId(),
+                                offer.getEdition(),
+                                offer.getLanguage()
+                        ),
+                        Collectors.minBy(Comparator.comparing(CardOffer::getPrice))
+                ))
+                .values().stream()
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .toList();
         try {
-            for (CardOffer offer : offers) {
+            for (CardOffer offer : cheaperOffers) {
                 CardShopEntity cardShopEntity = toCardShopEntity(offer).orElse(null);
                 if (cardShopEntity == null) {
                     continue;
@@ -102,6 +122,7 @@ public class MarketScheduler {
         }
     }
 
+
     private Optional<CardShopEntity> toCardShopEntity(CardOffer cardOffer) {
         if (cardOffer == null || cardOffer.getCardId() == null || cardOffer.getLink() == null || cardOffer.getMarket() == null || cardOffer.getPrice() == null || cardOffer.getCurrency() == null) {
             log.warn("Invalid card offer: {}", cardOffer);
@@ -123,12 +144,15 @@ public class MarketScheduler {
             default:
 
         }
-        String set = cardOffer.getEdition();
-        if (setCache.get(set) == null) {
-            log.warn("No set found for {}", set);
-            return Optional.empty();
-        } else if (cardOffer.getEditionDetails() != null) {
-            set += ":" + cardOffer.getEditionDetails();
+        String set = null;
+        if (cardOffer.getEdition() != null) {
+            set = cardOffer.getEdition();
+            if (setCache.get(set) == null) {
+                log.warn("No set found for {}", set);
+                return Optional.empty();
+            } else if (cardOffer.getEditionDetails() != null) {
+                set += ":" + cardOffer.getEditionDetails();
+            }
         }
 
         // Build data object

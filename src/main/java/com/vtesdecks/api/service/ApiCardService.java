@@ -86,9 +86,14 @@ public class ApiCardService {
     }
 
     public ApiShopResult getCardShops(Integer cardId, boolean showAll) {
-        List<CardShopEntity> all = cardShopRepository.findByCardId(cardId)
+        List<CardShopEntity> results = cardShopRepository.findByCardId(cardId);
+        boolean hasInStock = results.stream()
+                .filter(cardShop -> cardShop.getPlatform().isEnabled())
+                .anyMatch(CardShopEntity::isInStock);
+        List<CardShopEntity> all = results
                 .stream()
                 .filter(cardShop -> cardShop.getPlatform().isEnabled())
+                .filter(cardShop -> !hasInStock || cardShop.isInStock())
                 .sorted(Comparator.comparing(CardShopEntity::getPrice))
                 .toList();
         if (showAll) {
