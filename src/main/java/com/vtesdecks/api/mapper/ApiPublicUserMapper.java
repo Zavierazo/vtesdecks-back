@@ -4,7 +4,6 @@ import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.model.api.ApiPublicUser;
-import com.vtesdecks.model.api.ApiUser;
 import org.mapstruct.Mapper;
 import org.mapstruct.Named;
 
@@ -14,21 +13,8 @@ import java.util.List;
 public abstract class ApiPublicUserMapper {
 
     @Named("mapDeckUser")
-    public ApiUser mapUser(Deck deck) {
-        return mapUser(deck.getUser(), deck.getUserRoles());
-    }
-
-    public ApiUser mapUser(UserEntity user, List<String> roles) {
-        if (user == null) {
-            return null;
-        }
-        ApiUser apiUser = new ApiUser();
-        apiUser.setUser(user.getUsername());
-        apiUser.setDisplayName(user.getDisplayName());
-        apiUser.setProfileImage(ApiUtils.getProfileImage(user));
-        apiUser.setAdmin(user.getAdmin());
-        apiUser.setRoles(roles);
-        return apiUser;
+    public ApiPublicUser mapUser(Deck deck) {
+        return mapPublicUser(deck.getUser(), deck.getUserRoles());
     }
 
     public ApiPublicUser mapPublicUser(UserEntity user, List<String> roles) {
@@ -39,7 +25,6 @@ public abstract class ApiPublicUserMapper {
         apiUser.setUser(user.getUsername());
         apiUser.setDisplayName(user.getDisplayName());
         apiUser.setProfileImage(ApiUtils.getProfileImage(user));
-        apiUser.setAdmin(user.getAdmin());
         apiUser.setRoles(roles);
         return apiUser;
     }

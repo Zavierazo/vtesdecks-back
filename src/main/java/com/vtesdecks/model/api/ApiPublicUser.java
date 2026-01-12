@@ -17,7 +17,6 @@ public class ApiPublicUser {
     private String user;
     private String displayName;
     private String profileImage;
-    private Boolean admin;
     private List<String> roles;
     private List<ApiPublicUser> followers;
     private List<ApiPublicUser> following;

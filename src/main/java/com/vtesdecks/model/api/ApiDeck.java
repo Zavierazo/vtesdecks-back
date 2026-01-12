@@ -23,7 +23,7 @@ public class ApiDeck {
     private Integer players;
     private Integer year;
     private String author;
-    private ApiUser user;
+    private ApiPublicUser user;
     private String url;
     private String source;
     private String description;
