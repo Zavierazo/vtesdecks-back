@@ -74,7 +74,13 @@ public class MarketScheduler {
         return marketClient.getCardOffers(offset, LIMIT);
     }
 
-    private record CompositeKey(ShopPlatform platform, Integer cardId, String set, String locale) {
+    private record CompositeKey(
+            ShopPlatform platform,
+            Integer cardId,
+            String edition,
+            String editionDetails,
+            String locale
+    ) {
     }
 
     private void parseOffers(List<CardOffer> offers, List<CardShopEntity> existingCardSets) {
@@ -85,6 +91,7 @@ public class MarketScheduler {
                                 PLATFORM_MAP.get(offer.getMarket()),
                                 offer.getCardId(),
                                 offer.getEdition(),
+                                offer.getEditionDetails(),
                                 offer.getLanguage()
                         ),
                         Collectors.minBy(Comparator.comparing(CardOffer::getPrice))
