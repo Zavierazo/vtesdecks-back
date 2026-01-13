@@ -5950,3 +5950,5 @@ If this retainer is burned when a ghoul ally enters play, you can reduce the cos
 "150014","Tranquility Shield","","Combat","Salubri","","Fortitude","","1","","","Only usable before range is determined during the first round.
 [for] This combat, this vampire can prevent 1 damage each round. This combat, frenzy cards cannot be used on this vampire; cancel the effects of frenzy cards that have already been used on this vampire this combat.
 [FOR] As above, but this vampire can prevent 2 damage each round.","","Spoiler:NB4","","Mark Kelly",""
+"150015","The Vozhd of Gravesend","","Ally","Tzimisce","","","4","","","","Unique ghoul with 5 life. 4 strength, 0 bleed.
+After this ally enters play, burn an ally or retainer you control. This ally can enter combat with a vampire as a (D) action. This ally can prevent 1 damage each round of combat. During combat, this ally can burn 1 life to cancel a strike card as it is played by the opposing minion, and its cost is not paid (the minion chooses a strike again).","","Spoiler:NB4","","Ginés Quiñonero",""
