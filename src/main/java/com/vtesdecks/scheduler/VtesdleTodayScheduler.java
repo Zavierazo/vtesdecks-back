@@ -15,7 +15,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -31,22 +30,22 @@ public class VtesdleTodayScheduler {
         LocalDate today = LocalDate.now();
         if (vtesdleDayRepository.findById(today).isEmpty()) {
             Set<Integer> cardsLastYear = vtesdleDayRepository.selectCardsLastYear();
-            ResultSet<Crypt> result = cryptCache.selectAll(null, null);
+            try (ResultSet<Crypt> result = cryptCache.selectAll()) {
 
-            List<Integer> validCardList = result.stream()
-                    .map(Crypt::getId)
-                    .filter(cardId -> !cardsLastYear.contains(cardId))
-                    .collect(Collectors.toList());
+                List<Integer> validCardList = result.stream()
+                        .map(Crypt::getId)
+                        .filter(cardId -> !cardsLastYear.contains(cardId))
+                        .toList();
+                Random r = new Random();
+                Integer selectedCard = validCardList.stream()
+                        .skip(r.nextInt(validCardList.size()))
+                        .findFirst().orElse(200001);
 
-            Random r = new Random();
-            Integer selectedCard = validCardList.stream()
-                    .skip(r.nextInt(validCardList.size()))
-                    .findFirst().orElse(200001);
-
-            VtesdleDayEntity vtesdleDay = new VtesdleDayEntity();
-            vtesdleDay.setDay(today);
-            vtesdleDay.setCardId(selectedCard);
-            vtesdleDayRepository.saveAndFlush(vtesdleDay);
+                VtesdleDayEntity vtesdleDay = new VtesdleDayEntity();
+                vtesdleDay.setDay(today);
+                vtesdleDay.setCardId(selectedCard);
+                vtesdleDayRepository.saveAndFlush(vtesdleDay);
+            }
         }
     }
 }

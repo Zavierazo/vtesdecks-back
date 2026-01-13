@@ -48,13 +48,14 @@ public class ApiCardService {
     }
 
     public List<ApiCrypt> getAllCrypt(String locale) {
-        ResultSet<Crypt> result = cryptCache.selectAll(null, null);
-        if (result == null) {
-            return Collections.emptyList();
+        try (ResultSet<Crypt> result = cryptCache.selectAll()) {
+            if (result == null) {
+                return Collections.emptyList();
+            }
+            return result.stream()
+                    .map(card -> apiCardMapper.mapCrypt(card, locale, null, null))
+                    .collect(Collectors.toList());
         }
-        return result.stream()
-                .map(card -> apiCardMapper.mapCrypt(card, locale, null, null))
-                .collect(Collectors.toList());
     }
 
     public ApiCrypt getCryptLastUpdate() {
@@ -71,13 +72,14 @@ public class ApiCardService {
     }
 
     public List<ApiLibrary> getAllLibrary(String locale) {
-        ResultSet<Library> result = libraryCache.selectAll(null, null);
-        if (result == null) {
-            return Collections.emptyList();
+        try (ResultSet<Library> result = libraryCache.selectAll()) {
+            if (result == null) {
+                return Collections.emptyList();
+            }
+            return result.stream()
+                    .map(card -> apiCardMapper.mapLibrary(card, locale, null, null))
+                    .toList();
         }
-        return result.stream()
-                .map(card -> apiCardMapper.mapLibrary(card, locale, null, null))
-                .toList();
     }
 
     public ApiLibrary getLibraryLastUpdate() {
@@ -119,7 +121,7 @@ public class ApiCardService {
 
     public List<Object> searchCards(String query, Double minScore, Integer limit, Set<String> fields) {
         BigDecimal targetScore = minScore != null ? BigDecimal.valueOf(minScore) : MIN_TRIGRAMS_SCORE;
-        try (ResultSet<Crypt> cryptResult = cryptCache.selectAll(null, null); ResultSet<Library> libraryResult = libraryCache.selectAll(null, null);) {
+        try (ResultSet<Crypt> cryptResult = cryptCache.selectAll(); ResultSet<Library> libraryResult = libraryCache.selectAll()) {
             Set<String> queryTrigrams = TrigramSimilarity.generateTrigram(query);
             return Stream.concat(cryptResult.stream(), libraryResult.stream())
                     .map((Card card) -> {

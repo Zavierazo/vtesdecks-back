@@ -23,6 +23,7 @@ import com.vtesdecks.util.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -288,7 +289,7 @@ public class ApiCollectionImportService {
         try (ResultSet<Library> library = libraryCache.selectAll(card.getCardName(), null)) {
             if (library.isEmpty() || library.stream().noneMatch(l -> compareExactName(card.getCardName(), l.getName()))) {
                 String cryptName = StringUtils.substringBefore(card.getCardName(), " (ADV)");
-                boolean isAdv = StringUtils.containsIgnoreCase(card.getCardName(), "(ADV)");
+                boolean isAdv = Strings.CI.contains(card.getCardName(), "(ADV)");
                 try (ResultSet<Crypt> crypt = cryptCache.selectAll(cryptName, null)) {
                     if (!crypt.isEmpty() && crypt.stream().anyMatch(c -> compareExactName(cryptName, c.getName()))) {
                         return crypt.stream()

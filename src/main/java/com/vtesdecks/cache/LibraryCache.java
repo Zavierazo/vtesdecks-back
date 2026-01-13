@@ -147,6 +147,16 @@ public class LibraryCache {
         return cache.retrieve(query, queryOptions);
     }
 
+    public ResultSet<Library> selectAll() {
+        Thresholds threshold = QueryFactory.applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
+        QueryOptions queryOptions = queryOptions(orderBy(ascending(Library.NAME_ATTRIBUTE)), threshold);
+        Query<Library> query = all(Library.class);
+        if (log.isDebugEnabled()) {
+            log.debug("Query {} with options {}", query, queryOptions);
+        }
+        return cache.retrieve(query, queryOptions);
+    }
+
     public ResultSet<Library> selectAll(String name, String text) {
         Thresholds threshold = QueryFactory.applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
         QueryOptions queryOptions = queryOptions(orderBy(ascending(Library.NAME_ATTRIBUTE)), threshold);

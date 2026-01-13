@@ -41,7 +41,7 @@ public class ApiCollectionStatsService {
         Map<Integer, List<CollectionCardEntity>> collection = getCollectionCardsMap();
         ApiCollectionStats apiCollectionStats = new ApiCollectionStats();
         apiCollectionStats.setCurrency(currencyCode);
-        try (ResultSet<Crypt> cryptResultSet = cryptCache.selectAll(null, null)) {
+        try (ResultSet<Crypt> cryptResultSet = cryptCache.selectAll()) {
             for (Crypt crypt : cryptResultSet) {
                 List<CollectionCardEntity> cards = collection.getOrDefault(crypt.getId(), Collections.emptyList());
                 int number = cards.stream().mapToInt(CollectionCardEntity::getNumber).sum();
@@ -51,7 +51,7 @@ public class ApiCollectionStatsService {
                 fillCommon(currencyCode, crypt, apiCollectionStats, number, cards);
             }
         }
-        try (ResultSet<Library> libraryResultSet = libraryCache.selectAll(null, null)) {
+        try (ResultSet<Library> libraryResultSet = libraryCache.selectAll()) {
             for (Library library : libraryResultSet) {
                 List<CollectionCardEntity> cards = collection.getOrDefault(library.getId(), Collections.emptyList());
                 int number = cards.stream().mapToInt(CollectionCardEntity::getNumber).sum();
