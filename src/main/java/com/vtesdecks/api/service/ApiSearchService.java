@@ -7,12 +7,14 @@ import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.api.ApiDeck;
+import com.vtesdecks.model.api.ApiDecks;
 import com.vtesdecks.model.api.ApiPublicUser;
 import com.vtesdecks.model.api.ApiSearchResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -20,6 +22,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class ApiSearchService {
+    private static final int LIMIT = 5;
     private final UserRepository userRepository;
     private final ApiPublicUserMapper apiPublicUserMapper;
     private final ApiCardService apiCardService;
@@ -34,24 +37,36 @@ public class ApiSearchService {
     }
 
     private List<Object> getSearchCards(String query) {
-        return apiCardService.searchCards(query, null, 5, Set.of("id", "name"));
+        return apiCardService.searchCards(query, null, LIMIT, Set.of("id", "name"));
     }
 
     private List<ApiDeck> getSearchDecks(String query, String currencyCode) {
-        DeckQuery deckQuery = DeckQuery.builder()
-                .apiType(ApiDeckType.ALL)
+        DeckQuery preconstructedDeckQuery = DeckQuery.builder()
+                .apiType(ApiDeckType.PRECONSTRUCTED)
                 .order(DeckSort.NEWEST)
                 .userId(ApiUtils.extractUserId())
                 .name(query)
                 .build();
-        return deckService.getDecks(deckQuery, null, null, currencyCode, 0, 5).getDecks();
+        ApiDecks result = deckService.getDecks(preconstructedDeckQuery, null, null, currencyCode, 0, LIMIT);
+        List<ApiDeck> decks = new ArrayList<>(result.getDecks());
+        if (decks.size() < 5) {
+            DeckQuery deckQuery = DeckQuery.builder()
+                    .apiType(ApiDeckType.ALL)
+                    .order(DeckSort.POPULAR)
+                    .userId(ApiUtils.extractUserId())
+                    .name(query)
+                    .build();
+            result = deckService.getDecks(deckQuery, null, null, currencyCode, 0, LIMIT - decks.size());
+            decks.addAll(result.getDecks());
+        }
+        return decks;
     }
 
 
     private List<ApiPublicUser> getSearchUsers(String query) {
         return userRepository.findByUsernameContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(query, query)
                 .stream()
-                .limit(5)
+                .limit(LIMIT)
                 .map(userEntity -> apiPublicUserMapper.mapPublicUser(userEntity, null))
                 .toList();
     }
