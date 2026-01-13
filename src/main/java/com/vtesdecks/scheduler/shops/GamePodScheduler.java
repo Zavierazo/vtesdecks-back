@@ -36,7 +36,9 @@ public class GamePodScheduler {
     private static final String SPECIAL_CHARACTERS = "[_,:\"'”\\s]";
     private static final List<String> BLACKLIST_TAGS = List.of("Tapete", "Accesorios", "Tokens");
     private static final Map<String, String> CARD_NAME_FIXES = Map.of(
-            "Nu - The Pillar [2] - True Brujah", "Nu, The Pillar"
+            "Nu - The Pillar [2] - True Brujah", "Nu, The Pillar",
+            "Path of Blood The - Master", "Path of Blood, The",
+            "Abandoning the Flesh Combat Reaction", "Abandoning the Flesh"
     );
 
     @Autowired
