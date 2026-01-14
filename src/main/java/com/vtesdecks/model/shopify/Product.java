@@ -19,4 +19,5 @@ public class Product {
     private String productType;
     private List<String> tags;
     private List<Variant> variants;
+    private List<Image> images;
 }
