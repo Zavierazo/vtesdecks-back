@@ -49,7 +49,7 @@ public class CardGameGeekScheduler {
     private static final String EURO = "EUR";
     private static final String COLLECTION = "20250207_products";
     private static final String PRESET = "xavier_vtes";
-    private static final String SPECIAL_CHAR_REGEX = "[_,:\"'”\\s]";
+    private static final String SPECIAL_CHAR_REGEX = "[_,:\"'”()\\s]";
     private static final String MULTIPLE_REPLACEMENT_REGEX = "(\\(G\\d+\\))(?:\\s*\\(G\\d+\\))+";
     private static final List<Map.Entry<String, String>> REPLACEMENTS = List.of(
             // Replacement for vampires with same name
@@ -67,6 +67,7 @@ public class CardGameGeekScheduler {
             entry("Nikolaus Vermeulen - 30th Anniversary", "Nikolaus Vermeulen (G6)"),
             entry("Lucinde, Alastor - 30th Anniversary", "Lucinde, Alastor (G7)"),
             entry("Donal O'Connor - 30th Anniversary", "Dónal O'Connor (G6)"),
+            entry("Lodin \\(Olaf Holte\\)", "Lodin Olaf Holte"),
             // Remove group marks
             entry(" G1", ""),
             entry(" G3", ""),
