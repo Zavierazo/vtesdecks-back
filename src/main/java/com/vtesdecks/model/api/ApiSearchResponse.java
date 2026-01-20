@@ -8,7 +8,7 @@ import java.util.List;
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiSearchResponse {
-    private List<Object> cards;
+    private List<ApiBaseCard> cards;
     private List<ApiDeck> decks;
     private List<ApiPublicUser> users;
 }

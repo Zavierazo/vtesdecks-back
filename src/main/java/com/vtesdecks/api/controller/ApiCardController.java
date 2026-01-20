@@ -2,6 +2,7 @@ package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.ApiCardInfoService;
 import com.vtesdecks.api.service.ApiCardService;
+import com.vtesdecks.model.api.ApiBaseCard;
 import com.vtesdecks.model.api.ApiCardInfo;
 import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
@@ -39,8 +40,8 @@ public class ApiCardController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<List<Object>> searchCards(@RequestParam String query, @RequestParam(required = false) Double minScore, @RequestParam(required = false) Integer limit, @RequestParam(required = false) Set<String> fields) {
-        List<Object> results = apiCardService.searchCards(query, minScore, limit, fields);
+    public ResponseEntity<List<ApiBaseCard>> searchCards(@RequestParam String query, @RequestParam(required = false) Double minScore, @RequestParam(required = false) Integer limit, @RequestParam(required = false) Set<String> fields) {
+        List<ApiBaseCard> results = apiCardService.searchCards(query, minScore, limit, fields);
         return new ResponseEntity<>(results, HttpStatus.OK);
     }
 

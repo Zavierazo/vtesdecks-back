@@ -2,17 +2,19 @@ package com.vtesdecks.scheduler.shops;
 
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
+import com.vtesdecks.api.service.ApiCardService;
 import com.vtesdecks.integration.GamePodClient;
 import com.vtesdecks.jpa.entity.CardShopEntity;
-import com.vtesdecks.jpa.entity.extra.TextSearch;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
-import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.model.ShopPlatform;
+import com.vtesdecks.model.api.ApiBaseCard;
+import com.vtesdecks.model.api.ApiCrypt;
+import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.shopify.Product;
 import com.vtesdecks.model.shopify.ProductsResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ import static org.apache.commons.lang3.ObjectUtils.isEmpty;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class GamePodScheduler {
     private static final ShopPlatform PLATFORM = ShopPlatform.GP;
     private static final String SET = "POD:GP";
@@ -40,15 +43,9 @@ public class GamePodScheduler {
             "Path of Blood The - Master", "Path of Blood, The",
             "Abandoning the Flesh Combat Reaction", "Abandoning the Flesh"
     );
-
-    @Autowired
-    private DeckCardRepository deckCardRepository;
-
-    @Autowired
-    private CardShopRepository cardShopRepository;
-
-    @Autowired
-    private GamePodClient gamePodClient;
+    private final CardShopRepository cardShopRepository;
+    private final ApiCardService apiCardService;
+    private final GamePodClient gamePodClient;
 
     @Scheduled(cron = "0 0 0 * * 0")
     @Transactional
@@ -148,24 +145,23 @@ public class GamePodScheduler {
             }
         }
 
-
-        List<TextSearch> cards = deckCardRepository.search(cardNameRaw.replace("_", ":"), advanced);
+        List<ApiBaseCard> cards = apiCardService.searchCards(cardNameRaw.replace("_", ":"), 0.3, 10, null);
         if (CollectionUtils.isEmpty(cards)) {
             log.warn("Unable to found card with name '{}' with handle {}", cardNameRaw, productCard.getHandle());
             return null;
         }
 
-        final TextSearch card;
+        final ApiBaseCard card;
         if (cards.size() > 1) {
             final String cardName = cardNameRaw.replaceAll(SPECIAL_CHARACTERS, "").trim();
-            Optional<TextSearch> exactCard = cards.stream()
-                    .filter(cardSearch -> cardSearch.getName().replaceAll(SPECIAL_CHARACTERS, "")
-                            .equalsIgnoreCase(cardName))
+            Optional<ApiBaseCard> exactCard = cards.stream()
+                    .filter(cardSearch -> cardSearch.getName().replaceAll(SPECIAL_CHARACTERS, "").equalsIgnoreCase(cardName))
+                    .filter(cardSearch -> cardSearch instanceof ApiLibrary || advanced == (cardSearch instanceof ApiCrypt crypt && crypt.getAdv()))
                     .findFirst();
             if (exactCard.isPresent()) {
                 card = exactCard.get();
             } else {
-                log.warn("Multiple finds for '{}' with raw '{}': {} with handle {}", cardName, productCard.getTitle(), cards.stream().map(TextSearch::getName).toList(), productCard.getHandle());
+                log.warn("Multiple finds for '{}' with raw '{}': {} with handle {}", cardName, productCard.getTitle(), cards, productCard.getHandle());
                 return null;
             }
         } else {

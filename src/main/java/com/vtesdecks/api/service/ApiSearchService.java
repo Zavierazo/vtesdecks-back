@@ -6,6 +6,7 @@ import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
+import com.vtesdecks.model.api.ApiBaseCard;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDecks;
 import com.vtesdecks.model.api.ApiPublicUser;
@@ -36,7 +37,7 @@ public class ApiSearchService {
         return response;
     }
 
-    private List<Object> getSearchCards(String query) {
+    private List<ApiBaseCard> getSearchCards(String query) {
         return apiCardService.searchCards(query, null, LIMIT, Set.of("id", "name"));
     }
 

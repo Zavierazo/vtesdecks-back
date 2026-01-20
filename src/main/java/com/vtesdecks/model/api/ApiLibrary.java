@@ -2,18 +2,16 @@ package com.vtesdecks.model.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ApiLibrary {
-    private Integer id;
-    private String name;
-    private String aka;
+public class ApiLibrary extends ApiBaseCard {
     private String type;
     private Set<String> clans;
     private String path;
@@ -21,12 +19,9 @@ public class ApiLibrary {
     private Integer bloodCost;
     private Integer convictionCost;
     private Boolean burn;
-    private String text;
     private String flavor;
     private List<String> sets;
     private String requirement;
-    private String banned;
-    private String artist;
     private String capacity;
     private String image;
     private String cropImage;
@@ -36,17 +31,7 @@ public class ApiLibrary {
     private Set<String> typeIcons;
     private Set<String> clanIcons;
     private String pathIcon;
-    private Set<String> disciplineIcons;
-    private Set<String> sects;
     private Set<String> titles;
-    private Set<String> taints;
-    private Long deckPopularity;
-    private Long cardPopularity;
-    private ApiI18n i18n;
-    private Boolean printOnDemand;
-    private Boolean unreleased;
     private BigDecimal minPrice;
     private Set<Integer> limitedFormats;
-    private Double score;
-    private LocalDateTime lastUpdate;
 }

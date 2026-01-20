@@ -9,6 +9,7 @@ import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
+import com.vtesdecks.model.api.ApiBaseCard;
 import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiShop;
@@ -119,7 +120,7 @@ public class ApiCardService {
         return ApiShopResult.builder().shops(groupedByShop).hasMore(all.size() > groupedByShop.size()).build();
     }
 
-    public List<Object> searchCards(String query, Double minScore, Integer limit, Set<String> fields) {
+    public List<ApiBaseCard> searchCards(String query, Double minScore, Integer limit, Set<String> fields) {
         BigDecimal targetScore = minScore != null ? BigDecimal.valueOf(minScore) : MIN_TRIGRAMS_SCORE;
         try (ResultSet<Crypt> cryptResult = cryptCache.selectAll(); ResultSet<Library> libraryResult = libraryCache.selectAll()) {
             Set<String> queryTrigrams = TrigramSimilarity.generateTrigram(query);
