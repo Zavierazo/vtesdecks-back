@@ -3,6 +3,7 @@ package com.vtesdecks.scheduler.shops;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.googlecode.cqengine.resultset.ResultSet;
+import com.vtesdecks.api.service.ApiCardService;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.SetCache;
@@ -10,10 +11,11 @@ import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.Set;
 import com.vtesdecks.jpa.entity.CardShopEntity;
-import com.vtesdecks.jpa.entity.extra.TextSearch;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
-import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.model.ShopPlatform;
+import com.vtesdecks.model.api.ApiBaseCard;
+import com.vtesdecks.model.api.ApiCrypt;
+import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.util.Utils;
 import com.vtesdecks.util.VtesUtils;
 import lombok.RequiredArgsConstructor;
@@ -75,6 +77,7 @@ public class CardGameGeekScheduler {
             entry("Sebastian Goulet", "Sebastien Goulet"),
             // Fix name
             entry("Enzo Giovanni \\(Adv\\)", "Enzo Giovanni, Pentex Board of Directors (Adv)"),
+            entry("Al-Ashrad \\(Adv\\)", "Al-Ashrad, Amr of Alamut (Adv)"),
             entry("47th Street Royal", "47th Street Royals"),
             entry("Crimson Sentinel", "Crimson Sentinel, The"),
             entry("Pentex Subversion", "Pentex(TM) Subversion"),
@@ -82,7 +85,8 @@ public class CardGameGeekScheduler {
             entry("Sacre Cour", "Sacré-Cœur"),
             entry("Thadius Zho, Mage", "Thadius Zho"),
             entry("Vozhd of Sofia", "Vozhd of Sofia, The"),
-            entry("Seeds of Fear", "Seeds of Terror")
+            entry("Seeds of Fear", "Seeds of Terror"),
+            entry("Bang Nakh -- Tiger's Claws", "Bang Nakh — Tiger's Claws")
     );
     private static final Map<String, String> EDITION_MAPPINGS = Map.ofEntries(
             entry("BCP Reprint", "POD"),
@@ -112,8 +116,7 @@ public class CardGameGeekScheduler {
             entry("Promo - Latin", "Promo"),
             entry("Promo - French", "Promo")
     );
-
-    private final DeckCardRepository deckCardRepository;
+    private final ApiCardService apiCardService;
     private final CardShopRepository cardShopRepository;
     private final SetCache setCache;
     private final CryptCache cryptCache;
@@ -273,6 +276,10 @@ public class CardGameGeekScheduler {
         // Advanced handling
         int advancedIndex = cardName.toLowerCase().indexOf("(adv)");
         boolean advanced = advancedIndex > 0;
+        if (!advanced && cardName.toLowerCase().endsWith(" adv")) {
+            advancedIndex = cardName.toLowerCase().lastIndexOf(" adv");
+            advanced = advancedIndex > 0;
+        }
         if (advanced) {
             cardName = cardName.substring(0, advancedIndex);
         }
@@ -318,21 +325,22 @@ public class CardGameGeekScheduler {
             }
         }
         if (cardId == null) {
-            List<TextSearch> cards = deckCardRepository.search(cardName, advanced);
+            List<ApiBaseCard> cards = apiCardService.searchCards(cardName, 0.3, 10, null);
             if (CollectionUtils.isEmpty(cards)) {
-                log.warn("Unable to found card with name '{}' with url {}", cardNameRaw, url);
+                log.warn("Unable to found card with name '{}' and raw '{}' with url {}", cardName, cardNameRaw, url);
                 return Optional.empty();
             } else if (cards.size() > 1) {
                 final String cardNameFinal = cardName;
-                Optional<TextSearch> exactCard = cards.stream()
-                        .filter(cardSearch ->
-                                cardSearch.getName().equalsIgnoreCase(cardNameFinal) ||
-                                        Utils.normalizeName(cardSearch.getName()).replaceAll(SPECIAL_CHAR_REGEX, "").equalsIgnoreCase(cardNameNormalized))
+                final boolean isAdvanced = advanced;
+                Optional<ApiBaseCard> exactCard = cards.stream()
+                        .filter(cardSearch -> cardSearch.getName().equalsIgnoreCase(cardNameFinal)
+                                || Utils.normalizeName(cardSearch.getName()).replaceAll(SPECIAL_CHAR_REGEX, "").equalsIgnoreCase(cardNameNormalized))
+                        .filter(cardSearch -> cardSearch instanceof ApiLibrary || isAdvanced == (cardSearch instanceof ApiCrypt crypt && crypt.getAdv()))
                         .findFirst();
                 if (exactCard.isPresent()) {
                     cardId = exactCard.get().getId();
                 } else {
-                    log.warn("Multiple finds for '{}' with raw '{}': {} with url {}", cardName, cardNameRaw, cards.stream().map(TextSearch::getName).toList(), url);
+                    log.warn("Multiple finds for '{}' with raw '{}': {} with url {}", cardName, cardNameRaw, cards.stream().map(ApiBaseCard::getName).toList(), url);
                     return Optional.empty();
                 }
             } else {
@@ -340,7 +348,7 @@ public class CardGameGeekScheduler {
             }
         }
         if (cardId == null) {
-            log.warn("Unable to found card with name '{}' with url {}", cardNameRaw, url);
+            log.warn("Unable to found card with name '{}' and raw '{}' with url {}", cardName, cardNameRaw, url);
             return Optional.empty();
         }
 
