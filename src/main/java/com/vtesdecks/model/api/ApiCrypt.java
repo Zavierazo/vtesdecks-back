@@ -26,6 +26,7 @@ public class ApiCrypt extends ApiBaseCard {
     private String pathIcon;
     private Set<String> disciplines;
     private Set<String> superiorDisciplines;
+    private String sect;
     private BigDecimal minPrice;
     private Set<Integer> limitedFormats;
 }

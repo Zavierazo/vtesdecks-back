@@ -16,7 +16,6 @@ public class ApiBaseCard {
     private String banned;
     private String artist;
     private Set<String> disciplineIcons;
-    private String sect;
     private Set<String> taints;
     private Long deckPopularity;
     private Long cardPopularity;

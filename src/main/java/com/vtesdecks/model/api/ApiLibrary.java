@@ -24,13 +24,10 @@ public class ApiLibrary extends ApiBaseCard {
     private String requirement;
     private String capacity;
     private String image;
-    private String cropImage;
-    private Boolean trifle;
-    private Set<String> disciplines;
-    private Set<String> types;
     private Set<String> typeIcons;
     private Set<String> clanIcons;
     private String pathIcon;
+    private Set<String> sects;
     private Set<String> titles;
     private BigDecimal minPrice;
     private Set<Integer> limitedFormats;
