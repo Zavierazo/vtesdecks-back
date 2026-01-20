@@ -1,17 +1,19 @@
 package com.vtesdecks.scheduler.shops;
 
+import com.vtesdecks.api.service.ApiCardService;
 import com.vtesdecks.integration.DTCClient;
 import com.vtesdecks.jpa.entity.CardShopEntity;
-import com.vtesdecks.jpa.entity.extra.TextSearch;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
-import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.model.ShopPlatform;
+import com.vtesdecks.model.api.ApiBaseCard;
+import com.vtesdecks.model.api.ApiCrypt;
+import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.dtc.Product;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,7 @@ import static org.apache.commons.lang3.ObjectUtils.isEmpty;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class DriveThruCardsScheduler {
     private static final ShopPlatform PLATFORM = ShopPlatform.DTC;
     private static final String SET = "POD:DTC";
@@ -35,13 +38,9 @@ public class DriveThruCardsScheduler {
     public static final int GROUP_ID = 26;
     public static final int SITE_ID = 73;
     public static final int BLACK_CHANTRY_CATEGORY_ID = 34260;
-
-    @Autowired
-    private DTCClient dtcClient;
-    @Autowired
-    private DeckCardRepository deckCardRepository;
-    @Autowired
-    private CardShopRepository cardShopRepository;
+    private final DTCClient dtcClient;
+    private final ApiCardService apiCardService;
+    private final CardShopRepository cardShopRepository;
 
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
@@ -135,18 +134,21 @@ public class DriveThruCardsScheduler {
         }
         cardNameHtml = cardNameHtml.replace("_", ":");
         final String cardName = StringUtils.trim(StringEscapeUtils.unescapeXml(cardNameHtml));
-        List<TextSearch> cards = deckCardRepository.search(cardName, advanced);
+        List<ApiBaseCard> cards = apiCardService.searchCards(cardName, 0.3, 10, null);
         if (CollectionUtils.isEmpty(cards)) {
             log.warn("Unable to found card with name '{}' with full name {}", cardName, cardNameRaw);
             return null;
         }
-        final TextSearch card;
+        final ApiBaseCard card;
         if (cards.size() > 1) {
-            Optional<TextSearch> exactCard = cards.stream().filter(cardSearch -> cardSearch.getName().replaceAll(SPECIAL_CHARACTERS, "").equalsIgnoreCase(cardName.replaceAll(SPECIAL_CHARACTERS, ""))).findFirst();
+            Optional<ApiBaseCard> exactCard = cards.stream()
+                    .filter(cardSearch -> cardSearch.getName().replaceAll(SPECIAL_CHARACTERS, "").equalsIgnoreCase(cardName.replaceAll(SPECIAL_CHARACTERS, "")))
+                    .filter(cardSearch -> cardSearch instanceof ApiLibrary || advanced == (cardSearch instanceof ApiCrypt crypt && crypt.getAdv()))
+                    .findFirst();
             if (exactCard.isPresent()) {
                 card = exactCard.get();
             } else {
-                log.warn("Multiple finds for '{}' with raw '{}': {}", cardName, cardNameRaw, cards.stream().map(TextSearch::getName).toList());
+                log.warn("Multiple finds for '{}' with raw '{}': {}", cardName, cardNameRaw, cards.stream().map(ApiBaseCard::getName).toList());
                 return null;
             }
         } else {
