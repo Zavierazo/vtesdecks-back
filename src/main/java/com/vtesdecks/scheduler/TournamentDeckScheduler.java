@@ -8,16 +8,19 @@ import com.gargoylesoftware.htmlunit.html.HtmlElement;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import com.vtesdecks.api.service.ApiCardService;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.CryptEntity;
 import com.vtesdecks.jpa.entity.DeckCardEntity;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.LibraryEntity;
-import com.vtesdecks.jpa.entity.extra.TextSearch;
 import com.vtesdecks.jpa.repositories.CryptRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.LibraryRepository;
+import com.vtesdecks.model.api.ApiBaseCard;
+import com.vtesdecks.model.api.ApiCrypt;
+import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.util.VtesUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -65,6 +68,7 @@ public class TournamentDeckScheduler {
     private final CryptRepository cryptRepository;
     private final LibraryRepository libraryRepository;
     private final DeckCardRepository deckCardRepository;
+    private final ApiCardService apiCardService;
 
     //Update tournament decks once a day at 06:30
     @Scheduled(cron = "${jobs.scrappingDecksCron:0 30 6 * * *}")
@@ -223,10 +227,11 @@ public class TournamentDeckScheduler {
                             name = TYPO_FIXES.get(name);
                         }
                         if (!DISCARDED_NAMES.contains(name)) {
-                            List<TextSearch> results = deckCardRepository.search(name, name.contains("(ADV)"));//TODO Search ADV (Advanced)
+                            boolean advanced = name.contains("(ADV)");
+                            List<ApiBaseCard> results = apiCardService.searchCards(name, 0.3, 10, null);
                             if (CollectionUtils.isNotEmpty(results)) {
                                 //Get result with exact string or first element who have more score
-                                TextSearch result = selectResult(name, line, results);
+                                ApiBaseCard result = selectResult(name, line, results, advanced);
                                 Integer cardId = result.getId();
                                 storeDeckCard(deck, deckCards, debugLines, line, cardId, number);
                             } else {
@@ -363,9 +368,12 @@ public class TournamentDeckScheduler {
         }
     }
 
-    private TextSearch selectResult(String name, String line, List<TextSearch> results) {
+    private ApiBaseCard selectResult(String name, String line, List<ApiBaseCard> allCards, boolean advanced) {
+        List<ApiBaseCard> results = allCards.stream()
+                .filter(cardSearch -> cardSearch instanceof ApiLibrary || advanced == (cardSearch instanceof ApiCrypt crypt && crypt.getAdv()))
+                .toList();
         //First loop for exact name with G6 & G7 cards...
-        for (TextSearch result : results) {
+        for (ApiBaseCard result : results) {
             if (result.getName().toLowerCase().startsWith(name.toLowerCase())) {
                 if (result.getName().endsWith("(G6)") && line.endsWith(":6")) {
                     return result;
@@ -375,7 +383,7 @@ public class TournamentDeckScheduler {
             }
         }
         //Second loop with exact name
-        for (TextSearch result : results) {
+        for (ApiBaseCard result : results) {
             if (result.getName().equalsIgnoreCase(name)) {
                 return result;
             }
@@ -386,7 +394,7 @@ public class TournamentDeckScheduler {
             }
         }
         //Else return most probable card
-        return results.get(0);
+        return results.getFirst();
     }
 
     private LocalDateTime getCreationDate(String url) {
