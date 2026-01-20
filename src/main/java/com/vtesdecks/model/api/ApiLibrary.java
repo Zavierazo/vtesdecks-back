@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -19,16 +20,32 @@ public class ApiLibrary extends ApiBaseCard {
     private Integer bloodCost;
     private Integer convictionCost;
     private Boolean burn;
+    private String text;
     private String flavor;
     private List<String> sets;
     private String requirement;
+    private String banned;
+    private String artist;
     private String capacity;
     private String image;
+    private String cropImage;
+    private Boolean trifle;
+    private Set<String> disciplines;
+    private Set<String> types;
     private Set<String> typeIcons;
     private Set<String> clanIcons;
     private String pathIcon;
+    private Set<String> disciplineIcons;
     private Set<String> sects;
     private Set<String> titles;
+    private Set<String> taints;
+    private Long deckPopularity;
+    private Long cardPopularity;
+    private ApiI18n i18n;
+    private Boolean printOnDemand;
+    private Boolean unreleased;
     private BigDecimal minPrice;
     private Set<Integer> limitedFormats;
+    private Double score;
+    private LocalDateTime lastUpdate;
 }
