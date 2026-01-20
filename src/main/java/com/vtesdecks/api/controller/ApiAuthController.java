@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static com.vtesdecks.util.Constants.USER_COUNTRY_HEADER;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 @Controller
 @RequestMapping("/api/1.0/auth")
@@ -77,7 +78,10 @@ public class ApiAuthController {
             }
             if (dbUser != null) {
                 String password = data.get(FORM_DATA_PASSWORD);
-                if (password != null && passwordEncoder.matches(password, dbUser.getPassword())) {
+                if (isEmpty(dbUser.getPassword())) {
+                    user.setMessage("Your account doesn’t have a password yet. Please sign in using Google, or use Forgot password to create one.");
+                    log.warn("Login request for {} failed. No password set(Oauth user).", username);
+                } else if (password != null && passwordEncoder.matches(password, dbUser.getPassword())) {
                     List<String> roles = userRepository.selectRolesByUserId(dbUser.getId());
                     if (Boolean.FALSE.equals(dbUser.getValidated())) {
                         if (recaptchaService.isResponseValid(Utils.getIp(httpServletRequest), data.get(FORM_DATA_RECAPTCHA))
