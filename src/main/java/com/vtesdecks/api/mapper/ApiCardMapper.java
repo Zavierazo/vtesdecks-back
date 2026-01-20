@@ -16,16 +16,18 @@ import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.ReportingPolicy;
 
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Set;
 
 @Slf4j
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public abstract class ApiCardMapper {
 
     @Mapping(target = "i18n", ignore = true)
+    @Mapping(target = "score", ignore = true)
     public abstract ApiCrypt mapCrypt(Crypt entity, @Context String locale, @Context Set<String> fields, @Context Double score);
 
     @AfterMapping
@@ -42,6 +44,7 @@ public abstract class ApiCardMapper {
 
 
     @Mapping(target = "i18n", ignore = true)
+    @Mapping(target = "score", ignore = true)
     public abstract ApiLibrary mapLibrary(Library entity, @Context String locale, @Context Set<String> fields, @Context Double score);
 
     @AfterMapping
