@@ -5952,3 +5952,6 @@ If this retainer is burned when a ghoul ally enters play, you can reduce the cos
 [FOR] As above, but this vampire can prevent 2 damage each round.","","Spoiler:NB4","","Mark Kelly",""
 "150015","The Vozhd of Gravesend","","Ally","Tzimisce","","","4","","","","Unique ghoul with 5 life. 4 strength, 0 bleed.
 After this ally enters play, burn an ally or retainer you control. This ally can enter combat with a vampire as a (D) action. This ally can prevent 1 damage each round of combat. During combat, this ally can burn 1 life to cancel a strike card as it is played by the opposing minion, and its cost is not paid (the minion chooses a strike again).","","Spoiler:NB4","","Ginés Quiñonero",""
+"150016","Go-getter","","Action Modifier","Ravnos","","Obfuscate","","","","","Not usable during a bleed action.
+[obf] +1 stealth.
+[OBF] Only usable after resolution of a blocked action. This vampire burns 1 blood to continue the action as if unblocked.","","Spoiler:NB4","","Ginés Quiñonero",""
