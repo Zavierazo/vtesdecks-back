@@ -51,11 +51,13 @@ public class DeckCardIndex {
         try {
             List<DeckCardEntity> dbDeckCardEntities = deckCardRepository.findByIdDeckId(deckId);
             for (DeckCardEntity dbDeckCard : dbDeckCardEntities) {
-                deckCards.add(DeckCard.builder()
-                        .deckId(dbDeckCard.getId().getDeckId())
-                        .id(dbDeckCard.getId().getCardId())
-                        .number(dbDeckCard.getNumber())
-                        .build());
+                if (dbDeckCard.getNumber() != null && dbDeckCard.getNumber() > 0) {
+                    deckCards.add(DeckCard.builder()
+                            .deckId(dbDeckCard.getId().getDeckId())
+                            .id(dbDeckCard.getId().getCardId())
+                            .number(dbDeckCard.getNumber())
+                            .build());
+                }
             }
             refreshIndex(deckId, deckCards);
         } catch (Exception e) {

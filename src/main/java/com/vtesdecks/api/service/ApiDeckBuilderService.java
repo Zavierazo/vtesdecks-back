@@ -144,7 +144,7 @@ public class ApiDeckBuilderService {
         Iterables.removeIf(deckCards, Objects::isNull);
         List<DeckCardEntity> dbCards = deckCardRepository.findByIdDeckId(deck.getId());
         for (ApiCard card : deckCards) {
-            if (card.getNumber() != null && card.getNumber() > 0) {
+            if (card.getNumber() != null) {
                 DeckCardEntity dbCard = dbCards.stream().filter(db -> db.getId().getCardId().equals(card.getId())).findFirst().orElse(null);
                 if (dbCard == null) {
                     dbCard = new DeckCardEntity();
@@ -165,7 +165,7 @@ public class ApiDeckBuilderService {
         for (DeckCardEntity card : dbCards) {
             try {
                 ApiCard deckCard = deckCards.stream()
-                        .filter(dc -> dc.getNumber() != null && dc.getNumber() > 0 && dc.getId().equals(card.getId().getCardId()))
+                        .filter(dc -> dc.getNumber() != null && dc.getId().equals(card.getId().getCardId()))
                         .findFirst().orElse(null);
                 if (deckCard == null) {
                     deckCardRepository.delete(card);
