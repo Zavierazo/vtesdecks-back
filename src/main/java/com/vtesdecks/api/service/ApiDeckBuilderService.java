@@ -164,7 +164,9 @@ public class ApiDeckBuilderService {
         //Delete removed cards
         for (DeckCardEntity card : dbCards) {
             try {
-                Integer deckCard = deckCards.stream().map(ApiCard::getId).filter(id -> id.equals(card.getId().getCardId())).findFirst().orElse(null);
+                ApiCard deckCard = deckCards.stream()
+                        .filter(dc -> dc.getNumber() != null && dc.getNumber() > 0 && dc.getId().equals(card.getId().getCardId()))
+                        .findFirst().orElse(null);
                 if (deckCard == null) {
                     deckCardRepository.delete(card);
                     isUpdated = true;
