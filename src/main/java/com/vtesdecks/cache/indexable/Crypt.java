@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.Set;
+import java.util.List;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -43,8 +43,8 @@ public class Crypt extends Card {
     //Extra
     private String clanIcon;
     private String pathIcon;
-    private Set<String> disciplines;
-    private Set<String> superiorDisciplines;
-    private Set<String> disciplineIcons;
+    private List<String> disciplines;
+    private List<String> superiorDisciplines;
+    private List<String> disciplineIcons;
     private String sect;
 }

@@ -28,9 +28,9 @@ public class ApiCrypt extends ApiBaseCard {
     private String cropImage;
     private String clanIcon;
     private String pathIcon;
-    private Set<String> disciplines;
-    private Set<String> superiorDisciplines;
-    private Set<String> disciplineIcons;
+    private List<String> disciplines;
+    private List<String> superiorDisciplines;
+    private List<String> disciplineIcons;
     private String sect;
     private Set<String> taints;
     private Long deckPopularity;

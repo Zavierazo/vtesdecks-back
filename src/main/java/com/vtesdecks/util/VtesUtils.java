@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -141,11 +142,11 @@ public class VtesUtils {
         return disciplineNames.stream().map(name -> name.equals("Thaumaturgy") ? Discipline.BLOOD_SORCERY.getName() : name).collect(Collectors.toSet());
     }
 
-    public static Set<String> getCryptDisciplines(String type, String disciplineValue) {
+    public static List<String> getCryptDisciplines(String type, String disciplineValue) {
         if (disciplineValue == null) {
-            return Collections.emptySet();
+            return Collections.emptyList();
         }
-        Set<String> disciplines = new HashSet<>();
+        List<String> disciplines = new ArrayList<>();
         if (disciplineValue != null) {
             List<String> cardDisciplines = Splitter.on(' ').trimResults().omitEmptyStrings().splitToList(disciplineValue);
             for (String cardDiscipline : cardDisciplines) {
@@ -154,7 +155,7 @@ public class VtesUtils {
                         cardDiscipline = "Imbuedvis";
                     }
                     String discipline = VtesUtils.getDisciplineIconFromAbbreviation(cardDiscipline);
-                    if (discipline != null) {
+                    if (discipline != null && !disciplines.contains(discipline)) {
                         disciplines.add(discipline);
                     }
                 }
@@ -163,8 +164,8 @@ public class VtesUtils {
         return disciplines;
     }
 
-    public static Set<String> getCryptDisciplineNames(String type, String disciplineValue, boolean onlySuperior) {
-        Set<String> disciplines = new HashSet<>();
+    public static List<String> getCryptDisciplineNames(String type, String disciplineValue, boolean onlySuperior) {
+        List<String> disciplines = new ArrayList<>();
         if (disciplineValue != null) {
             List<String> cardDisciplines = Splitter.on(' ').trimResults().omitEmptyStrings().splitToList(disciplineValue);
             for (String cardDiscipline : cardDisciplines) {
@@ -176,7 +177,7 @@ public class VtesUtils {
                         continue;
                     }
                     Discipline disciplineEnum = Discipline.getFromName(cardDiscipline);
-                    if (disciplineEnum != null) {
+                    if (disciplineEnum != null && !disciplines.contains(disciplineEnum.getName())) {
                         disciplines.add(disciplineEnum.getName());
                     }
                 }
