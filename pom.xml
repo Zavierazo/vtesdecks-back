@@ -267,6 +267,11 @@
             <artifactId>typesense-java</artifactId>
             <version>1.3.0</version>
         </dependency>
+        <!-- Feign OkHttp client to allow configuring SSL per-client -->
+        <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-okhttp</artifactId>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
