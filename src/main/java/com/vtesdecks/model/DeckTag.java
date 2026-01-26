@@ -26,7 +26,7 @@ public enum DeckTag {
     COMBAT("combat", 20, crypt -> hasTaint(crypt, CryptTaint.STRENGTH, CryptTaint.PRESS, CryptTaint.ADDITIONAL_STRIKE, CryptTaint.PREVENT), DeckTag::isCombatLibrary, deck -> true),
     ALLY("ally", 8, crypt -> false, DeckTag::isAllyLibrary, deck -> true),
     RAMP("ramp", 10, crypt -> hasTaint(crypt, CryptTaint.ADD_BLOOD), library -> hasTaint(library, LibraryTaint.ADD_BLOOD), deck -> true),
-    MMPA("mmpa", 10, DeckTag::isMmpaCrypt, DeckTag::isMmpaLibrary, deck -> deck.getStats().getMaster() > 15),
+    MMPA("mmpa", 10, crypt -> hasTaint(crypt, CryptTaint.ADDITIONAL_MASTER_PHASE), library -> hasTaint(library, LibraryTaint.ADDITIONAL_MASTER_PHASE), deck -> deck.getStats().getMaster() > 15),
     SWARM("swarm", 8, crypt -> false, library -> hasTaint(library, LibraryTaint.CREATE_VAMPIRE), deck -> true),
     VOTE("vote", 8, crypt -> false, DeckTag::isVoteLibrary, deck -> deck.getStats().getPoliticalAction() > 5);
 
@@ -53,25 +53,11 @@ public enum DeckTag {
         return Stream.of(taints).anyMatch(taint -> library.getTaints().contains(taint.getName()));
     }
 
-    private static final List<Integer> MMPA_CRYPT = Lists.newArrayList(
-            200107, //Anson
-            200305, //Cybele
-            201035, //Nana Buruku
-            200611, //Huitzilopochtli
-            200644 //Isanwayen
-    );
-    private static final List<Integer> MMPA_LIBRARY = Lists.newArrayList(
-            101355, //Parthenon, The
-            101663 //Rumors of Gehenna
-    );
     private static final List<Integer> ALLY_LIBRARY = Lists.newArrayList(
             100709, //FBI Special Affairs Division
             102079 //Unmasking, The
     );
 
-    private static boolean isMmpaCrypt(Crypt crypt) {
-        return MMPA_CRYPT.contains(crypt.getId());
-    }
 
     private static boolean isAllyLibrary(Library library) {
         if (library.getType().contains("Ally")) {
@@ -85,10 +71,6 @@ public enum DeckTag {
             return hasTaint(library, LibraryTaint.UNLOCK) || (hasTaint(library, LibraryTaint.POSITIVE_INTERCEPT) && !hasTaint(library, LibraryTaint.CHANGE_TARGET));
         }
         return hasTaint(library, LibraryTaint.POSITIVE_INTERCEPT);
-    }
-
-    private static boolean isMmpaLibrary(Library library) {
-        return MMPA_LIBRARY.contains(library.getId());
     }
 
     private static boolean isCombatLibrary(Library library) {

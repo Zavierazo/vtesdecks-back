@@ -34,7 +34,8 @@ public enum CryptTaint {
     BANNED("Banned"),
     SLAVE("Slave"),
     TWD("Used by TWD"),
-    ADD_BLOOD("Add Blood", "add .* blood (from the blood bank )?to .* in your uncontrolled region");
+    ADD_BLOOD("Add Blood", "add .* blood (from the blood bank )?to .* in your uncontrolled region"),
+    ADDITIONAL_MASTER_PHASE("+Master Phase", "get \\+\\d master phase action|get two master phase actions");
 
     @Getter
     private String name;
