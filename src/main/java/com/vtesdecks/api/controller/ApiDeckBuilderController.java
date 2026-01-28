@@ -68,13 +68,13 @@ public class ApiDeckBuilderController {
 
     @RequestMapping(method = RequestMethod.DELETE, value = "/{id}", produces = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
-    public ResponseEntity<Boolean> deleteDeck(@PathVariable String id) {
+    public ResponseEntity<Boolean> deleteDeck(@PathVariable String id, @RequestParam(required = false, defaultValue = "false") Boolean permanent) {
         log.info("Deck builder user {} deletes {}", ApiUtils.extractUserId(), id);
         ApiDeckBuilder deck = deckBuilderService.getDeck(id);
         if (deck == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {
-            return new ResponseEntity<>(deckBuilderService.deleteDeck(id), HttpStatus.OK);
+            return new ResponseEntity<>(deckBuilderService.deleteDeck(id, permanent), HttpStatus.OK);
         }
     }
 

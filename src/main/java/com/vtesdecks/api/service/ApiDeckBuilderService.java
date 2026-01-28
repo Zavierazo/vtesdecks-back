@@ -188,15 +188,20 @@ public class ApiDeckBuilderService {
 
     }
 
-    public boolean deleteDeck(String deckId) {
+    public boolean deleteDeck(String deckId, boolean permanent) {
         Integer userId = ApiUtils.extractUserId();
         DeckEntity deck = deckRepository.findById(deckId).orElse(null);
         if (!isOwnerOrAdmin(deck, userId)) {
             log.warn("Deck delete invalid request for user {}, trying to delete {}", userId, deckId);
             return false;
         }
+        if (permanent) {
+            // Remove user reference to be not visible anymore, delete will be done by cleanup scheduler
+            deck.setUser(null);
+        }
         deck.setDeleted(true);
         deckRepository.save(deck);
+
         //Enqueue indexation of new deck
         messageProducer.publishDeckSync(deck.getId());
         apiUserNotificationService.deckDeleteNotifications(deck.getId());
