@@ -14,7 +14,7 @@ public interface DeckRepository extends JpaRepository<DeckEntity, String> {
     @Query(value = "SELECT * FROM deck WHERE type ='COMMUNITY' AND deleted = true AND modification_date < (NOW() - INTERVAL 60 DAY)", nativeQuery = true)
     List<DeckEntity> selectOldDeleted();
 
-    @Query(value = "SELECT * FROM deck WHERE type ='COMMUNITY' AND deleted = true AND user=:userId", nativeQuery = true)
+    @Query(value = "SELECT * FROM deck WHERE type ='COMMUNITY' AND deleted = true AND user=:userId ORDER BY modification_date DESC", nativeQuery = true)
     List<DeckEntity> selectUserDeleted(Integer userId);
 
 }
