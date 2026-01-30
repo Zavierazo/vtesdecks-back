@@ -41,7 +41,7 @@ public class MarketScheduler {
     private final SetCache setCache;
     private final ObjectMapper objectMapper;
 
-    @Scheduled(cron = "3 0 0 * * MON")
+    @Scheduled(cron = "0 0 0/6 * * *")
     @Transactional
     public void scrapCards() {
         log.info("Starting Blood Library Market scrapping...");
