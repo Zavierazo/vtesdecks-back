@@ -43,10 +43,10 @@ public class ApiCardInfoService {
     private final CardErrataRepository cardErrataRepository;
     private final ApiCardErrataMapper apiCardErrataMapper;
 
-    public ApiCardInfo getCardInfo(Integer id, String currencyCode) {
+    public ApiCardInfo getCardInfo(Integer id, String currencyCode, String locale) {
         Integer userId = ApiUtils.extractUserId();
         ApiCardInfo cardInfo = new ApiCardInfo();
-        fillShopInfo(id, cardInfo);
+        fillShopInfo(id, cardInfo, locale);
         cardInfo.setPreconstructedDecks(getPreconstructedDecks(id, currencyCode));
         cardInfo.setCollectionStats(getCollectionStats(id, userId));
         fillPriceInfo(cardInfo, id, currencyCode);
@@ -63,8 +63,8 @@ public class ApiCardInfoService {
                 .toList();
     }
 
-    private void fillShopInfo(Integer id, ApiCardInfo cardInfo) {
-        ApiShopResult shopResult = apiCardService.getCardShops(id, false);
+    private void fillShopInfo(Integer id, ApiCardInfo cardInfo, String locale) {
+        ApiShopResult shopResult = apiCardService.getCardShops(id, locale, false);
         if (shopResult != null) {
             cardInfo.setShopList(shopResult.getShops());
             cardInfo.setHasMoreShops(shopResult.getHasMore());

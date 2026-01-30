@@ -108,8 +108,8 @@ public class ApiCardController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<ApiCardInfo> getCardInfo(HttpServletRequest request, @PathVariable Integer id) {
-        return new ResponseEntity<>(apiCardInfoService.getCardInfo(id, Utils.getCurrencyCode(request)), HttpStatus.OK);
+    public ResponseEntity<ApiCardInfo> getCardInfo(HttpServletRequest request, @RequestParam(required = false, defaultValue = "en") String locale, @PathVariable Integer id) {
+        return new ResponseEntity<>(apiCardInfoService.getCardInfo(id, Utils.getCurrencyCode(request), locale), HttpStatus.OK);
     }
 
     @GetMapping(value = "/{id}/rulings", produces = {
@@ -125,8 +125,8 @@ public class ApiCardController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ResponseEntity<List<ApiShop>> getCardShops(@PathVariable Integer id, @RequestParam(required = false, defaultValue = "false") Boolean showAll) {
-        ApiShopResult result = apiCardService.getCardShops(id, showAll);
+    public ResponseEntity<List<ApiShop>> getCardShops(@PathVariable Integer id, @RequestParam(required = false, defaultValue = "en") String locale, @RequestParam(required = false, defaultValue = "false") Boolean showAll) {
+        ApiShopResult result = apiCardService.getCardShops(id, locale, showAll);
         return new ResponseEntity<>(result.getShops(), HttpStatus.OK);
     }
 

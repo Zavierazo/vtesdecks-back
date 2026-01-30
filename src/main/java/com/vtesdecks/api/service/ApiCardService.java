@@ -88,16 +88,19 @@ public class ApiCardService {
         return apiCardMapper.mapLibrary(library, null, null, null);
     }
 
-    public ApiShopResult getCardShops(Integer cardId, boolean showAll) {
+    public ApiShopResult getCardShops(Integer cardId, String locale, boolean showAll) {
         List<CardShopEntity> results = cardShopRepository.findByCardId(cardId);
         boolean hasInStock = results.stream()
                 .filter(cardShop -> cardShop.getPlatform().isEnabled())
                 .anyMatch(CardShopEntity::isInStock);
+        Comparator<CardShopEntity> sortByLocaleAndPrice = Comparator
+                .comparing((CardShopEntity shop) -> !locale.equals(shop.getLocale()))
+                .thenComparing(CardShopEntity::getPrice);
         List<CardShopEntity> all = results
                 .stream()
                 .filter(cardShop -> cardShop.getPlatform().isEnabled())
                 .filter(cardShop -> !hasInStock || cardShop.isInStock())
-                .sorted(Comparator.comparing(CardShopEntity::getPrice))
+                .sorted(sortByLocaleAndPrice)
                 .toList();
         if (showAll) {
             return ApiShopResult.builder().shops(apiCardMapper.mapCardShop(all)).hasMore(false).build();
@@ -107,14 +110,27 @@ public class ApiCardService {
                 .collect(Collectors.groupingBy(CardShopEntity::getPlatform))
                 .values()
                 .stream()
-                .map(shops -> shops.stream()
-                        .filter(shop -> shop.getSet() == null)
-                        .findFirst()
-                        .orElseGet(() -> shops.stream()
+                .flatMap(shops -> {
+                    CardShopEntity cheapest = shops.stream()
+                            .filter(shop -> shop.getSet() == null)
+                            .findFirst()
+                            .orElseGet(() -> shops.stream()
+                                    .min(Comparator.comparing(CardShopEntity::getPrice))
+                                    .orElseGet(shops::getFirst));
+
+                    if (!locale.equals(cheapest.getLocale())) {
+                        CardShopEntity cheapestUserLocale = shops.stream()
+                                .filter(shop -> locale.equals(shop.getLocale()))
                                 .min(Comparator.comparing(CardShopEntity::getPrice))
-                                .orElseGet(shops::getFirst))
-                )
-                .sorted(Comparator.comparing(CardShopEntity::getPrice))
+                                .orElse(null);
+
+                        if (cheapestUserLocale != null) {
+                            return Stream.of(cheapest, cheapestUserLocale);
+                        }
+                    }
+                    return Stream.of(cheapest);
+                })
+                .sorted(sortByLocaleAndPrice)
                 .toList());
 
         return ApiShopResult.builder().shops(groupedByShop).hasMore(all.size() > groupedByShop.size()).build();
