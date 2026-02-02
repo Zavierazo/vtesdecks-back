@@ -38,6 +38,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -46,6 +47,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
@@ -194,21 +197,12 @@ public class DeckFactory {
             libraries.sort(Comparator.comparing(Card::getNumber).reversed());
         }
         //Other fields
-        value.setClanIcons(cards
+        value.setGroups(cards
                 .stream()
                 .map(Card::getId)
                 .filter(VtesUtils::isCrypt)
                 .map(cryptCache::get)
-                .map(Crypt::getClan)
-                .map(VtesUtils::getClanIcon)
-                .collect(Collectors.toSet()));
-        value.setDisciplineIcons(cards
-                .stream()
-                .map(Card::getId)
-                .filter(VtesUtils::isLibrary)
-                .map(libraryCache::get)
-                .map(Library::getDisciplineIcons)
-                .flatMap(Set::stream)
+                .map(Crypt::getGroup)
                 .collect(Collectors.toSet()));
         value.setClans(cards
                 .stream()
@@ -217,21 +211,36 @@ public class DeckFactory {
                 .map(cryptCache::get)
                 .map(Crypt::getClan)
                 .collect(Collectors.toSet()));
-        value.setGroups(cards
+        value.setClanIcons(cards
                 .stream()
                 .map(Card::getId)
                 .filter(VtesUtils::isCrypt)
                 .map(cryptCache::get)
-                .map(Crypt::getGroup)
+                .map(Crypt::getClan)
+                .map(VtesUtils::getClanIcon)
                 .collect(Collectors.toSet()));
-        value.setDisciplines(cards
-                .stream()
-                .map(Card::getId)
-                .filter(VtesUtils::isLibrary)
-                .map(libraryCache::get)
-                .map(Library::getDisciplines)
-                .flatMap(Set::stream)
-                .collect(Collectors.toSet()));
+        Set<String> disciplines = intersection(
+                cards.stream()
+                        .map(Card::getId)
+                        .filter(VtesUtils::isLibrary)
+                        .map(id -> libraryCache.get(id).getDisciplines())
+                        .filter(Objects::nonNull)
+                        .flatMap(Collection::stream)
+                        .collect(Collectors.toSet()),
+                cards.stream()
+                        .map(Card::getId)
+                        .filter(VtesUtils::isCrypt)
+                        .map(id -> cryptCache.get(id).getDisciplines())
+                        .filter(Objects::nonNull)
+                        .flatMap(Collection::stream)
+                        .collect(Collectors.toSet())
+        );
+        value.setDisciplines(disciplines);
+        value.setDisciplineIcons(disciplines.stream()
+                .map(discipline -> VtesUtils.getDisciplineIcon(discipline, false))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet())
+        );
         value.setPath(cards
                 .stream()
                 .map(Card::getId)
@@ -256,6 +265,24 @@ public class DeckFactory {
         value.setTags(getDeckTags(value, limitedFormats));
         value.setL2Norm(CosineSimilarityUtils.computeL2Norm(CosineSimilarityUtils.getVector(value)));
         return value;
+    }
+
+    private <T> Set<T> collectFromCards(List<Card> cards,
+                                        Predicate<Integer> idPredicate,
+                                        Function<Integer, Collection<T>> getter) {
+        return cards.stream()
+                .map(Card::getId)
+                .filter(idPredicate::test)
+                .map(getter)
+                .filter(Objects::nonNull)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
+    }
+
+    private Set<String> intersection(Set<String> set1, Set<String> set2) {
+        Set<String> intersection = new HashSet<>(set1);
+        intersection.retainAll(set2);
+        return intersection;
     }
 
 
