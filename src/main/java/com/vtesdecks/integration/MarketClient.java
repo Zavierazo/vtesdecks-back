@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-@FeignClient(name = "MarketBloodLibraryClient", url = "https://market.bloodlibrary.info", configuration = MarketClient.Configuration.class)
+@FeignClient(name = "MarketBloodLibraryClient", url = "https://market.vtesdecks.com", configuration = MarketClient.Configuration.class)
 public interface MarketClient {
 
     @GetMapping(value = "/api/card_offers", produces = APPLICATION_JSON_VALUE)
