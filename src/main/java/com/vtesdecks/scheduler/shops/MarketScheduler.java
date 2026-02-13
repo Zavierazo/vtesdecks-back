@@ -140,17 +140,6 @@ public class MarketScheduler {
             log.debug("No market platform found for {}", cardOffer.getMarket());
             return Optional.empty();
         }
-        // Extra validations
-        switch (platform) {
-            case TCG_MKT:
-                if (cardOffer.getEdition() == null) {
-                    log.warn("Invalid card offer: {}", cardOffer);
-                    return Optional.empty();
-                }
-                break;
-            default:
-
-        }
         String set = null;
         if (cardOffer.getEdition() != null) {
             set = cardOffer.getEdition();
