@@ -48,7 +48,7 @@ public class CardShopEntity {
     @Column(name = "locale")
     private String locale;
 
-    @Column(name = "link", nullable = false, length = 512)
+    @Column(name = "link", nullable = false)
     private String link;
 
     @Column(name = "price")

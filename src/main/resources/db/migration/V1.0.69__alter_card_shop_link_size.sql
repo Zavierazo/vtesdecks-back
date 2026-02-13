@@ -1,0 +1,2 @@
+ALTER TABLE `card_shop` MODIFY COLUMN `link` TEXT NOT NULL;
+
