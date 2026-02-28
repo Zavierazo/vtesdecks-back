@@ -102,9 +102,7 @@ public class LibraryCache {
             }
             if (!currentKeys.isEmpty()) {
                 log.warn("Deleting form index {}", currentKeys);
-                for (Integer key : currentKeys) {
-                    cache.remove(key);
-                }
+                cache.removeIf(library -> currentKeys.contains(library.getId()));
             }
         } finally {
             stopWatch.stop();

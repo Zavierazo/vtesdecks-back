@@ -99,9 +99,7 @@ public class CryptCache {
             }
             if (!currentKeys.isEmpty()) {
                 log.warn("Deleting form index {}", currentKeys);
-                for (Integer key : currentKeys) {
-                    cache.remove(key);
-                }
+                cache.removeIf(crypt -> currentKeys.contains(crypt.getId()));
             }
         } finally {
             stopWatch.stop();
