@@ -329,6 +329,10 @@ public class AfterStartupService {
                 finalSets.add(String.join(":", setInfo));
                 finalSets.add("Anthology I:" + setInfo.getLast());
                 converted = true;
+            } else if (setInfo.getFirst().equals("NB3") && (setInfo.getLast().contains("PR") || setInfo.getLast().contains("PS") || setInfo.getLast().contains("PT"))) {
+                converted |= convertSubSetToSet(finalSets, setInfo, "NB3", "PR", "NB3C", false);
+                converted |= convertSubSetToSet(finalSets, setInfo, "NB3", "PS", "NB3C", false);
+                converted |= convertSubSetToSet(finalSets, setInfo, "NB3", "PT", "NB3C", false);
             } else if (setInfo.getFirst().equals("TU")) {
                 converted |= divideUnleashed(finalSets, setInfo, "TU");
             } else if (setInfo.getFirst().equals("AU")) {
