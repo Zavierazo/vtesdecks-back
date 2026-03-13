@@ -57,24 +57,20 @@ public class Utils {
     }
 
     public static String getCurrencyCode(HttpServletRequest httpServletRequest) {
+
         String countryCode = null;
         try {
             countryCode = httpServletRequest.getHeader(Constants.USER_COUNTRY_HEADER);
-            if (countryCode == null || countryCode.isEmpty()) {
+            //T1 is used by Cloudflare for requests where the country code cannot be determined, so we should default to EUR in that case as well
+            if (countryCode == null || countryCode.isEmpty() || countryCode.equals("T1")) {
                 return DEFAULT_CURRENCY;
             }
-            String currency;
-            try {
-                currency = Currency.getInstance(Locale.of("", countryCode)).getCurrencyCode();
-            } catch (IllegalArgumentException e) {
-                log.warn("Unable to obtain currency for country code {}", countryCode);
-                currency = "EUR";
-            }
+            String currency = Currency.getInstance(Locale.of("", countryCode)).getCurrencyCode();
             if (currency != null && !currency.isEmpty()) {
                 return currency;
             }
         } catch (Exception e) {
-            log.warn("Unable to obtain currency from request for country code {}", countryCode, e);
+            log.warn("Unable to obtain currency from request for country code '{}': {}", countryCode, e.getMessage());
         }
         return DEFAULT_CURRENCY;
     }
