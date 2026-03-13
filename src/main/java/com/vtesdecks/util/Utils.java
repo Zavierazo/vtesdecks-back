@@ -63,7 +63,13 @@ public class Utils {
             if (countryCode == null || countryCode.isEmpty()) {
                 return DEFAULT_CURRENCY;
             }
-            String currency = Currency.getInstance(Locale.of("", countryCode)).getCurrencyCode();
+            String currency;
+            try {
+                currency = Currency.getInstance(Locale.of("", countryCode)).getCurrencyCode();
+            } catch (IllegalArgumentException e) {
+                log.warn("Unable to obtain currency for country code {}", countryCode);
+                currency = "EUR";
+            }
             if (currency != null && !currency.isEmpty()) {
                 return currency;
             }
