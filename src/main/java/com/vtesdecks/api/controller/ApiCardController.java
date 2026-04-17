@@ -10,6 +10,7 @@ import com.vtesdecks.model.api.ApiRuling;
 import com.vtesdecks.model.api.ApiShop;
 import com.vtesdecks.model.api.ApiShopResult;
 import com.vtesdecks.util.Utils;
+import com.vtesdecks.util.VtesUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,6 +103,24 @@ public class ApiCardController {
     @ResponseBody
     public ResponseEntity<ApiLibrary> getLibraryLastUpdate() {
         return new ResponseEntity<>(apiCardService.getLibraryLastUpdate(), HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/{id}", produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public ResponseEntity<ApiBaseCard> getCard(HttpServletRequest request, @RequestParam(required = false, defaultValue = "en") String locale, @PathVariable Integer id) {
+        ApiBaseCard card;
+        if (VtesUtils.isCrypt(id)) {
+            card = apiCardService.getCrypt(id, locale);
+        } else {
+            card = apiCardService.getLibrary(id, locale);
+        }
+        if (card == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } else {
+            return new ResponseEntity<>(card, HttpStatus.OK);
+        }
     }
 
     @GetMapping(value = "/{id}/info", produces = {
