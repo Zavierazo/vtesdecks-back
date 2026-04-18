@@ -7,6 +7,7 @@ import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Card;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Library;
+import com.vtesdecks.integration.ScannerClient;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
 import com.vtesdecks.model.api.ApiBaseCard;
@@ -14,6 +15,8 @@ import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiShop;
 import com.vtesdecks.model.api.ApiShopResult;
+import com.vtesdecks.model.scanner.ScanRequest;
+import com.vtesdecks.model.scanner.ScanResponse;
 import com.vtesdecks.util.TrigramSimilarity;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Strings;
@@ -39,6 +42,7 @@ public class ApiCardService {
     private final LibraryCache libraryCache;
     private final CardShopRepository cardShopRepository;
     private final ApiCardMapper apiCardMapper;
+    private final ScannerClient scannerClient;
 
     public ApiCrypt getCrypt(Integer id, String locale) {
         Crypt crypt = cryptCache.get(id);
@@ -175,5 +179,9 @@ public class ApiCardService {
                     .limit(limit != null ? limit : Long.MAX_VALUE)
                     .toList();
         }
+    }
+
+    public ScanResponse scan(ScanRequest request) {
+        return scannerClient.scan(request);
     }
 }

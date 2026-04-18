@@ -9,6 +9,8 @@ import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiRuling;
 import com.vtesdecks.model.api.ApiShop;
 import com.vtesdecks.model.api.ApiShopResult;
+import com.vtesdecks.model.scanner.ScanRequest;
+import com.vtesdecks.model.scanner.ScanResponse;
 import com.vtesdecks.util.Utils;
 import com.vtesdecks.util.VtesUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +22,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -149,5 +153,15 @@ public class ApiCardController {
         return new ResponseEntity<>(result.getShops(), HttpStatus.OK);
     }
 
+    @PostMapping(value = "/scan", consumes = {
+            MediaType.APPLICATION_JSON_VALUE
+    }, produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public ResponseEntity<ScanResponse> scan(@RequestBody ScanRequest request) {
+        ScanResponse response = apiCardService.scan(request);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 
 }
