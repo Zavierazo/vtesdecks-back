@@ -7,7 +7,7 @@ import java.util.List;
 @Data
 public class ScanResponse {
     private boolean found;
-    private String id;
+    private Integer id;
     private String set;
     private Integer confidence;
     private Integer score;
