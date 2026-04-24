@@ -15,7 +15,5 @@ public class ScanRequest {
     private boolean idOnly = false;
     @Builder.Default
     private boolean noAlternatives = false;
-    @Builder.Default
-    private boolean fast = false;
 }
 

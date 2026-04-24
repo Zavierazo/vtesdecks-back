@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class ScanAlternative {
-    private String id;
+    private Integer id;
     private String set;
     private Integer score;
     private Integer confidence;
