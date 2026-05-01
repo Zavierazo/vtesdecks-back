@@ -8,6 +8,7 @@ import com.vtesdecks.api.mapper.ApiCollectionMapper;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.SetCache;
+import com.vtesdecks.cache.indexable.Card;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.jpa.entity.CollectionBinderEntity;
@@ -287,22 +288,30 @@ public class ApiCollectionImportService {
 
     private Integer getCardId(ApiCollectionCardCsv card) {
         try (ResultSet<Library> library = libraryCache.selectAll(card.getCardName(), null)) {
-            if (library.isEmpty() || library.stream().noneMatch(l -> compareExactName(card.getCardName(), l.getName()))) {
-                String cryptName = StringUtils.substringBefore(card.getCardName(), " (ADV)");
-                boolean isAdv = Strings.CI.contains(card.getCardName(), "(ADV)");
-                try (ResultSet<Crypt> crypt = cryptCache.selectAll(cryptName, null)) {
-                    if (!crypt.isEmpty() && crypt.stream().anyMatch(c -> compareExactName(cryptName, c.getName()))) {
-                        return crypt.stream()
-                                .filter(c -> c.isAdv() == isAdv)
-                                .findFirst().orElseThrow().getId();
-                    }
-                }
-            } else {
-                return library.stream().findFirst().orElseThrow().getId();
+            if (!library.isEmpty() && library.stream().anyMatch(l -> compareExactName(card.getCardName(), l.getName()) || hasMatchingI18nName(l, card.getCardName()))) {
+                return library.stream()
+                        .filter(l -> compareExactName(card.getCardName(), l.getName()) || hasMatchingI18nName(l, card.getCardName()))
+                        .findFirst().orElseThrow().getId();
+            }
+        }
+        String cryptName = StringUtils.substringBefore(card.getCardName(), " (ADV)");
+        boolean isAdv = Strings.CI.contains(card.getCardName(), "(ADV)");
+        try (ResultSet<Crypt> crypt = cryptCache.selectAll(cryptName, null)) {
+            if (!crypt.isEmpty()) {
+                return crypt.stream()
+                        .filter(c -> (compareExactName(cryptName, c.getName()) || hasMatchingI18nName(c, cryptName)) && c.isAdv() == isAdv)
+                        .findFirst()
+                        .map(Crypt::getId)
+                        .orElse(null);
             }
         }
         log.warn("Card not found in cache: {}", card.getCardName());
         return null;
+    }
+
+    private boolean hasMatchingI18nName(Card card, String name) {
+        return card.getI18n() != null && card.getI18n().values().stream()
+                .anyMatch(i18n -> i18n.getName() != null && compareExactName(name, i18n.getName()));
     }
 
     private static boolean compareExactName(String cardNameA, String cardNameB) {

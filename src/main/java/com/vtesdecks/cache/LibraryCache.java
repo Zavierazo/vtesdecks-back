@@ -77,6 +77,7 @@ public class LibraryCache {
         cache.addIndex(HashIndex.onAttribute(Library.DISCIPLINE_NUMBER_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Library.DISCIPLINE_MULTI_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Library.LAST_UPDATE_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Library.I18N_NAME_ATTRIBUTE));
     }
 
 
@@ -160,7 +161,11 @@ public class LibraryCache {
         QueryOptions queryOptions = queryOptions(orderBy(ascending(Library.NAME_ATTRIBUTE)), threshold);
         Query<Library> query = all(Library.class);
         if (name != null) {
-            query = and(query, contains(Library.NAME_ATTRIBUTE, Utils.normalizeName(StringUtils.lowerCase(name))));
+            String normalizedName = Utils.normalizeName(StringUtils.lowerCase(name));
+            query = and(query, QueryFactory.or(
+                    contains(Library.NAME_ATTRIBUTE, normalizedName),
+                    contains(Library.I18N_NAME_ATTRIBUTE, normalizedName)
+            ));
         }
         if (text != null) {
             query = and(query, contains(Library.TEXT_ATTRIBUTE, Utils.normalizeName(StringUtils.lowerCase(text))));

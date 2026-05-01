@@ -37,6 +37,15 @@ public class Library extends Card {
         }
     };
     public static final Attribute<Library, LocalDateTime> LAST_UPDATE_ATTRIBUTE = QueryFactory.attribute(Library.class, LocalDateTime.class, "last_update", Library::getLastUpdate);
+    public static final Attribute<Library, String> I18N_NAME_ATTRIBUTE = new MultiValueNullableAttribute<Library, String>("i18nName", true) {
+        public Iterable<String> getNullableValues(Library library, QueryOptions queryOptions) {
+            if (library.getI18n() == null) return java.util.Collections.emptyList();
+            return library.getI18n().values().stream()
+                    .filter(i18n -> i18n.getName() != null)
+                    .map(i18n -> Utils.normalizeName(StringUtils.lowerCase(i18n.getName())))
+                    .toList();
+        }
+    };
 
     private String type;
     private Set<String> clans;

@@ -74,6 +74,7 @@ public class CryptCache {
         cache.addIndex(HashIndex.onAttribute(Crypt.DISCIPLINE_NUMBER_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Crypt.DISCIPLINE_MULTI_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Crypt.LAST_UPDATE_ATTRIBUTE));
+        cache.addIndex(HashIndex.onAttribute(Crypt.I18N_NAME_ATTRIBUTE));
     }
 
 
@@ -159,7 +160,11 @@ public class CryptCache {
         QueryOptions queryOptions = queryOptions(orderBy(ascending(Crypt.NAME_ATTRIBUTE)), threshold);
         Query<Crypt> query = all(Crypt.class);
         if (name != null) {
-            query = and(query, contains(Crypt.NAME_ATTRIBUTE, Utils.normalizeName(StringUtils.lowerCase(name))));
+            String normalizedName = Utils.normalizeName(StringUtils.lowerCase(name));
+            query = and(query, QueryFactory.or(
+                    contains(Crypt.NAME_ATTRIBUTE, normalizedName),
+                    contains(Crypt.I18N_NAME_ATTRIBUTE, normalizedName)
+            ));
         }
         if (text != null) {
             query = and(query, contains(Crypt.TEXT_ATTRIBUTE, Utils.normalizeName(StringUtils.lowerCase(text))));

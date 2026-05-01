@@ -29,6 +29,15 @@ public class Crypt extends Card {
         }
     };
     public static final Attribute<Crypt, LocalDateTime> LAST_UPDATE_ATTRIBUTE = QueryFactory.attribute(Crypt.class, LocalDateTime.class, "last_update", Crypt::getLastUpdate);
+    public static final Attribute<Crypt, String> I18N_NAME_ATTRIBUTE = new MultiValueNullableAttribute<Crypt, String>("i18nName", true) {
+        public Iterable<String> getNullableValues(Crypt crypt, QueryOptions queryOptions) {
+            if (crypt.getI18n() == null) return java.util.Collections.emptyList();
+            return crypt.getI18n().values().stream()
+                    .filter(i18n -> i18n.getName() != null)
+                    .map(i18n -> Utils.normalizeName(StringUtils.lowerCase(i18n.getName())))
+                    .toList();
+        }
+    };
 
     private String type;
     private String clan;
