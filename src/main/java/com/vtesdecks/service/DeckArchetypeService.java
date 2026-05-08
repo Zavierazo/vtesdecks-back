@@ -62,12 +62,22 @@ public class DeckArchetypeService {
     }
 
     public Optional<ApiDeckArchetype> getById(Integer id, String currencyCode) {
-        return redisRepository.findById(id).map(archetype -> mapper.map(archetype, getMetaTotal(MetaType.TOURNAMENT), MetaType.TOURNAMENT, currencyCode));
+        return redisRepository.findById(id).map(archetype -> {
+            ApiDeckArchetype api = mapper.map(archetype, getMetaTotal(MetaType.TOURNAMENT), MetaType.TOURNAMENT, currencyCode);
+            api.setKeyCrypt(mapper.mapKeyCrypt(archetype.getKeyCards()));
+            api.setKeyLibrary(mapper.mapKeyLibrary(archetype.getKeyCards()));
+            return api;
+        });
     }
 
     public Optional<ApiDeckArchetype> getByDeckId(String deckId, String currencyCode) {
         Optional<DeckArchetype> entity = redisRepository.findByDeckId(deckId);
-        return entity.map(archetype -> mapper.map(archetype, getMetaTotal(MetaType.TOURNAMENT), MetaType.TOURNAMENT, currencyCode));
+        return entity.map(archetype -> {
+            ApiDeckArchetype api = mapper.map(archetype, getMetaTotal(MetaType.TOURNAMENT), MetaType.TOURNAMENT, currencyCode);
+            api.setKeyCrypt(mapper.mapKeyCrypt(archetype.getKeyCards()));
+            api.setKeyLibrary(mapper.mapKeyLibrary(archetype.getKeyCards()));
+            return api;
+        });
     }
 
     public Optional<ApiDeckArchetype> create(ApiDeckArchetype api, String currencyCode) {

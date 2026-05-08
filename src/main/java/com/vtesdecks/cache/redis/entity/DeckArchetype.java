@@ -10,6 +10,7 @@ import org.springframework.data.redis.core.index.Indexed;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder(toBuilder = true)
@@ -36,4 +37,5 @@ public class DeckArchetype {
     private String currency;
     private LocalDateTime creationDate;
     private LocalDateTime modificationDate;
+    private List<ArchetypeKeyCard> keyCards;
 }

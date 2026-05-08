@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -29,5 +30,7 @@ public class ApiDeckArchetype {
     private String currency;
     private LocalDateTime creationDate;
     private LocalDateTime modificationDate;
+    private List<ApiArchetypeCard> keyCrypt;
+    private List<ApiArchetypeCard> keyLibrary;
 }
 
