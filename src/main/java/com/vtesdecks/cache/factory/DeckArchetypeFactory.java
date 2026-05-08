@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 public abstract class DeckArchetypeFactory {
 
 
-    private static final double MIN_APPEARANCE_THRESHOLD = 0.2;
+    private static final double MIN_APPEARANCE_THRESHOLD = 0.1;
 
     @Autowired
     private DeckService deckService;
