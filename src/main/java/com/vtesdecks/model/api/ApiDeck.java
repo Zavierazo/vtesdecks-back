@@ -47,4 +47,5 @@ public class ApiDeck {
     private List<String> tags;
     private LocalDateTime creationDate;
     private LocalDateTime modifyDate;
+    private ApiDeckArchetype archetype;
 }

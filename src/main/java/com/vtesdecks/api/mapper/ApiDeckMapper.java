@@ -6,10 +6,12 @@ import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.CollectionTracker;
 import com.vtesdecks.cache.indexable.deck.card.Card;
+import com.vtesdecks.cache.redis.repositories.DeckArchetypeRedisRepository;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeck;
+import com.vtesdecks.model.api.ApiDeckArchetype;
 import com.vtesdecks.model.api.ApiDeckStats;
 import com.vtesdecks.service.CurrencyExchangeService;
 import com.vtesdecks.util.VtesUtils;
@@ -42,9 +44,12 @@ public abstract class ApiDeckMapper {
     private ApiCollectionService apiCollectionService;
     @Autowired
     private CurrencyExchangeService currencyExchangeService;
+    @Autowired
+    private DeckArchetypeRedisRepository deckArchetypeRedisRepository;
 
 
     @BeanMapping(qualifiedByName = "map")
+    @Mapping(target = "archetype", ignore = true)
     @Mapping(target = "user", source = "deck", qualifiedByName = "mapDeckUser")
     public abstract ApiDeck map(Deck deck, @Context Integer userId, @Context boolean collectionTracker, @Context String currencyCode);
 
@@ -59,6 +64,7 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "erratas", ignore = true)
     @Mapping(target = "warnings", ignore = true)
     @Mapping(target = "extra", ignore = true)
+    @Mapping(target = "archetype", ignore = true)
     @Mapping(target = "user", source = "deck", qualifiedByName = "mapDeckUser")
     public abstract ApiDeck mapSummary(Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode);
 
@@ -87,6 +93,16 @@ public abstract class ApiDeckMapper {
             }
         }
         convertPriceCurrency(api.getStats(), currencyCode);
+        if (deck.getDeckArchetypeId() != null && deck.getDeckArchetypeId() != 0) {
+            deckArchetypeRedisRepository.findById(deck.getDeckArchetypeId()).ifPresent(archetype ->
+                    api.setArchetype(ApiDeckArchetype.builder()
+                            .id(archetype.getId())
+                            .name(archetype.getName())
+                            .icon(archetype.getIcon())
+                            .type(archetype.getType())
+                            .build())
+            );
+        }
     }
 
     private static void fillCollectionTracker(ApiCard apiCard, Map<Integer, Integer> collectionMap) {
