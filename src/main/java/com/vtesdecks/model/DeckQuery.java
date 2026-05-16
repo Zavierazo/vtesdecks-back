@@ -60,6 +60,9 @@ public class DeckQuery {
     private Boolean favorite;
     private Integer archetype;
     private LocalDate creationDate;
+    /** When true, skips both the published filter and the deck-type restriction, returning all non-deleted decks. */
+    @Builder.Default
+    private boolean allDecks = false;
 
     public boolean isStarVampire() {
         return starVampire != null && starVampire;

@@ -49,6 +49,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
+import static com.googlecode.cqengine.query.QueryFactory.all;
 import static com.googlecode.cqengine.query.QueryFactory.applyThresholds;
 import static com.googlecode.cqengine.query.QueryFactory.ascending;
 import static com.googlecode.cqengine.query.QueryFactory.contains;
@@ -277,10 +278,13 @@ public class DeckIndex {
                 queryOptions = queryOptions(orderBy(descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
         }
         Equal<Deck, Boolean> published = QueryFactory.equal(Deck.PUBLISHED_ATTRIBUTE, true);
-        if (deckQuery.getUserId() != null) {
-            query = and(query, or(equal(Deck.USER_ATTRIBUTE, deckQuery.getUserId()), published));
+        if (deckQuery.isAllDecks()) {
+            // Skip published and type filters — returns every non-deleted deck in the index
+            query = all(Deck.class);
+        } else if (deckQuery.getUserId() != null) {
+            query = or(equal(Deck.USER_ATTRIBUTE, deckQuery.getUserId()), published);
         } else {
-            query = and(query, published);
+            query = published;
         }
         if (deckQuery.getUsername() != null) {
             UserEntity filterUser = userRepository.findByUsername(deckQuery.getUsername());

@@ -50,7 +50,7 @@ import java.util.function.Function;
 @Service
 @RequiredArgsConstructor
 public class ApiDeckBuilderService {
-    public static final double MIN_SUGGESTION_SIMILARITY_THRESHOLD = 0.7;
+    public static final double MIN_SUGGESTION_SIMILARITY_THRESHOLD = 0.6;
     private final DeckRepository deckRepository;
     private final DeckCardRepository deckCardRepository;
     private final LibraryCache libraryCache;
@@ -311,9 +311,9 @@ public class ApiDeckBuilderService {
             return new ApiDeckSuggestedCards();
         }
 
-        // Find all published decks (COMMUNITY + TOURNAMENT) with cosine similarity >= 0.5
+        // Find all non-deleted decks (TOURNAMENT, COMMUNITY and USER/private) with cosine similarity
         List<Deck> similarDecks = new ArrayList<>();
-        try (ResultSet<Deck> deckResultSet = deckService.getDecks(DeckQuery.builder().build())) {
+        try (ResultSet<Deck> deckResultSet = deckService.getDecks(DeckQuery.builder().allDecks(true).build())) {
             for (Deck candidate : deckResultSet) {
                 Map<Integer, Integer> candidateVector = CosineSimilarityUtils.getVector(candidate);
                 double similarity = CosineSimilarityUtils.cosineSimilarity(inputDeck, inputVector, candidate, candidateVector);
@@ -323,8 +323,8 @@ public class ApiDeckBuilderService {
             }
         }
 
-        // Compute key cards with the same algorithm as DeckArchetypeFactory
-        List<ArchetypeKeyCard> keyCards = deckKeyCardsService.computeKeyCards(similarDecks);
+        // Compute key cards using a higher threshold (30%) to produce tighter suggestions
+        List<ArchetypeKeyCard> keyCards = deckKeyCardsService.computeKeyCards(similarDecks, DeckKeyCardsService.SUGGESTED_CARDS_THRESHOLD);
 
         // Map to the response model splitting crypt / library
         return ApiDeckSuggestedCards.builder()

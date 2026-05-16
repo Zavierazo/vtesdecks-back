@@ -18,17 +18,26 @@ import java.util.stream.Collectors;
 @Component
 public class DeckKeyCardsService {
 
+    /**
+     * Threshold used by archetypes: card must appear in at least 10% of decks.
+     */
     public static final double MIN_APPEARANCE_THRESHOLD = 0.1;
 
     /**
-     * Given an iterable of decks, computes the key cards with their appearance rate,
+     * Threshold used for suggested cards: card must appear in at least 30% of similar decks.
+     */
+    public static final double SUGGESTED_CARDS_THRESHOLD = 0.3;
+
+    /**
+     * Given a list of decks, computes the key cards with their appearance rate,
      * average copies, min/max normalized counts and mode (most common copy count).
-     * Only cards that appear in at least {@value MIN_APPEARANCE_THRESHOLD} of the decks are included.
+     * Only cards that appear in at least {@code threshold} fraction of the decks are included.
      *
-     * @param decks the decks to analyse
+     * @param decks     the decks to analyse
+     * @param threshold minimum appearance rate (0.0–1.0) for a card to be included
      * @return list of key cards sorted by appearance rate descending, empty if no decks provided
      */
-    public List<ArchetypeKeyCard> computeKeyCards(List<Deck> decks) {
+    public List<ArchetypeKeyCard> computeKeyCards(List<Deck> decks, double threshold) {
         // Map<cardId, Map<copies, deckCount>>
         Map<Integer, Map<Integer, Integer>> cardCopyDistribution = new HashMap<>();
         Map<Integer, Integer> cardDeckCount = new HashMap<>();
@@ -60,7 +69,7 @@ public class DeckKeyCardsService {
             int decksWithCard = cardDeckCount.getOrDefault(cardId, 0);
             double appearanceRate = (double) decksWithCard / totalDecks;
 
-            if (appearanceRate < MIN_APPEARANCE_THRESHOLD) {
+            if (appearanceRate < threshold) {
                 continue;
             }
 

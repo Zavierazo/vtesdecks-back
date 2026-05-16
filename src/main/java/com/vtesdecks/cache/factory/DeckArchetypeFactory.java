@@ -57,7 +57,7 @@ public abstract class DeckArchetypeFactory {
                 DeckQuery.builder().archetype(entity.getId()).type(DeckType.TOURNAMENT).build())) {
             decks = deckResultSet.stream().toList();
         }
-        List<ArchetypeKeyCard> keyCards = deckKeyCardsService.computeKeyCards(decks);
+        List<ArchetypeKeyCard> keyCards = deckKeyCardsService.computeKeyCards(decks, DeckKeyCardsService.MIN_APPEARANCE_THRESHOLD);
         deckArchetype.setKeyCards(keyCards.isEmpty() ? null : keyCards);
     }
 
