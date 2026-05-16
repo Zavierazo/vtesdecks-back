@@ -280,11 +280,11 @@ public class DeckIndex {
         Equal<Deck, Boolean> published = QueryFactory.equal(Deck.PUBLISHED_ATTRIBUTE, true);
         if (deckQuery.isAllDecks()) {
             // Skip published and type filters — returns every non-deleted deck in the index
-            query = all(Deck.class);
+            query = and(query, all(Deck.class));
         } else if (deckQuery.getUserId() != null) {
-            query = or(equal(Deck.USER_ATTRIBUTE, deckQuery.getUserId()), published);
+            query = and(query, or(equal(Deck.USER_ATTRIBUTE, deckQuery.getUserId()), published));
         } else {
-            query = published;
+            query = and(query, published);
         }
         if (deckQuery.getUsername() != null) {
             UserEntity filterUser = userRepository.findByUsername(deckQuery.getUsername());
