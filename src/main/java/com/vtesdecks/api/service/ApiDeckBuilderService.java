@@ -4,10 +4,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Iterables;
+import com.googlecode.cqengine.resultset.ResultSet;
+import com.vtesdecks.api.mapper.DeckArchetypeMapper;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.LibraryCache;
+import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.DeckType;
+import com.vtesdecks.cache.indexable.deck.card.Card;
+import com.vtesdecks.cache.redis.entity.ArchetypeKeyCard;
 import com.vtesdecks.integration.KRCGClient;
 import com.vtesdecks.jpa.entity.DeckCardEntity;
 import com.vtesdecks.jpa.entity.DeckEntity;
@@ -17,11 +22,15 @@ import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.LimitedFormatRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.messaging.MessageProducer;
+import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.ImportType;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeckBuilder;
-import com.vtesdecks.model.krcg.Card;
-import com.vtesdecks.model.krcg.Deck;
+import com.vtesdecks.model.api.ApiDeckSuggestedCards;
+import com.vtesdecks.service.DeckKeyCardsService;
+import com.vtesdecks.service.DeckService;
+import com.vtesdecks.util.CosineSimilarityUtils;
+import com.vtesdecks.util.VtesUtils;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +50,7 @@ import java.util.function.Function;
 @Service
 @RequiredArgsConstructor
 public class ApiDeckBuilderService {
+    public static final double MIN_SUGGESTION_SIMILARITY_THRESHOLD = 0.7;
     private final DeckRepository deckRepository;
     private final DeckCardRepository deckCardRepository;
     private final LibraryCache libraryCache;
@@ -50,6 +60,9 @@ public class ApiDeckBuilderService {
     private final LimitedFormatRepository limitedFormatRepository;
     private final MessageProducer messageProducer;
     private final ApiUserNotificationService apiUserNotificationService;
+    private final DeckService deckService;
+    private final DeckKeyCardsService deckKeyCardsService;
+    private final DeckArchetypeMapper deckArchetypeMapper;
 
 
     public ApiDeckBuilder getDeck(String deckId) {
@@ -227,11 +240,11 @@ public class ApiDeckBuilderService {
         return true;
     }
 
-    private ApiDeckBuilder importDeck(String url, Function<Map<String, ?>, Deck> api) {
+    private ApiDeckBuilder importDeck(String url, Function<Map<String, ?>, com.vtesdecks.model.krcg.Deck> api) {
         try {
             Map<String, String> form = new HashMap<>();
             form.put("url", url);
-            Deck deck = api.apply(form);
+            com.vtesdecks.model.krcg.Deck deck = api.apply(form);
             if (deck != null) {
                 return importKRCGDeck(deck);
             }
@@ -241,21 +254,21 @@ public class ApiDeckBuilderService {
         return null;
     }
 
-    private ApiDeckBuilder importKRCGDeck(Deck deck) {
+    private ApiDeckBuilder importKRCGDeck(com.vtesdecks.model.krcg.Deck deck) {
         ApiDeckBuilder deckBuilder = new ApiDeckBuilder();
         deckBuilder.setName(deck.getName());
         deckBuilder.setDescription(deck.getComments());
         deckBuilder.setPublished(false);
         deckBuilder.setCards(new ArrayList<>());
         if (deck.getCrypt() != null && deck.getCrypt().getCards() != null) {
-            for (Card card : deck.getCrypt().getCards()) {
+            for (com.vtesdecks.model.krcg.Card card : deck.getCrypt().getCards()) {
                 deckBuilder.getCards().add(getApiCard(card.getId(), card.getCount()));
             }
         }
         if (deck.getLibrary() != null && deck.getLibrary().getCards() != null) {
-            for (Card libraryCard : deck.getLibrary().getCards()) {
+            for (com.vtesdecks.model.krcg.Card libraryCard : deck.getLibrary().getCards()) {
                 if (libraryCard.getCards() != null) {
-                    for (Card card : libraryCard.getCards()) {
+                    for (com.vtesdecks.model.krcg.Card card : libraryCard.getCards()) {
                         deckBuilder.getCards().add(getApiCard(card.getId(), card.getCount()));
                     }
                 }
@@ -287,6 +300,62 @@ public class ApiDeckBuilderService {
         //Enqueue indexation of new deck
         messageProducer.publishDeckSync(deck.getId());
         return true;
+    }
+
+    public ApiDeckSuggestedCards getSuggestedCards(List<ApiCard> cards) {
+        // Build a transient Deck from the input cards
+        Deck inputDeck = buildTemporalDeck(cards);
+        Map<Integer, Integer> inputVector = CosineSimilarityUtils.getVector(inputDeck);
+
+        if (inputVector.isEmpty()) {
+            return new ApiDeckSuggestedCards();
+        }
+
+        // Find all published decks (COMMUNITY + TOURNAMENT) with cosine similarity >= 0.5
+        List<Deck> similarDecks = new ArrayList<>();
+        try (ResultSet<Deck> deckResultSet = deckService.getDecks(DeckQuery.builder().build())) {
+            for (Deck candidate : deckResultSet) {
+                Map<Integer, Integer> candidateVector = CosineSimilarityUtils.getVector(candidate);
+                double similarity = CosineSimilarityUtils.cosineSimilarity(inputDeck, inputVector, candidate, candidateVector);
+                if (similarity >= MIN_SUGGESTION_SIMILARITY_THRESHOLD) {
+                    similarDecks.add(candidate);
+                }
+            }
+        }
+
+        // Compute key cards with the same algorithm as DeckArchetypeFactory
+        List<ArchetypeKeyCard> keyCards = deckKeyCardsService.computeKeyCards(similarDecks);
+
+        // Map to the response model splitting crypt / library
+        return ApiDeckSuggestedCards.builder()
+                .keyCrypt(deckArchetypeMapper.mapKeyCrypt(keyCards))
+                .keyLibrary(deckArchetypeMapper.mapKeyLibrary(keyCards))
+                .build();
+    }
+
+    private Deck buildTemporalDeck(List<ApiCard> cards) {
+        Deck deck = new Deck();
+        if (cards != null) {
+            for (ApiCard apiCard : cards) {
+                if (apiCard.getId() == null || apiCard.getNumber() == null || apiCard.getNumber() <= 0) {
+                    continue;
+                }
+                Card card = Card.builder()
+                        .id(apiCard.getId())
+                        .number(apiCard.getNumber())
+                        .build();
+                if (VtesUtils.isCrypt(apiCard.getId())) {
+                    deck.getCrypt().add(card);
+                } else {
+                    deck.getLibraryByType()
+                            .computeIfAbsent("library", k -> new ArrayList<>())
+                            .add(card);
+                }
+            }
+        }
+        Map<Integer, Integer> vector = CosineSimilarityUtils.getVector(deck);
+        deck.setL2Norm(CosineSimilarityUtils.computeL2Norm(vector));
+        return deck;
     }
 
     private boolean isOwnerOrAdmin(DeckEntity deck, Integer userId) {

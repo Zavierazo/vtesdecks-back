@@ -4,6 +4,7 @@ import com.vtesdecks.api.service.ApiDeckBuilderService;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.model.ImportType;
 import com.vtesdecks.model.api.ApiDeckBuilder;
+import com.vtesdecks.model.api.ApiDeckSuggestedCards;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -85,5 +86,12 @@ public class ApiDeckBuilderController {
         return new ResponseEntity<>(deckBuilderService.restoreDeck(id), HttpStatus.OK);
     }
 
+    @RequestMapping(method = RequestMethod.POST, value = "/suggested-cards", consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE})
+    @ResponseBody
+    public ResponseEntity<ApiDeckSuggestedCards> suggestedCards(@RequestBody ApiDeckBuilder deckBuilder) {
+        log.debug("Deck builder user {} requests suggested cards", ApiUtils.extractUserId());
+        ApiDeckSuggestedCards result = deckBuilderService.getSuggestedCards(deckBuilder.getCards());
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
 
 }
