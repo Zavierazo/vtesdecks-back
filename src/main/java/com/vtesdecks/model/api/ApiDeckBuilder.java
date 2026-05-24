@@ -14,4 +14,5 @@ public class ApiDeckBuilder {
     private boolean collection;
     private List<ApiCard> cards;
     private JsonNode extra;
+    private String tagLabel;
 }

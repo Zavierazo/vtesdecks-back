@@ -26,7 +26,9 @@ import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.ImportType;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeckBuilder;
+import com.vtesdecks.model.api.ApiDeckBuilderHistory;
 import com.vtesdecks.model.api.ApiDeckSuggestedCards;
+import com.vtesdecks.service.DeckCardHistoryService;
 import com.vtesdecks.service.DeckKeyCardsService;
 import com.vtesdecks.service.DeckService;
 import com.vtesdecks.util.CosineSimilarityUtils;
@@ -36,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -53,6 +56,7 @@ public class ApiDeckBuilderService {
     public static final double MIN_SUGGESTION_SIMILARITY_THRESHOLD = 0.6;
     private final DeckRepository deckRepository;
     private final DeckCardRepository deckCardRepository;
+    private final DeckCardHistoryService deckCardHistoryService;
     private final LibraryCache libraryCache;
     private final KRCGClient krcgClient;
     private final ObjectMapper objectMapper;
@@ -117,6 +121,7 @@ public class ApiDeckBuilderService {
         return null;
     }
 
+    @Transactional
     public ApiDeckBuilder storeDeck(ApiDeckBuilder apiDeckBuilder) {
         Integer userId = ApiUtils.extractUserId();
         DeckEntity deck = null;
@@ -153,6 +158,13 @@ public class ApiDeckBuilderService {
         }
         deckRepository.save(deck);
         //Deck cards
+        // Capture cursor BEFORE card saves so we can identify trigger rows from this save
+        Long preSaveMaxHistoryId = null;
+        if (apiDeckBuilder.getTagLabel() != null) {
+            Long maxId = deckCardHistoryService.getMaxId(deck.getId());
+            preSaveMaxHistoryId = maxId != null ? maxId : 0L;
+        }
+
         List<ApiCard> deckCards = apiDeckBuilder.getCards();
         Iterables.removeIf(deckCards, Objects::isNull);
         List<DeckCardEntity> dbCards = deckCardRepository.findByIdDeckId(deck.getId());
@@ -188,6 +200,13 @@ public class ApiDeckBuilderService {
                 log.error("Unable to delete card {}", card, e);
             }
         }
+        //Tag the last trigger-fired history row of this save as a named checkpoint
+        if (preSaveMaxHistoryId != null) {
+            Integer maxTag = deckCardHistoryService.getMaxTag(deck.getId());
+            int nextTag = (maxTag != null ? maxTag : 0) + 1;
+            deckCardHistoryService.tagLastEntry(deck.getId(), preSaveMaxHistoryId, nextTag, apiDeckBuilder.getTagLabel());
+            log.info("Deck builder user {} saved tag {} ('{}') for deck {}", userId, nextTag, apiDeckBuilder.getTagLabel(), deck.getId());
+        }
         //Enqueue indexation of new deck
         messageProducer.publishDeckSync(deck.getId());
         if (Boolean.TRUE.equals(deck.getPublished())) {
@@ -199,6 +218,29 @@ public class ApiDeckBuilderService {
         }
         return getDeck(deckId);
 
+    }
+
+    public List<ApiDeckBuilderHistory> getDeckBuilderHistory(String deckId) {
+        Integer userId = ApiUtils.extractUserId();
+        DeckEntity deck = deckRepository.findById(deckId).orElse(null);
+        if (deck == null || Boolean.TRUE.equals(deck.getDeleted())) {
+            return null;
+        }
+        if (!isOwnerOrAdmin(deck, userId)) {
+            throw new IllegalArgumentException("Deck " + deckId + " is not accessible for user " + userId);
+        }
+
+        return deckCardHistoryService.getDeckHistoryAsc(deckId)
+                .stream()
+                .map(row -> ApiDeckBuilderHistory.builder()
+                        .action(row.getAction())
+                        .cardId(row.getCardId())
+                        .number(row.getNumber())
+                        .date(row.getCreationDate())
+                        .tag(row.getTag())
+                        .tagLabel(row.getTagLabel())
+                        .build())
+                .toList();
     }
 
     public boolean deleteDeck(String deckId, boolean permanent) {

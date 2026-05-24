@@ -4,6 +4,7 @@ import com.vtesdecks.api.service.ApiDeckBuilderService;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.model.ImportType;
 import com.vtesdecks.model.api.ApiDeckBuilder;
+import com.vtesdecks.model.api.ApiDeckBuilderHistory;
 import com.vtesdecks.model.api.ApiDeckSuggestedCards;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.List;
 
 import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
 
@@ -84,6 +87,22 @@ public class ApiDeckBuilderController {
     public ResponseEntity<Boolean> restoreDeck(@PathVariable String id) {
         log.info("Deck builder user {} restores {}", ApiUtils.extractUserId(), id);
         return new ResponseEntity<>(deckBuilderService.restoreDeck(id), HttpStatus.OK);
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/{id}/history", produces = {MediaType.APPLICATION_JSON_VALUE})
+    @ResponseBody
+    public ResponseEntity<List<ApiDeckBuilderHistory>> deckHistory(@PathVariable String id) {
+        log.debug("Deck builder user {} requests history for deck {}", ApiUtils.extractUserId(), id);
+        try {
+            List<ApiDeckBuilderHistory> history = deckBuilderService.getDeckBuilderHistory(id);
+            if (history == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            return new ResponseEntity<>(history, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            log.warn("Unauthorized history access: {}", e.getMessage());
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/suggested-cards", consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE})

@@ -40,6 +40,9 @@ public class DeckCardHistoryEntity {
     @Column(name = "tag")
     private Integer tag;
 
+    @Column(name = "tag_label")
+    private String tagLabel;
+
     @CreationTimestamp
     @Column(name = "creation_date", nullable = false, insertable = false, updatable = false)
     private LocalDateTime creationDate;

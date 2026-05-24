@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -16,42 +15,31 @@ public class DeckCardHistoryService {
     private final DeckCardHistoryRepository deckCardHistoryRepository;
 
     /**
-     * Get all history for a specific deck ordered by creation date descending
+     * Get all history for a specific deck ordered by id ascending (chronological, for event-sourcing)
      */
-    public List<DeckCardHistoryEntity> getDeckHistory(String deckId) {
-        return deckCardHistoryRepository.findByDeckIdOrderByCreationDateDesc(deckId);
+    public List<DeckCardHistoryEntity> getDeckHistoryAsc(String deckId) {
+        return deckCardHistoryRepository.findByDeckIdOrderByIdAsc(deckId);
     }
 
     /**
-     * Get all tagged history entries for a deck
+     * Get the max history row id for a deck (used as cursor before a save)
      */
-    public List<DeckCardHistoryEntity> getTaggedHistory(String deckId) {
-        return deckCardHistoryRepository.findTaggedHistoryByDeckId(deckId);
+    public Long getMaxId(String deckId) {
+        return deckCardHistoryRepository.findMaxIdByDeckId(deckId);
     }
 
     /**
-     * Add a tag to a specific history entry
+     * Get the max tag value for a deck (used to compute next sequential tag)
+     */
+    public Integer getMaxTag(String deckId) {
+        return deckCardHistoryRepository.findMaxTagByDeckId(deckId);
+    }
+
+    /**
+     * Tag the last history row written after minId as a named save point
      */
     @Transactional
-    public void addTag(Long historyId, Integer tag) {
-        Optional<DeckCardHistoryEntity> historyEntry = deckCardHistoryRepository.findById(historyId);
-        if (historyEntry.isPresent()) {
-            DeckCardHistoryEntity entity = historyEntry.get();
-            entity.setTag(tag);
-            deckCardHistoryRepository.save(entity);
-        }
-    }
-
-    /**
-     * Remove tag from a specific history entry
-     */
-    @Transactional
-    public void removeTag(Long historyId) {
-        Optional<DeckCardHistoryEntity> historyEntry = deckCardHistoryRepository.findById(historyId);
-        if (historyEntry.isPresent()) {
-            DeckCardHistoryEntity entity = historyEntry.get();
-            entity.setTag(null);
-            deckCardHistoryRepository.save(entity);
-        }
+    public int tagLastEntry(String deckId, Long minId, Integer tag, String tagLabel) {
+        return deckCardHistoryRepository.tagHistory(deckId, minId, tag, tagLabel);
     }
 }
