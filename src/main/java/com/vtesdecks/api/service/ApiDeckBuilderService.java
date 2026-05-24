@@ -54,6 +54,7 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class ApiDeckBuilderService {
     public static final double MIN_SUGGESTION_SIMILARITY_THRESHOLD = 0.6;
+
     private final DeckRepository deckRepository;
     private final DeckCardRepository deckCardRepository;
     private final DeckCardHistoryService deckCardHistoryService;
@@ -399,6 +400,8 @@ public class ApiDeckBuilderService {
         deck.setL2Norm(CosineSimilarityUtils.computeL2Norm(vector));
         return deck;
     }
+
+    // -------------------------------------------------------------------------
 
     private boolean isOwnerOrAdmin(DeckEntity deck, Integer userId) {
         boolean isDeckOwner = deck.getUser() != null && deck.getUser().equals(userId);

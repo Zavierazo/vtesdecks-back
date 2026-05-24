@@ -1,6 +1,7 @@
 package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.ApiDeckBuilderService;
+import com.vtesdecks.api.service.DeckTextImportService;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.model.ImportType;
 import com.vtesdecks.model.api.ApiDeckBuilder;
@@ -29,6 +30,8 @@ import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
 public class ApiDeckBuilderController {
     @Autowired
     private ApiDeckBuilderService deckBuilderService;
+    @Autowired
+    private DeckTextImportService deckTextImportService;
 
     @RequestMapping(method = RequestMethod.GET, value = "/{id}", produces = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
@@ -52,6 +55,20 @@ public class ApiDeckBuilderController {
         } else {
             return new ResponseEntity<>(deck, HttpStatus.OK);
         }
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/text/import", consumes = TEXT_PLAIN_VALUE, produces = {MediaType.APPLICATION_JSON_VALUE})
+    @ResponseBody
+    public ResponseEntity<ApiDeckBuilder> importDeckFromText(@RequestBody String text) {
+        log.debug("Deck builder user {} imports deck from text ({} chars)", ApiUtils.extractUserId(), text != null ? text.length() : 0);
+        if (text == null || text.isBlank()) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        ApiDeckBuilder deck = deckTextImportService.importFromText(text);
+        if (deck == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<>(deck, HttpStatus.OK);
     }
 
 
