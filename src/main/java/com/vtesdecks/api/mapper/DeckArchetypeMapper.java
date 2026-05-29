@@ -71,24 +71,24 @@ public abstract class DeckArchetypeMapper {
      * Returns {@code null} when there is not enough data (fewer than 3 decks in 365 days).
      */
     private ArchetypeTrend calculateTrend(DeckArchetype entity) {
-        Long countLatest = entity.getTournament90Count();
-        Long countLongTerm = entity.getTournament365Count();
-        if (countLatest == null || countLongTerm == null || countLongTerm < 3) {
-            return null;
+        Long countRecent = entity.getTournament180Count();
+        Long countOld = entity.getTournament365Count();
+        if (countRecent == null || countOld == null || countOld < 3) {
+            return ArchetypeTrend.STABLE;
         }
-        // Per-day rates for each period (last 90 days vs days 91-365 = 275 days)
-        double rateRecent = countLatest / 90.0;
-        long oldCount = countLongTerm - countLatest;
-        double rateOld = oldCount / 275.0;
+        // Per-day rates for each period (last 180 days vs days 181-365 = 185 days)
+        double rateRecent = countRecent / 180.0;
+        long oldCount = countOld - countRecent;
+        double rateOld = oldCount / 185.0;
 
         if (rateOld == 0) {
-            // All activity is concentrated in the last 90 days → trending
-            return countLatest > 0 ? ArchetypeTrend.TRENDING : null;
+            // All activity is concentrated in the last 180 days → trending
+            return countRecent > 0 ? ArchetypeTrend.TRENDING : null;
         }
         double ratio = rateRecent / rateOld;
         if (ratio >= 1.5) {
             return ArchetypeTrend.TRENDING;
-        } else if (ratio <= 0.6) {
+        } else if (ratio <= 0.5) {
             return ArchetypeTrend.DECLINING;
         }
         return ArchetypeTrend.STABLE;
