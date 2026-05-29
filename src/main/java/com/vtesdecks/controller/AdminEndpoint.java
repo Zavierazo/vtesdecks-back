@@ -5,6 +5,7 @@ import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.scheduler.TournamentDeckScheduler;
+import com.vtesdecks.scheduler.UserMonthScheduler;
 import com.vtesdecks.scheduler.VtesdleTodayScheduler;
 import com.vtesdecks.scheduler.shops.CardGameGeekScheduler;
 import com.vtesdecks.scheduler.shops.DriveThruCardsScheduler;
@@ -32,6 +33,7 @@ public class AdminEndpoint {
     private final MarketScheduler marketScheduler;
     private final DeckArchetypeScheduler deckArchetypeScheduler;
     private final DeckArchetypeIndex deckArchetypeIndex;
+    private final UserMonthScheduler userMonthScheduler;
 
     @GetMapping(value = "/scheduler/deck_views_clean", produces = {
             MediaType.TEXT_PLAIN_VALUE
@@ -118,6 +120,14 @@ public class AdminEndpoint {
     })
     public String deckArchetypeSchedulerIndex() {
         deckArchetypeIndex.refreshIndex();
+        return "OK";
+    }
+
+    @GetMapping(value = "/scheduler/user_month", produces = {
+            MediaType.TEXT_PLAIN_VALUE
+    })
+    public String userMonthScheduler() {
+        userMonthScheduler.selectUsersOfMonth();
         return "OK";
     }
 

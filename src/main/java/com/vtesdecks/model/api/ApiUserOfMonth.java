@@ -3,21 +3,19 @@ package com.vtesdecks.model.api;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import java.util.List;
-
 @Data
 @SuperBuilder(toBuilder = true)
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ApiPublicUser {
-    private String user;
-    private String displayName;
-    private String profileImage;
-    private List<String> roles;
-    private List<ApiPublicUser> followers;
-    private List<ApiPublicUser> following;
+public class ApiUserOfMonth extends ApiPublicUser {
+    private Integer rank;
+    private Long score;
 }
+
+
