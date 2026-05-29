@@ -13,18 +13,14 @@ public interface DeckCardHistoryRepository extends JpaRepository<DeckCardHistory
 
     List<DeckCardHistoryEntity> findByDeckIdOrderByIdAsc(String deckId);
 
-    @Query("SELECT MAX(h.id) FROM DeckCardHistoryEntity h WHERE h.deckId = :deckId")
-    Long findMaxIdByDeckId(@Param("deckId") String deckId);
-
-    @Query("SELECT MAX(h.tag) FROM DeckCardHistoryEntity h WHERE h.deckId = :deckId")
-    Integer findMaxTagByDeckId(@Param("deckId") String deckId);
-
     @Modifying
     @Transactional
-    @Query(value = "UPDATE deck_card_history SET tag = :tag, tag_label = :tagLabel " +
-            "WHERE id = (SELECT max_id FROM (SELECT MAX(id) AS max_id FROM deck_card_history WHERE deck_id = :deckId AND id > :minId AND tag IS NULL) sub)",
+    @Query(value = "UPDATE deck_card_history " +
+            "SET tag = (SELECT next_tag FROM (SELECT COALESCE(MAX(tag), 0) + 1 AS next_tag FROM deck_card_history WHERE deck_id = :deckId) t), " +
+            "    tag_label = :tagLabel " +
+            "WHERE id = (SELECT max_id FROM (SELECT MAX(id) AS max_id FROM deck_card_history WHERE deck_id = :deckId AND tag IS NULL) sub)",
             nativeQuery = true)
-    int tagHistory(@Param("deckId") String deckId, @Param("minId") Long minId, @Param("tag") Integer tag, @Param("tagLabel") String tagLabel);
+    int tagHistory(@Param("deckId") String deckId, @Param("tagLabel") String tagLabel);
 
     @Modifying
     @Transactional

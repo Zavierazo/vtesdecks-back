@@ -22,24 +22,11 @@ public class DeckCardHistoryService {
     }
 
     /**
-     * Get the max history row id for a deck (used as cursor before a save)
-     */
-    public Long getMaxId(String deckId) {
-        return deckCardHistoryRepository.findMaxIdByDeckId(deckId);
-    }
-
-    /**
-     * Get the max tag value for a deck (used to compute next sequential tag)
-     */
-    public Integer getMaxTag(String deckId) {
-        return deckCardHistoryRepository.findMaxTagByDeckId(deckId);
-    }
-
-    /**
-     * Tag the last history row written after minId as a named save point
+     * Tag the last untagged history row of this deck as a named save point.
+     * The minId cursor and next sequential tag number are resolved directly in the query.
      */
     @Transactional
-    public int tagLastEntry(String deckId, Long minId, Integer tag, String tagLabel) {
-        return deckCardHistoryRepository.tagHistory(deckId, minId, tag, tagLabel);
+    public int tagLastEntry(String deckId, String tagLabel) {
+        return deckCardHistoryRepository.tagHistory(deckId, tagLabel);
     }
 }

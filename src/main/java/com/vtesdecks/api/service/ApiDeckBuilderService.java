@@ -196,12 +196,8 @@ public class ApiDeckBuilderService {
         }
         //Tag the last trigger-fired history row of this save as a named checkpoint
         if (apiDeckBuilder.getTagLabel() != null) {
-            Long maxId = deckCardHistoryService.getMaxId(deck.getId());
-            maxId = maxId != null ? maxId : 0L;
-            Integer maxTag = deckCardHistoryService.getMaxTag(deck.getId());
-            int nextTag = (maxTag != null ? maxTag : 0) + 1;
-            deckCardHistoryService.tagLastEntry(deck.getId(), maxId, nextTag, apiDeckBuilder.getTagLabel());
-            log.info("Deck builder user {} saved tag {} ('{}') for deck {}", userId, nextTag, apiDeckBuilder.getTagLabel(), deck.getId());
+            deckCardHistoryService.tagLastEntry(deck.getId(), apiDeckBuilder.getTagLabel());
+            log.info("Deck builder user {} saved tag '{}' for deck {}", userId, apiDeckBuilder.getTagLabel(), deck.getId());
         }
         //Enqueue indexation of new deck
         messageProducer.publishDeckSync(deck.getId());
