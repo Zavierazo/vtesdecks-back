@@ -159,13 +159,6 @@ public class ApiDeckBuilderService {
         }
         deckRepository.save(deck);
         //Deck cards
-        // Capture cursor BEFORE card saves so we can identify trigger rows from this save
-        Long preSaveMaxHistoryId = null;
-        if (apiDeckBuilder.getTagLabel() != null) {
-            Long maxId = deckCardHistoryService.getMaxId(deck.getId());
-            preSaveMaxHistoryId = maxId != null ? maxId : 0L;
-        }
-
         List<ApiCard> deckCards = apiDeckBuilder.getCards();
         Iterables.removeIf(deckCards, Objects::isNull);
         List<DeckCardEntity> dbCards = deckCardRepository.findByIdDeckId(deck.getId());
@@ -202,10 +195,12 @@ public class ApiDeckBuilderService {
             }
         }
         //Tag the last trigger-fired history row of this save as a named checkpoint
-        if (preSaveMaxHistoryId != null) {
+        if (apiDeckBuilder.getTagLabel() != null) {
+            Long maxId = deckCardHistoryService.getMaxId(deck.getId());
+            maxId = maxId != null ? maxId : 0L;
             Integer maxTag = deckCardHistoryService.getMaxTag(deck.getId());
             int nextTag = (maxTag != null ? maxTag : 0) + 1;
-            deckCardHistoryService.tagLastEntry(deck.getId(), preSaveMaxHistoryId, nextTag, apiDeckBuilder.getTagLabel());
+            deckCardHistoryService.tagLastEntry(deck.getId(), maxId, nextTag, apiDeckBuilder.getTagLabel());
             log.info("Deck builder user {} saved tag {} ('{}') for deck {}", userId, nextTag, apiDeckBuilder.getTagLabel(), deck.getId());
         }
         //Enqueue indexation of new deck
