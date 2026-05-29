@@ -1,6 +1,7 @@
 package com.vtesdecks.model.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.vtesdecks.model.ArchetypeTrend;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,5 +33,7 @@ public class ApiDeckArchetype {
     private LocalDateTime modificationDate;
     private List<ApiArchetypeCard> keyCrypt;
     private List<ApiArchetypeCard> keyLibrary;
+    /** Trend of this archetype in the tournament meta, based on 90-day vs 91-365 day activity rate. */
+    private ArchetypeTrend trend;
 }
 
