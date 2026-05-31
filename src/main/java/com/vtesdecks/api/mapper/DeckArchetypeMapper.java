@@ -73,8 +73,11 @@ public abstract class DeckArchetypeMapper {
     private ArchetypeTrend calculateTrend(DeckArchetype entity) {
         Long countRecent = entity.getTournament180Count();
         Long countOld = entity.getTournament365Count();
-        if (countRecent == null || countOld == null || countOld < 3) {
+        if (countRecent == null || countOld == null) {
             return ArchetypeTrend.STABLE;
+        }
+        if (countOld == 0 && countRecent > 3) {
+            return ArchetypeTrend.TRENDING;
         }
         // Per-day rates for each period (last 180 days vs days 181-365 = 185 days)
         double rateRecent = countRecent / 180.0;
