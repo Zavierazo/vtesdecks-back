@@ -35,12 +35,13 @@ import java.util.stream.Collectors;
 public class DeckTextImportService {
 
     /**
-     * TWD crypt line: {@code "3x  Victoria Ash     5  ANI FOR ..."}
-     * <p>The name sits between {@code "{N}x "} and the double-space separator
-     * that precedes the capacity digit.
+     * TWD crypt line: {@code "3x  Victoria Ash     5 ANI FOR ..."}
+     * <p>The name sits between {@code "{N}x "} and the multi-space padding that
+     * precedes the capacity digit. Only one space is required after the capacity
+     * (disciplines follow with a single space separator in practice).
      */
     private static final Pattern TWD_CRYPT_CARD_PATTERN =
-            Pattern.compile("^(\\d+)x\\s+(.*?)\\s{2,}\\d+\\s{2,}");
+            Pattern.compile("^(\\d+)x\\s+(.*?)\\s+\\d+\\s+");
 
     /**
      * Generic card line that covers all three formats:
@@ -53,15 +54,21 @@ public class DeckTextImportService {
     private static final Pattern GENERIC_CARD_PATTERN =
             Pattern.compile("^(\\d+)[\\tx]\\s*(.+)$");
 
-    /** {@code "Deck Name: My Deck"} */
+    /**
+     * {@code "Deck Name: My Deck"}
+     */
     private static final Pattern DECK_NAME_PATTERN =
             Pattern.compile("(?i)^Deck Name:\\s*(.+)$");
 
-    /** {@code "Description: Some text"} */
+    /**
+     * {@code "Description: Some text"}
+     */
     private static final Pattern DESCRIPTION_PATTERN =
             Pattern.compile("(?i)^Description:\\s*(.*)$");
 
-    /** Suffix appended to advanced vampire names in all export formats. */
+    /**
+     * Suffix appended to advanced vampire names in all export formats.
+     */
     private static final String ADV_SUFFIX = "(ADV)";
 
     private final CryptCache cryptCache;
@@ -309,7 +316,8 @@ public class DeckTextImportService {
         return card;
     }
 
-    private record CardEntry(int count, String name) {}
+    private record CardEntry(int count, String name) {
+    }
 }
 
 
