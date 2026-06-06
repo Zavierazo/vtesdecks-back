@@ -12,7 +12,6 @@ import com.googlecode.cqengine.query.option.DeduplicationOption;
 import com.googlecode.cqengine.query.option.DeduplicationStrategy;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.query.option.Thresholds;
-import com.googlecode.cqengine.query.simple.Equal;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.factory.DeckFactory;
 import com.vtesdecks.cache.indexable.Crypt;
@@ -277,12 +276,18 @@ public class DeckIndex {
             default:
                 queryOptions = queryOptions(orderBy(descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
         }
-        Equal<Deck, Boolean> published = QueryFactory.equal(Deck.PUBLISHED_ATTRIBUTE, true);
+        Query<Deck> published = equal(Deck.PUBLISHED_ATTRIBUTE, true);
         if (deckQuery.isAllDecks()) {
             // Skip published and type filters — returns every non-deleted deck in the index
             query = and(query, all(Deck.class));
         } else if (deckQuery.getUserId() != null) {
-            query = and(query, or(equal(Deck.USER_ATTRIBUTE, deckQuery.getUserId()), published));
+            query = and(query, or(
+                    published, // Deck is public
+                    or(
+                            equal(Deck.USER_ATTRIBUTE, deckQuery.getUserId()), // Deck is owned by requesting user
+                            in(Deck.FAVORITE_MULTI_ATTRIBUTE, deckQuery.getUserId()) // Deck is bookmarked by requesting user
+                    )
+            ));
         } else {
             query = and(query, published);
         }
