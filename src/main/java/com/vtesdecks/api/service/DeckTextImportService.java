@@ -161,6 +161,7 @@ public class DeckTextImportService {
     /**
      * Returns {@code true} if the entry's name resolves to at least one crypt
      * card (respecting the {@code (ADV)} suffix).
+     * Falls back to i18n name matching when the English exact search returns nothing.
      */
     private boolean hasCryptCandidates(CardEntry entry) {
         boolean isAdv = entry.name().endsWith(ADV_SUFFIX);
@@ -174,11 +175,28 @@ public class DeckTextImportService {
                 }
             }
         }
+        // Fallback: search by i18n name
+        try (ResultSet<Crypt> rs = cryptCache.selectByExactI18nName(searchName)) {
+            for (Crypt c : rs) {
+                if (c.isAdv() == isAdv) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
     private void addLibraryCard(ApiDeckBuilder builder, String name, int count) {
+        // First try English exact name
         try (ResultSet<Library> results = libraryCache.selectByExactName(name)) {
+            if (results.isNotEmpty()) {
+                results.stream().findFirst().ifPresent(
+                        library -> builder.getCards().add(buildApiCard(library.getId(), count)));
+                return;
+            }
+        }
+        // Fallback: search by i18n name
+        try (ResultSet<Library> results = libraryCache.selectByExactI18nName(name)) {
             results.stream().findFirst().ifPresentOrElse(
                     library -> builder.getCards().add(buildApiCard(library.getId(), count)),
                     () -> log.warn("Card not found during text import: '{}'", name)
@@ -266,6 +284,16 @@ public class DeckTextImportService {
             for (Crypt c : rs) {
                 if (c.isAdv() == isAdv) {
                     candidates.add(c);
+                }
+            }
+        }
+        // Fallback: search by i18n name when English name search yields nothing
+        if (candidates.isEmpty()) {
+            try (ResultSet<Crypt> rs = cryptCache.selectByExactI18nName(searchName)) {
+                for (Crypt c : rs) {
+                    if (c.isAdv() == isAdv) {
+                        candidates.add(c);
+                    }
                 }
             }
         }

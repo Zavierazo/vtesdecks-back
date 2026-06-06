@@ -146,6 +146,20 @@ public class LibraryCache {
         return cache.retrieve(query, queryOptions);
     }
 
+    /**
+     * Returns all library cards whose i18n name exactly matches {@code name}
+     * (case-insensitive, diacritic-normalised).
+     */
+    public ResultSet<Library> selectByExactI18nName(String name) {
+        Thresholds threshold = QueryFactory.applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
+        QueryOptions queryOptions = queryOptions(orderBy(ascending(Library.NAME_ATTRIBUTE)), threshold);
+        Query<Library> query = equal(Library.I18N_NAME_ATTRIBUTE, Utils.normalizeName(StringUtils.lowerCase(name)));
+        if (log.isDebugEnabled()) {
+            log.debug("Query {} with options {}", query, queryOptions);
+        }
+        return cache.retrieve(query, queryOptions);
+    }
+
     public ResultSet<Library> selectAll() {
         Thresholds threshold = QueryFactory.applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
         QueryOptions queryOptions = queryOptions(orderBy(ascending(Library.NAME_ATTRIBUTE)), threshold);
