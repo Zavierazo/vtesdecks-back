@@ -97,16 +97,24 @@ public class ProxyService {
         if (setAbbrev != null) {
             String imgUrl = getProxyImageUrl(setAbbrev.toLowerCase(), cardId);
             if (existImage(imgUrl)) {
-                return Image.getInstance(imgUrl);
+                return Image.getInstance(downloadImageBytes(imgUrl));
             }
         }
         if (!isEmpty(cardOptions)) {
-            String imgUrl = getProxyImageUrl(cardOptions.get(0).getSetAbbrev().toLowerCase(), cardId);
+            String imgUrl = getProxyImageUrl(cardOptions.getFirst().getSetAbbrev().toLowerCase(), cardId);
             if (existImage(imgUrl)) {
-                return Image.getInstance(imgUrl);
+                return Image.getInstance(downloadImageBytes(imgUrl));
             }
         }
-        return Image.getInstance(String.format(CARD_IMAGE_FAILOVER_URL, cardId));
+        return Image.getInstance(downloadImageBytes(String.format(CARD_IMAGE_FAILOVER_URL, cardId)));
+    }
+
+    private byte[] downloadImageBytes(String imgUrl) throws IOException {
+        try {
+            return restTemplate.getForObject(imgUrl, byte[].class);
+        } catch (Exception e) {
+            throw new IOException("Failed to download image from URL: " + imgUrl, e);
+        }
     }
 
     private void drawLines(PdfWriter writer) {
