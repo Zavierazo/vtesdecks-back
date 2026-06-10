@@ -12,6 +12,7 @@ import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
@@ -101,10 +102,15 @@ public class ApiUserService {
         if (follow) {
             // Follow user
             if (!userFollowerRepository.existsById(id)) {
-                UserFollowerEntity userFollower = new UserFollowerEntity();
-                userFollower.setId(id);
-                userFollowerRepository.save(userFollower);
-                log.info("User {} is now following user {}", userId, user);
+                try {
+                    UserFollowerEntity userFollower = new UserFollowerEntity();
+                    userFollower.setId(id);
+                    userFollowerRepository.save(userFollower);
+                    log.info("User {} is now following user {}", userId, user);
+                } catch (DataIntegrityViolationException e) {
+                    // Race condition: another concurrent request already inserted the same entry
+                    log.warn("User {} is already following user {} (concurrent request)", userId, user);
+                }
                 return true;
             } else {
                 log.debug("User {} is already following user {}", userId, user);
