@@ -68,7 +68,9 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                         orders.add(cb.desc(cardNumber));
                     }
                 } else if (order.getProperty().equals("price") || order.getProperty().equals("totalPrice")) {
-                    Expression<Number> cardPrice = getCardPriceJoin(cq, cb, root, order.getProperty().equals("totalPrice"));
+                    // In a GROUP BY context, use SUM(number) to comply with sql_mode=ONLY_FULL_GROUP_BY
+                    Expression<Number> groupedNumber = cb.sum(root.get(NUMBER));
+                    Expression<Number> cardPrice = getCardPriceJoin(cq, cb, root, order.getProperty().equals("totalPrice"), groupedNumber);
                     if (order.isAscending()) {
                         orders.add(cb.asc(cardPrice));
                     } else {
@@ -162,7 +164,7 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                         orders.add(cb.desc(cardName));
                     }
                 } else if (order.getProperty().equals("price") || order.getProperty().equals("totalPrice")) {
-                    Expression<Number> cardPrice = getCardPriceJoin(cq, cb, root, order.getProperty().equals("totalPrice"));
+                    Expression<Number> cardPrice = getCardPriceJoin(cq, cb, root, order.getProperty().equals("totalPrice"), root.get(NUMBER));
                     if (order.isAscending()) {
                         orders.add(cb.asc(cardPrice));
                     } else {
@@ -199,16 +201,15 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                 .otherwise(cryptJoin.get("name"));
     }
 
-    private static Expression<Number> getCardPriceJoin(CriteriaQuery<?> cq, CriteriaBuilder cb, Root<CollectionCardEntity> root, boolean totalPrice) {
-        Subquery<Number> sub = cq.subquery(Number.class);
-        Root<CardShopEntity> subRoot = sub.from(CardShopEntity.class);
-        sub.select(cb.min(subRoot.get("price")));
-        sub.where(cb.equal(subRoot.get("cardId"), root.get("cardId")));
+    private static Expression<Number> getCardPriceJoin(CriteriaQuery<?> cq, CriteriaBuilder cb, Root<CollectionCardEntity> root, boolean totalPrice, Expression<Number> numberExpression) {
+        Subquery<Number> minPriceSubquery = cq.subquery(Number.class);
+        Root<CardShopEntity> shopRoot = minPriceSubquery.from(CardShopEntity.class);
+        minPriceSubquery.select(cb.min(shopRoot.get("price")));
+        minPriceSubquery.where(cb.equal(shopRoot.get(CARD_ID), root.get(CARD_ID)));
         if (totalPrice) {
-            return cb.prod(sub, root.get(NUMBER));
-        } else {
-            return sub;
+            return cb.prod(minPriceSubquery, numberExpression);
         }
+        return minPriceSubquery;
     }
 
     private static List<Predicate> getPredicates(CriteriaBuilder cb, Root<CollectionCardEntity> root, Integer collectionId, Map<String, String> filters) {
