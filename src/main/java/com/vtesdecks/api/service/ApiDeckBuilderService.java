@@ -7,7 +7,9 @@ import com.google.common.collect.Iterables;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.DeckArchetypeMapper;
 import com.vtesdecks.api.util.ApiUtils;
+import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
+import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.DeckType;
@@ -59,6 +61,7 @@ public class ApiDeckBuilderService {
     private final DeckCardRepository deckCardRepository;
     private final DeckCardHistoryService deckCardHistoryService;
     private final LibraryCache libraryCache;
+    private final CryptCache cryptCache;
     private final KRCGClient krcgClient;
     private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
@@ -360,11 +363,66 @@ public class ApiDeckBuilderService {
         // Compute key cards using a higher threshold (30%) to produce tighter suggestions
         List<ArchetypeKeyCard> keyCards = deckKeyCardsService.computeKeyCards(similarDecks, DeckKeyCardsService.SUGGESTED_CARDS_THRESHOLD);
 
+        // Drop crypt suggestions whose group would make the deck illegal (only two
+        // consecutive crypt groups may be played together)
+        keyCards = filterIllegalCryptGroups(cards, keyCards);
+
         // Map to the response model splitting crypt / library
         return ApiDeckSuggestedCards.builder()
                 .keyCrypt(deckArchetypeMapper.mapKeyCrypt(keyCards))
                 .keyLibrary(deckArchetypeMapper.mapKeyLibrary(keyCards))
                 .build();
+    }
+
+    /**
+     * Removes crypt key cards that cannot legally be added to the deck. In V:TES a
+     * deck may only combine vampires from at most two consecutive crypt groups, so a
+     * suggested crypt card is kept only when adding its group keeps the whole crypt
+     * within a window of two consecutive groups. Cards belonging to the {@code ANY}
+     * group (stored as {@code <= 0}) are always playable, and library suggestions are
+     * never filtered.
+     */
+    private List<ArchetypeKeyCard> filterIllegalCryptGroups(List<ApiCard> cards, List<ArchetypeKeyCard> keyCards) {
+        Integer minGroup = null;
+        Integer maxGroup = null;
+        if (cards != null) {
+            for (ApiCard card : cards) {
+                if (card.getId() == null || card.getNumber() == null || card.getNumber() <= 0 || !VtesUtils.isCrypt(card.getId())) {
+                    continue;
+                }
+                Integer group = getCryptGroup(card.getId());
+                if (group == null || group <= 0) {
+                    continue;
+                }
+                minGroup = minGroup == null ? group : Math.min(minGroup, group);
+                maxGroup = maxGroup == null ? group : Math.max(maxGroup, group);
+            }
+        }
+
+        // No grouped crypt yet -> every group is still legal, nothing to filter
+        if (minGroup == null) {
+            return keyCards;
+        }
+
+        final int deckMin = minGroup;
+        final int deckMax = maxGroup;
+        return keyCards.stream()
+                .filter(keyCard -> {
+                    if (!VtesUtils.isCrypt(keyCard.getId())) {
+                        return true;
+                    }
+                    Integer group = getCryptGroup(keyCard.getId());
+                    if (group == null || group <= 0) {
+                        return true;
+                    }
+                    return Math.max(deckMax, group) - Math.min(deckMin, group) <= 1;
+                })
+                .toList();
+    }
+
+    private Integer getCryptGroup(Integer cardId) {
+        Crypt crypt = cryptCache.get(cardId);
+        return crypt != null ? crypt.getGroup() : null;
     }
 
     private Deck buildTemporalDeck(List<ApiCard> cards) {
