@@ -5,6 +5,7 @@ import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.scheduler.TournamentDeckScheduler;
+import com.vtesdecks.scheduler.TournamentEternalVigilanceDeckScheduler;
 import com.vtesdecks.scheduler.UserMonthScheduler;
 import com.vtesdecks.scheduler.VtesdleTodayScheduler;
 import com.vtesdecks.scheduler.shops.CardGameGeekScheduler;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminEndpoint {
     private final CleanUpScheduler cleanUpScheduler;
     private final TournamentDeckScheduler tournamentDeckScheduler;
+    private final TournamentEternalVigilanceDeckScheduler tournamentEternalVigilanceDeckScheduler;
     private final DriveThruCardsScheduler driveThruCardsScheduler;
     private final GamePodScheduler gamePodScheduler;
     private final VtesdleTodayScheduler vtesdleTodayScheduler;
@@ -56,6 +58,14 @@ public class AdminEndpoint {
     })
     public String scrappingDecks() {
         tournamentDeckScheduler.scrappingDecks();
+        return "OK";
+    }
+
+    @GetMapping(value = "/scheduler/scrap_decks_eternal_vigilance", produces = {
+            MediaType.TEXT_PLAIN_VALUE
+    })
+    public String scrappingEternalVigilanceDecks() {
+        tournamentEternalVigilanceDeckScheduler.scrappingDecks();
         return "OK";
     }
 
