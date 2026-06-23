@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.io.IOException;
@@ -32,12 +33,13 @@ public class ApiProxyController {
             MediaType.APPLICATION_PDF_VALUE
     })
     @ResponseBody
-    public ResponseEntity<byte[]> generateProxiesDocument(@RequestBody ApiProxy apiProxy) {
+    public ResponseEntity<byte[]> generateProxiesDocument(@RequestBody ApiProxy apiProxy,
+                                                          @RequestParam(required = false, defaultValue = "en") String locale) {
         byte[] documentData = new byte[0];
         HttpStatus status = HttpStatus.OK;
 
         try {
-            documentData = proxyService.generatePDF(apiProxy.getCards());
+            documentData = proxyService.generatePDF(apiProxy.getCards(), locale);
         } catch (DocumentException | IOException e) {
             log.error("Error generating proxies file: {0}", e);
             status = HttpStatus.INTERNAL_SERVER_ERROR;

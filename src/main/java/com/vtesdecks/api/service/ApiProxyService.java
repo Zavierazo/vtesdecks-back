@@ -1,7 +1,11 @@
 package com.vtesdecks.api.service;
 
 import com.itextpdf.text.DocumentException;
+import com.vtesdecks.cache.CryptCache;
+import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.SetCache;
+import com.vtesdecks.cache.indexable.Card;
+import com.vtesdecks.cache.indexable.I18n;
 import com.vtesdecks.cache.indexable.Set;
 import com.vtesdecks.cache.redis.entity.ProxyCardOption;
 import com.vtesdecks.cache.redis.repositories.ProxyCardOptionRepository;
@@ -9,8 +13,10 @@ import com.vtesdecks.model.api.ApiProxyCard;
 import com.vtesdecks.model.api.ApiProxyCardOption;
 import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.service.ProxyService;
+import com.vtesdecks.util.VtesUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -25,20 +31,47 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class ApiProxyService {
+    private static final String CDN_BASE_URL = "https://cdn.vtesdecks.com";
+    private static final String DEFAULT_LOCALE = "en";
+
     private final ProxyService proxyService;
     private final ProxyCardOptionRepository proxyCardOptionRepository;
     private final ProxyCardOptionScheduler proxyCardOptionScheduler;
     private final SetCache setCache;
+    private final CryptCache cryptCache;
+    private final LibraryCache libraryCache;
 
-    public byte[] generatePDF(List<ApiProxyCard> cards) throws IOException, DocumentException {
+    public byte[] generatePDF(List<ApiProxyCard> cards, String locale) throws IOException, DocumentException {
         Map<Integer, List<ApiProxyCardOption>> cardOptions = new HashMap<>();
+        Map<Integer, String> languageImages = new HashMap<>();
         for (ApiProxyCard card : cards) {
             List<ApiProxyCardOption> options = getProxyOptions(List.of(card.getCardId()));
             if (options != null) {
                 cardOptions.put(card.getCardId(), options);
             }
+            if (StringUtils.isBlank(card.getSetAbbrev())) {
+                String languageImageUrl = resolveLanguageImageUrl(card.getCardId(), locale);
+                if (languageImageUrl != null) {
+                    languageImages.put(card.getCardId(), languageImageUrl);
+                }
+            }
         }
-        return proxyService.generatePDF(cards, cardOptions);
+        return proxyService.generatePDF(cards, cardOptions, languageImages);
+    }
+
+    private String resolveLanguageImageUrl(Integer cardId, String locale) {
+        if (StringUtils.isBlank(locale) || DEFAULT_LOCALE.equalsIgnoreCase(locale)) {
+            return null;
+        }
+        Card card = VtesUtils.isLibrary(cardId) ? libraryCache.get(cardId) : cryptCache.get(cardId);
+        if (card == null || card.getI18n() == null) {
+            return null;
+        }
+        I18n i18n = card.getI18n().get(locale);
+        if (i18n == null || StringUtils.isBlank(i18n.getImage())) {
+            return null;
+        }
+        return CDN_BASE_URL + i18n.getImage();
     }
 
     public ApiProxyCardOption getProxyOption(Integer cardId, String set) {

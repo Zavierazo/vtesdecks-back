@@ -67,7 +67,7 @@ public class ProxyService {
         return true;
     }
 
-    public byte[] generatePDF(List<ApiProxyCard> cards, Map<Integer, List<ApiProxyCardOption>> cardOptions) throws DocumentException, IOException {
+    public byte[] generatePDF(List<ApiProxyCard> cards, Map<Integer, List<ApiProxyCardOption>> cardOptions, Map<Integer, String> languageImages) throws DocumentException, IOException {
         final Document document = new Document();
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PdfWriter pdfWriter = PdfWriter.getInstance(document, outputStream);
@@ -75,7 +75,7 @@ public class ProxyService {
 
         int n = 0;
         for (ApiProxyCard card : cards) {
-            Image img = getPDFImage(card.getSetAbbrev(), card.getCardId(), cardOptions.get(card.getCardId()));
+            Image img = getPDFImage(card.getSetAbbrev(), card.getCardId(), cardOptions.get(card.getCardId()), languageImages.get(card.getCardId()));
             img.scaleAbsolute(CARD_WIDTH, CARD_HEIGHT);
             for (int i = 0; i < card.getAmount(); i++) {
                 if (n == 9) {
@@ -93,12 +93,15 @@ public class ProxyService {
         return outputStream.toByteArray();
     }
 
-    private Image getPDFImage(String setAbbrev, Integer cardId, List<ApiProxyCardOption> cardOptions) throws BadElementException, IOException {
-        if (setAbbrev != null) {
+    private Image getPDFImage(String setAbbrev, Integer cardId, List<ApiProxyCardOption> cardOptions, String languageImageUrl) throws BadElementException, IOException {
+        if (StringUtils.isNotBlank(setAbbrev)) {
             String imgUrl = getProxyImageUrl(setAbbrev.toLowerCase(), cardId);
             if (existImage(imgUrl)) {
                 return Image.getInstance(downloadImageBytes(imgUrl));
             }
+        }
+        if (StringUtils.isNotBlank(languageImageUrl) && existImage(languageImageUrl)) {
+            return Image.getInstance(downloadImageBytes(languageImageUrl));
         }
         if (!isEmpty(cardOptions)) {
             String imgUrl = getProxyImageUrl(cardOptions.getFirst().getSetAbbrev().toLowerCase(), cardId);
