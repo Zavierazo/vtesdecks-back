@@ -2,7 +2,6 @@ package com.vtesdecks.scheduler.shops;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.vtesdecks.cache.SetCache;
 import com.vtesdecks.integration.MarketClient;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
@@ -38,7 +37,6 @@ public class MarketScheduler {
 
     private final CardShopRepository cardShopRepository;
     private final MarketClient marketClient;
-    private final SetCache setCache;
     private final ObjectMapper objectMapper;
 
     @Scheduled(cron = "0 0 0/6 * * *")
@@ -143,10 +141,7 @@ public class MarketScheduler {
         String set = null;
         if (cardOffer.getEdition() != null) {
             set = cardOffer.getEdition();
-            if (setCache.get(set) == null) {
-                log.warn("No set found for {}", set);
-                return Optional.empty();
-            } else if (cardOffer.getEditionDetails() != null) {
+            if (cardOffer.getEditionDetails() != null) {
                 set += ":" + cardOffer.getEditionDetails();
             }
         }
