@@ -202,8 +202,14 @@ public class TournamentEternalVigilanceDeckScheduler {
         boolean advanced = ADVANCED.matcher(fixedName).find();
         String name = moveLeadingThe(ADVANCED.matcher(fixedName).replaceAll(""));
         List<Crypt> matches = new ArrayList<>();
-        try (ResultSet<Crypt> result = cryptCache.selectByExactName(name)) {
-            result.forEach(matches::add);
+        //Same-named reprints are stored with a grouping suffix (e.g. "Kalinda (G6)") to disambiguate them,
+        //so the bare name only matches the original printing. Prefer the suffixed variant for the requested
+        //grouping and only fall back to the bare name when it does not exist.
+        if (card.getGrouping() != null) {
+            collectByExactName(name + " (G" + card.getGrouping() + ")", matches);
+        }
+        if (matches.isEmpty()) {
+            collectByExactName(name, matches);
         }
         if (matches.isEmpty()) {
             throw new IllegalArgumentException("Crypt card not found: '" + card.getName() + "'");
@@ -218,6 +224,12 @@ public class TournamentEternalVigilanceDeckScheduler {
             throw new IllegalArgumentException("Ambiguous crypt card '" + card.getName() + "' grouping " + card.getGrouping() + ": " + matches.size() + " matches");
         }
         return matches.getFirst().getId();
+    }
+
+    private void collectByExactName(String name, List<Crypt> matches) {
+        try (ResultSet<Crypt> result = cryptCache.selectByExactName(name)) {
+            result.forEach(matches::add);
+        }
     }
 
     private Integer resolveLibrary(String rawName) {
