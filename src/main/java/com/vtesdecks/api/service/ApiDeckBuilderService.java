@@ -149,6 +149,9 @@ public class ApiDeckBuilderService {
         } else if (!isOwnerOrAdmin(deck, userId)) {
             log.warn("Deck {} is not valid for user {}", apiDeckBuilder.getId(), userId);
             throw new IllegalArgumentException("Deck " + apiDeckBuilder.getId() + " is not valid for user " + userId);
+        } else if (deck.getType() == DeckType.TOURNAMENT) {
+            //Mark admin-edited tournament decks as verified so schedulers don't overwrite them
+            deck.setVerified(true);
         }
         deck.setName(apiDeckBuilder.getName());
         deck.setDescription(apiDeckBuilder.getDescription());
