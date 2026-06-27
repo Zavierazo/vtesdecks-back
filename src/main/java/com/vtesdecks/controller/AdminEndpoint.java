@@ -3,6 +3,7 @@ package com.vtesdecks.controller;
 import com.vtesdecks.cache.DeckArchetypeIndex;
 import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
+import com.vtesdecks.scheduler.PatreonReminderScheduler;
 import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.scheduler.TournamentDeckScheduler;
 import com.vtesdecks.scheduler.TournamentEternalVigilanceDeckScheduler;
@@ -36,6 +37,7 @@ public class AdminEndpoint {
     private final DeckArchetypeScheduler deckArchetypeScheduler;
     private final DeckArchetypeIndex deckArchetypeIndex;
     private final UserMonthScheduler userMonthScheduler;
+    private final PatreonReminderScheduler patreonReminderScheduler;
 
     @GetMapping(value = "/scheduler/deck_views_clean", produces = {
             MediaType.TEXT_PLAIN_VALUE
@@ -138,6 +140,14 @@ public class AdminEndpoint {
     })
     public String userMonthScheduler() {
         userMonthScheduler.selectUsersOfMonth();
+        return "OK";
+    }
+
+    @GetMapping(value = "/scheduler/patreon_reminder", produces = {
+            MediaType.TEXT_PLAIN_VALUE
+    })
+    public String patreonReminderScheduler() {
+        patreonReminderScheduler.remindPatreon();
         return "OK";
     }
 

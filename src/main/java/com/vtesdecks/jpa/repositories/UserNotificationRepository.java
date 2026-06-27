@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface UserNotificationRepository extends JpaRepository<UserNotificationEntity, Integer> {
@@ -25,4 +26,10 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
     @Modifying
     @Transactional
     void deleteByReferenceId(String referenceId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE user_notification SET creation_date = :now, `read` = false " +
+            "WHERE type = 'LINK' AND link LIKE '%patreon%' AND creation_date < :threshold", nativeQuery = true)
+    int refreshOldPatreonNotifications(LocalDateTime now, LocalDateTime threshold);
 }
