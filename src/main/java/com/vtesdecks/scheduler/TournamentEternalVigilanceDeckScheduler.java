@@ -176,21 +176,20 @@ public class TournamentEternalVigilanceDeckScheduler {
         }
 
         Map<Integer, DeckCardEntity> deckCards = new HashMap<>();
+        //Decks normally carry the card ids; older ones do not and need name matching. Log only once per deck.
+        boolean missingIds = source.getDeck().getCrypt().stream().anyMatch(card -> card.getId() == null)
+                || source.getDeck().getLibrarySections().stream()
+                .flatMap(section -> section.getCards().stream()).anyMatch(card -> card.getId() == null);
+        if (missingIds) {
+            log.warn("Deck {} has cards without id, falling back to name matching", id);
+        }
         for (EternalVigilanceCard card : source.getDeck().getCrypt()) {
-            Integer cardId = card.getId();
-            if (cardId == null) {
-                log.warn("Crypt card '{}' of deck {} has no id, falling back to name matching", card.getName(), id);
-                cardId = resolveCrypt(card);
-            }
+            Integer cardId = card.getId() != null ? card.getId() : resolveCrypt(card);
             storeDeckCard(deck, deckCards, cardId, card.getCount());
         }
         for (EternalVigilanceLibrarySection section : source.getDeck().getLibrarySections()) {
             for (EternalVigilanceCard card : section.getCards()) {
-                Integer cardId = card.getId();
-                if (cardId == null) {
-                    log.warn("Library card '{}' of deck {} has no id, falling back to name matching", card.getName(), id);
-                    cardId = resolveLibrary(card.getName());
-                }
+                Integer cardId = card.getId() != null ? card.getId() : resolveLibrary(card.getName());
                 storeDeckCard(deck, deckCards, cardId, card.getCount());
             }
         }
