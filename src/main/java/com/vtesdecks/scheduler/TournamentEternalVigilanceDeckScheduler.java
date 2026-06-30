@@ -177,11 +177,21 @@ public class TournamentEternalVigilanceDeckScheduler {
 
         Map<Integer, DeckCardEntity> deckCards = new HashMap<>();
         for (EternalVigilanceCard card : source.getDeck().getCrypt()) {
-            storeDeckCard(deck, deckCards, resolveCrypt(card), card.getCount());
+            Integer cardId = card.getId();
+            if (cardId == null) {
+                log.warn("Crypt card '{}' of deck {} has no id, falling back to name matching", card.getName(), id);
+                cardId = resolveCrypt(card);
+            }
+            storeDeckCard(deck, deckCards, cardId, card.getCount());
         }
         for (EternalVigilanceLibrarySection section : source.getDeck().getLibrarySections()) {
             for (EternalVigilanceCard card : section.getCards()) {
-                storeDeckCard(deck, deckCards, resolveLibrary(card.getName()), card.getCount());
+                Integer cardId = card.getId();
+                if (cardId == null) {
+                    log.warn("Library card '{}' of deck {} has no id, falling back to name matching", card.getName(), id);
+                    cardId = resolveLibrary(card.getName());
+                }
+                storeDeckCard(deck, deckCards, cardId, card.getCount());
             }
         }
 
@@ -201,15 +211,21 @@ public class TournamentEternalVigilanceDeckScheduler {
         String fixedName = TYPO_FIXES.getOrDefault(card.getName(), card.getName());
         boolean advanced = ADVANCED.matcher(fixedName).find();
         String name = moveLeadingThe(ADVANCED.matcher(fixedName).replaceAll(""));
+        //Grouping is "ANY" for cards usable with any group; only a numeric grouping disambiguates reprints.
+        Integer grouping = StringUtils.isNumeric(card.getGrouping()) ? Integer.valueOf(card.getGrouping()) : null;
         List<Crypt> matches = new ArrayList<>();
         //Same-named reprints are stored with a grouping suffix (e.g. "Kalinda (G6)") to disambiguate them,
         //so the bare name only matches the original printing. Prefer the suffixed variant for the requested
         //grouping and only fall back to the bare name when it does not exist.
-        if (card.getGrouping() != null) {
-            collectByExactName(name + " (G" + card.getGrouping() + ")", matches);
+        if (grouping != null) {
+            collectByExactName(name + " (G" + grouping + ")", matches);
         }
         if (matches.isEmpty()) {
             collectByExactName(name, matches);
+        }
+        if (matches.isEmpty()) {
+            //Fall back to localized (i18n) names for decks published in a language other than English
+            collectByExactI18nName(name, matches);
         }
         if (matches.isEmpty()) {
             throw new IllegalArgumentException("Crypt card not found: '" + card.getName() + "'");
@@ -217,8 +233,8 @@ public class TournamentEternalVigilanceDeckScheduler {
         if (matches.size() > 1) {
             matches = matches.stream().filter(crypt -> crypt.isAdv() == advanced).toList();
         }
-        if (matches.size() > 1 && card.getGrouping() != null) {
-            matches = matches.stream().filter(crypt -> Objects.equals(crypt.getGroup(), card.getGrouping())).toList();
+        if (matches.size() > 1 && grouping != null) {
+            matches = matches.stream().filter(crypt -> Objects.equals(crypt.getGroup(), grouping)).toList();
         }
         if (matches.size() != 1) {
             throw new IllegalArgumentException("Ambiguous crypt card '" + card.getName() + "' grouping " + card.getGrouping() + ": " + matches.size() + " matches");
@@ -232,11 +248,23 @@ public class TournamentEternalVigilanceDeckScheduler {
         }
     }
 
+    private void collectByExactI18nName(String name, List<Crypt> matches) {
+        try (ResultSet<Crypt> result = cryptCache.selectByExactI18nName(name)) {
+            result.forEach(matches::add);
+        }
+    }
+
     private Integer resolveLibrary(String rawName) {
         String name = moveLeadingThe(TYPO_FIXES.getOrDefault(rawName, rawName));
         List<Library> matches = new ArrayList<>();
         try (ResultSet<Library> result = libraryCache.selectByExactName(name)) {
             result.forEach(matches::add);
+        }
+        if (matches.isEmpty()) {
+            //Fall back to localized (i18n) names for decks published in a language other than English
+            try (ResultSet<Library> result = libraryCache.selectByExactI18nName(name)) {
+                result.forEach(matches::add);
+            }
         }
         if (matches.isEmpty()) {
             throw new IllegalArgumentException("Library card not found: '" + rawName + "'");
