@@ -4,9 +4,11 @@ import com.vtesdecks.api.mapper.ApiCollectionMapper;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.jpa.entity.CollectionBinderEntity;
 import com.vtesdecks.jpa.entity.CollectionCardEntity;
+import com.vtesdecks.jpa.entity.CollectionCardHistoryEntity;
 import com.vtesdecks.jpa.entity.CollectionEntity;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.CollectionBinderRepository;
+import com.vtesdecks.jpa.repositories.CollectionCardHistoryRepository;
 import com.vtesdecks.jpa.repositories.CollectionCardRepository;
 import com.vtesdecks.jpa.repositories.CollectionCardRepositoryCustom;
 import com.vtesdecks.jpa.repositories.CollectionRepository;
@@ -16,6 +18,7 @@ import com.vtesdecks.model.api.ApiCollection;
 import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
 import com.vtesdecks.model.api.ApiCollectionCardCsv;
+import com.vtesdecks.model.api.ApiCollectionCardHistory;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
 import com.vtesdecks.model.api.ApiCollectionImport;
 import com.vtesdecks.model.api.ApiCollectionPage;
@@ -26,6 +29,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -53,6 +57,7 @@ public class ApiCollectionService {
     private final CollectionBinderRepository collectionBinderRepository;
     private final CollectionCardRepository collectionCardRepository;
     private final CollectionCardRepositoryCustom collectionCardRepositoryCustom;
+    private final CollectionCardHistoryRepository collectionCardHistoryRepository;
     private final ApiCollectionMapper apiCollectionMapper;
     private final ApiCollectionImportService apiCollectionImportService;
 
@@ -298,6 +303,19 @@ public class ApiCollectionService {
             throw e; // Propagate validation errors
         } catch (Exception e) {
             throw new RuntimeException("An unexpected error occurred while retrieving the cards by ID", e);
+        }
+    }
+
+    public ApiCollectionPage<ApiCollectionCardHistory> getCardHistory(Integer cardId, Integer binderId, Integer page, Integer size) throws Exception {
+        try {
+            CollectionEntity collectionEntity = getCollectionOrCreate();
+            Pageable pageable = PageRequest.of(page, size);
+            Page<CollectionCardHistoryEntity> result = collectionCardHistoryRepository.findHistory(collectionEntity.getId(), cardId, binderId, pageable);
+            return apiCollectionMapper.mapHistoryPage(result);
+        } catch (IllegalArgumentException e) {
+            throw e; // Propagate validation errors
+        } catch (Exception e) {
+            throw new Exception("An unexpected error occurred while retrieving the card history", e);
         }
     }
 

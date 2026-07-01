@@ -5,11 +5,13 @@ import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.jpa.entity.CollectionBinderEntity;
 import com.vtesdecks.jpa.entity.CollectionCardEntity;
+import com.vtesdecks.jpa.entity.CollectionCardHistoryEntity;
 import com.vtesdecks.jpa.entity.CollectionEntity;
 import com.vtesdecks.model.api.ApiCollection;
 import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
 import com.vtesdecks.model.api.ApiCollectionCardCsv;
+import com.vtesdecks.model.api.ApiCollectionCardHistory;
 import com.vtesdecks.model.api.ApiCollectionPage;
 import com.vtesdecks.service.CurrencyExchangeService;
 import org.mapstruct.AfterMapping;
@@ -106,6 +108,15 @@ public abstract class ApiCollectionMapper {
     @Mapping(target = "creationDate", ignore = true)
     @Mapping(target = "modificationDate", ignore = true)
     public abstract CollectionCardEntity mapCsvToEntity(ApiCollectionCardCsv entity);
+
+    @Mapping(target = "cardName", source = "cardId", qualifiedByName = "mapCardName")
+    @Mapping(target = "date", source = "creationDate")
+    public abstract ApiCollectionCardHistory mapHistory(CollectionCardHistoryEntity entity);
+
+    @Mapping(target = "content", source = "content")
+    @Mapping(target = "totalPages", source = "totalPages")
+    @Mapping(target = "totalElements", source = "totalElements")
+    public abstract ApiCollectionPage<ApiCollectionCardHistory> mapHistoryPage(Page<CollectionCardHistoryEntity> entity);
 
     @Named("mapCardName")
     protected String mapCardName(Integer cardId) {

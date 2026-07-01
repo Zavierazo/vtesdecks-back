@@ -16,6 +16,7 @@ import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.api.ApiCollection;
 import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
+import com.vtesdecks.model.api.ApiCollectionCardHistory;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
 import com.vtesdecks.model.api.ApiCollectionImport;
 import com.vtesdecks.model.api.ApiCollectionPage;
@@ -140,6 +141,11 @@ public class ApiUserCollectionController {
     @PostMapping(value = "/cards/bulk", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public List<ApiCollectionCard> createCardsBulk(HttpServletRequest request, HttpServletResponse response, @RequestBody List<ApiCollectionCard> cards) throws Exception {
         return collectionService.createCardsBulk(cards, response, Utils.getCurrencyCode(request));
+    }
+
+    @GetMapping(value = "/cards/history", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiCollectionPage<ApiCollectionCardHistory> cardHistory(@RequestParam(required = false) Integer cardId, @RequestParam(required = false) Integer binderId, @RequestParam(defaultValue = "0") Integer page, @RequestParam(defaultValue = "50") Integer size) throws Exception {
+        return collectionService.getCardHistory(cardId, binderId, page, size);
     }
 
     @GetMapping(value = "/cards/{ids}", produces = MediaType.APPLICATION_JSON_VALUE)
