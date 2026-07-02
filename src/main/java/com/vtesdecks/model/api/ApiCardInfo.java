@@ -15,6 +15,7 @@ public class ApiCardInfo {
     private List<ApiRuling> rulingList;
     private List<ApiCardErrata> errataList;
     private ApiCollectionCardStats collectionStats;
+    private Integer wishlistNumber;
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
     private String currency;

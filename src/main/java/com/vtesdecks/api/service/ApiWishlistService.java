@@ -193,6 +193,13 @@ public class ApiWishlistService {
         return filteredIds;
     }
 
+    public Integer getWishlistNumber(Integer userId, Integer cardId) {
+        if (userId == null || cardId == null) {
+            return null;
+        }
+        return wishlistCardRepository.sumNumberByUserIdAndCardId(userId, cardId);
+    }
+
     private boolean isWishlistPublic(Integer userId) {
         // Defaults to public (true) when the user or flag is somehow absent
         return userRepository.findById(userId)

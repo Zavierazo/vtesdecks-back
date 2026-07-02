@@ -38,6 +38,7 @@ public class ApiCardInfoService {
     private final CryptCache cryptCache;
     private final ApiDeckService apiDeckService;
     private final ApiCollectionService apiCollectionService;
+    private final ApiWishlistService apiWishlistService;
     private final CurrencyExchangeService currencyExchangeService;
     private final RulingService rulingService;
     private final CardErrataRepository cardErrataRepository;
@@ -49,6 +50,7 @@ public class ApiCardInfoService {
         fillShopInfo(id, cardInfo, locale);
         cardInfo.setPreconstructedDecks(getPreconstructedDecks(id, currencyCode));
         cardInfo.setCollectionStats(getCollectionStats(id, userId));
+        cardInfo.setWishlistNumber(apiWishlistService.getWishlistNumber(userId, id));
         fillPriceInfo(cardInfo, id, currencyCode);
         cardInfo.setRulingList(rulingService.getRulings(id));
         cardInfo.setErrataList(getCardErrata(id));
