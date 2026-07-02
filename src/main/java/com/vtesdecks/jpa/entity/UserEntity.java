@@ -46,6 +46,9 @@ public class UserEntity {
     @Column(name = "admin", nullable = false)
     private Boolean admin;
 
+    @Column(name = "wishlist_public_visibility", nullable = false)
+    private Boolean wishlistPublicVisibility = true;
+
     @CreationTimestamp
     @Column(name = "creation_date", nullable = false, insertable = false, updatable = false)
     private LocalDateTime creationDate;

@@ -1,10 +1,13 @@
 package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.ApiCollectionService;
+import com.vtesdecks.api.service.ApiWishlistService;
 import com.vtesdecks.model.api.ApiCollection;
 import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
 import com.vtesdecks.model.api.ApiCollectionPage;
+import com.vtesdecks.model.api.ApiWishlistCard;
+import com.vtesdecks.model.api.ApiWishlistPage;
 import com.vtesdecks.util.Utils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -30,11 +33,17 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 public class ApiCollectionController {
 
     private final ApiCollectionService collectionService;
+    private final ApiWishlistService wishlistService;
 
 
     @GetMapping(value = "/users/{username}/collection", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiCollection getUserPublicCollection(@PathVariable String username) throws Exception {
         return collectionService.getUserPublicCollection(username);
+    }
+
+    @GetMapping(value = "/users/{username}/wishlist", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiWishlistPage<ApiWishlistCard> getUserPublicWishlist(HttpServletRequest request, @PathVariable String username, @RequestParam Integer page, @RequestParam Integer size, @RequestParam(required = false) String sortBy, @RequestParam(required = false) String sortDirection, @RequestParam Map<String, String> params) throws Exception {
+        return wishlistService.getUserPublicWishlist(username, page, size, sortBy, sortDirection, params, Utils.getCurrencyCode(request));
     }
 
     @GetMapping(value = "/binders/{publicHash}", produces = MediaType.APPLICATION_JSON_VALUE)
