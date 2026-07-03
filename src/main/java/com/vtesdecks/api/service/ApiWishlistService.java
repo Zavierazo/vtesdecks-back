@@ -22,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -101,6 +102,14 @@ public class ApiWishlistService {
         } catch (Exception e) {
             throw new Exception("An unexpected error occurred while adding the card to the wishlist", e);
         }
+    }
+
+    public List<ApiWishlistCard> addCardsBulk(List<ApiWishlistCard> cards, String currencyCode) throws Exception {
+        List<ApiWishlistCard> result = new ArrayList<>();
+        for (ApiWishlistCard card : cards) {
+            result.add(addCard(card, currencyCode));
+        }
+        return result;
     }
 
     public ApiWishlistCard updateCard(Integer id, ApiWishlistCard card, String currencyCode) throws Exception {

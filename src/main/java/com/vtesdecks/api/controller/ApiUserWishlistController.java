@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -36,6 +37,11 @@ public class ApiUserWishlistController {
     @PostMapping(value = "/cards", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiWishlistCard createCard(HttpServletRequest request, @RequestBody ApiWishlistCard card) throws Exception {
         return wishlistService.addCard(card, Utils.getCurrencyCode(request));
+    }
+
+    @PostMapping(value = "/cards/bulk", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<ApiWishlistCard> createCardsBulk(HttpServletRequest request, @RequestBody List<ApiWishlistCard> cards) throws Exception {
+        return wishlistService.addCardsBulk(cards, Utils.getCurrencyCode(request));
     }
 
     @PutMapping(value = "/cards/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
