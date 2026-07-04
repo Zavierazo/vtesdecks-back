@@ -134,9 +134,12 @@ public class ApiWishlistService {
     public boolean deleteCard(Integer id) throws Exception {
         try {
             Integer userId = ApiUtils.extractUserId();
-            WishlistCardEntity existingCard = wishlistCardRepository.findByUserIdAndId(userId, id)
-                    .orElseThrow(() -> new IllegalArgumentException("Card does not exist"));
-            wishlistCardRepository.delete(existingCard);
+            // Bulk delete keeps the operation idempotent: a duplicate/concurrent DELETE
+            // simply affects 0 rows instead of raising an optimistic-lock (StaleObjectState) error.
+            int deleted = wishlistCardRepository.deleteByUserIdAndId(userId, id);
+            if (deleted == 0) {
+                throw new IllegalArgumentException("Card does not exist");
+            }
             return true;
         } catch (IllegalArgumentException e) {
             throw e; // Propagate validation errors
