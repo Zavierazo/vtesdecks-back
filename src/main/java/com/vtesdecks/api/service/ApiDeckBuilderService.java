@@ -30,6 +30,7 @@ import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeckBuilder;
 import com.vtesdecks.model.api.ApiDeckBuilderHistory;
 import com.vtesdecks.model.api.ApiDeckSuggestedCards;
+import com.vtesdecks.model.krcg.DeckCard;
 import com.vtesdecks.service.DeckCardHistoryService;
 import com.vtesdecks.service.DeckKeyCardsService;
 import com.vtesdecks.service.DeckService;
@@ -297,21 +298,12 @@ public class ApiDeckBuilderService {
     private ApiDeckBuilder importKRCGDeck(com.vtesdecks.model.krcg.Deck deck) {
         ApiDeckBuilder deckBuilder = new ApiDeckBuilder();
         deckBuilder.setName(deck.getName());
-        deckBuilder.setDescription(deck.getComments());
+        deckBuilder.setDescription(deck.getComment());
         deckBuilder.setPublished(false);
         deckBuilder.setCards(new ArrayList<>());
-        if (deck.getCrypt() != null && deck.getCrypt().getCards() != null) {
-            for (com.vtesdecks.model.krcg.Card card : deck.getCrypt().getCards()) {
+        if (deck.getCards() != null) {
+            for (DeckCard card : deck.getCards()) {
                 deckBuilder.getCards().add(getApiCard(card.getId(), card.getCount()));
-            }
-        }
-        if (deck.getLibrary() != null && deck.getLibrary().getCards() != null) {
-            for (com.vtesdecks.model.krcg.Card libraryCard : deck.getLibrary().getCards()) {
-                if (libraryCard.getCards() != null) {
-                    for (com.vtesdecks.model.krcg.Card card : libraryCard.getCards()) {
-                        deckBuilder.getCards().add(getApiCard(card.getId(), card.getCount()));
-                    }
-                }
             }
         }
         return deckBuilder;

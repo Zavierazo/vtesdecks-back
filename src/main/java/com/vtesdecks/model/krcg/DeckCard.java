@@ -1,7 +1,6 @@
 package com.vtesdecks.model.krcg;
 
-import java.util.List;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,7 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Wrapper {
+public class DeckCard {
+    private Integer id;
+    @JsonProperty("printed_name")
+    private String name;
     private Integer count;
-    private List<Card> cards;
 }

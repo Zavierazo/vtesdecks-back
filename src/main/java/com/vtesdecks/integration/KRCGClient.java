@@ -28,7 +28,7 @@ import java.util.Map;
 import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-@FeignClient(name = "KRCGClient", url = "https://api.krcg.org", configuration = KRCGClient.Configuration.class)
+@FeignClient(name = "KRCGClient", url = "https://v4.api.krcg.org", configuration = KRCGClient.Configuration.class)
 public interface KRCGClient {
 
     @PostMapping(value = "/amaranth", consumes = APPLICATION_FORM_URLENCODED_VALUE, produces = APPLICATION_JSON_VALUE)

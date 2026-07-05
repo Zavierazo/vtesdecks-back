@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class ApiRulingCard {
-    private String text;
     private Integer id;
     private String name;
 }
