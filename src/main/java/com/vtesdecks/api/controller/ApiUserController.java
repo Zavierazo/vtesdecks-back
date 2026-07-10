@@ -160,6 +160,10 @@ public class ApiUserController {
                 response.setSuccessful(true);
                 requireDeckRefresh = true;
             }
+            if (apiUserSettings.getCardPrintingPreference() != null) {
+                user.setCardPrintingPreference(apiUserSettings.getCardPrintingPreference());
+                response.setSuccessful(true);
+            }
             if (StringUtils.isNotBlank(apiUserSettings.getPassword()) && StringUtils.isNotBlank(apiUserSettings.getNewPassword())) {
                 if (passwordEncoder.matches(apiUserSettings.getPassword(), user.getPassword())) {
                     user.setPassword(passwordEncoder.encode(apiUserSettings.getNewPassword()));

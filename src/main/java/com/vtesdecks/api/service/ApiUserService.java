@@ -2,6 +2,7 @@ package com.vtesdecks.api.service;
 
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.configuration.ApiSecurityConfiguration;
+import com.vtesdecks.enums.CardPrintingPreference;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.entity.UserFollowerEntity;
 import com.vtesdecks.jpa.repositories.UserFollowerRepository;
@@ -42,6 +43,7 @@ public class ApiUserService {
         user.setDisplayName(dbUser.getDisplayName() != null ? dbUser.getDisplayName() : dbUser.getUsername());
         user.setProfileImage(ApiUtils.getProfileImage(dbUser));
         user.setNotificationCount(userNotificationService.notificationUnreadCount(dbUser.getId()));
+        user.setCardPrintingPreference(dbUser.getCardPrintingPreference() != null ? dbUser.getCardPrintingPreference() : CardPrintingPreference.NEWEST);
         return user;
     }
 

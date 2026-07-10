@@ -1,7 +1,10 @@
 package com.vtesdecks.jpa.entity;
 
+import com.vtesdecks.enums.CardPrintingPreference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -48,6 +51,10 @@ public class UserEntity {
 
     @Column(name = "wishlist_public_visibility", nullable = false)
     private Boolean wishlistPublicVisibility = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "card_printing_preference", nullable = false)
+    private CardPrintingPreference cardPrintingPreference = CardPrintingPreference.NEWEST;
 
     @CreationTimestamp
     @Column(name = "creation_date", nullable = false, insertable = false, updatable = false)

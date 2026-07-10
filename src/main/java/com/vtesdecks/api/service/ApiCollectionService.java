@@ -1,7 +1,10 @@
 package com.vtesdecks.api.service;
 
+import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.ApiCollectionMapper;
 import com.vtesdecks.api.util.ApiUtils;
+import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.jpa.entity.CollectionBinderEntity;
 import com.vtesdecks.jpa.entity.CollectionCardEntity;
 import com.vtesdecks.jpa.entity.CollectionCardHistoryEntity;
@@ -13,7 +16,10 @@ import com.vtesdecks.jpa.repositories.CollectionCardRepository;
 import com.vtesdecks.jpa.repositories.CollectionCardRepositoryCustom;
 import com.vtesdecks.jpa.repositories.CollectionRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
+import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.CollectionType;
+import com.vtesdecks.model.DeckQuery;
+import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.api.ApiCollection;
 import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
@@ -23,7 +29,9 @@ import com.vtesdecks.model.api.ApiCollectionCardStats;
 import com.vtesdecks.model.api.ApiCollectionImport;
 import com.vtesdecks.model.api.ApiCollectionPage;
 import com.vtesdecks.model.api.ApiDecks;
+import com.vtesdecks.service.DeckService;
 import com.vtesdecks.util.Utils;
+import com.vtesdecks.util.VtesUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -52,7 +60,11 @@ import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 @Service
 @RequiredArgsConstructor
 public class ApiCollectionService {
+    /** Same window as the single-card stats endpoint, which sums over the 10 newest decks containing the card. */
+    private static final int MAX_STATS_DECKS = 10;
+    private static final int MAX_BULK_STATS_CARDS = 500;
     private final UserRepository userRepository;
+    private final DeckService deckService;
     private final CollectionRepository collectionRepository;
     private final CollectionBinderRepository collectionBinderRepository;
     private final CollectionCardRepository collectionCardRepository;
@@ -595,6 +607,75 @@ public class ApiCollectionService {
         } catch (Exception e) {
             throw new Exception("An unexpected error occurred while obtaining card stats", e);
         }
+    }
+
+    public List<ApiCollectionCardStats> getCardStatsBulk(List<Integer> cardIds) throws Exception {
+        if (cardIds.size() > MAX_BULK_STATS_CARDS) {
+            throw new IllegalArgumentException("Too many cards requested, maximum is " + MAX_BULK_STATS_CARDS);
+        }
+        CollectionEntity collectionEntity = getCollectionOrCreate();
+        try {
+            List<Integer> distinctCardIds = cardIds.stream().filter(Objects::nonNull).distinct().toList();
+            Map<Integer, Integer> collectionNumbers = collectionCardRepository.findByCollectionIdAndCardIdIn(collectionEntity.getId(), distinctCardIds).stream()
+                    .filter(card -> card.getNumber() != null)
+                    .collect(Collectors.groupingBy(CollectionCardEntity::getCardId, Collectors.summingInt(CollectionCardEntity::getNumber)));
+            DeckQuery deckQuery = DeckQuery.builder()
+                    .apiType(ApiDeckType.USER)
+                    .order(DeckSort.NEWEST)
+                    .userId(ApiUtils.extractUserId())
+                    .build();
+            List<ApiCollectionCardStats> statsList = new ArrayList<>(distinctCardIds.size());
+            try (ResultSet<Deck> resultSet = deckService.getDecks(deckQuery)) {
+                List<Deck> decks = resultSet.stream().toList();
+                for (Integer cardId : distinctCardIds) {
+                    ApiCollectionCardStats stats = new ApiCollectionCardStats();
+                    stats.setCardId(cardId);
+                    stats.setCollectionNumber(collectionNumbers.getOrDefault(cardId, 0));
+                    int decksNumber = 0;
+                    int trackedDecksNumber = 0;
+                    int decksWithCard = 0;
+                    for (Deck deck : decks) {
+                        int number = getCardNumber(deck, cardId);
+                        if (number > 0) {
+                            decksNumber += number;
+                            if (deck.isCollection()) {
+                                trackedDecksNumber += number;
+                            }
+                            if (++decksWithCard >= MAX_STATS_DECKS) {
+                                break;
+                            }
+                        }
+                    }
+                    stats.setDecksNumber(decksNumber);
+                    stats.setTrackedDecksNumber(trackedDecksNumber);
+                    statsList.add(stats);
+                }
+            }
+            return statsList;
+        } catch (IllegalArgumentException e) {
+            throw e; // Propagate validation errors
+        } catch (Exception e) {
+            throw new Exception("An unexpected error occurred while obtaining card stats", e);
+        }
+    }
+
+    private static int getCardNumber(Deck deck, Integer cardId) {
+        if (VtesUtils.isCrypt(cardId)) {
+            for (Card card : deck.getCrypt()) {
+                if (cardId.equals(card.getId())) {
+                    return card.getNumber() != null ? card.getNumber() : 0;
+                }
+            }
+        } else {
+            for (List<Card> cards : deck.getLibraryByType().values()) {
+                for (Card card : cards) {
+                    if (cardId.equals(card.getId())) {
+                        return card.getNumber() != null ? card.getNumber() : 0;
+                    }
+                }
+            }
+        }
+        return 0;
     }
 
     public Map<Integer, Integer> getCollectionCardsMap() {

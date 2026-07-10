@@ -18,6 +18,7 @@ import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
 import com.vtesdecks.model.api.ApiCollectionCardHistory;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
+import com.vtesdecks.model.api.ApiCollectionCardStatsRequest;
 import com.vtesdecks.model.api.ApiCollectionImport;
 import com.vtesdecks.model.api.ApiCollectionPage;
 import com.vtesdecks.model.api.ApiCollectionStats;
@@ -181,6 +182,14 @@ public class ApiUserCollectionController {
     @PostMapping(value = "/cards/import/{type}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiCollectionImport importCards(@PathVariable CollectionType type, @RequestParam("file") MultipartFile file, @RequestParam(required = false) Integer binderId) {
         return collectionService.importCards(type, file, binderId);
+    }
+
+    @PostMapping(value = "/cards/stats", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<ApiCollectionCardStats> cardStatsBulk(@RequestBody ApiCollectionCardStatsRequest request) throws Exception {
+        if (request == null || request.getCardIds() == null || request.getCardIds().isEmpty()) {
+            return List.of();
+        }
+        return collectionService.getCardStatsBulk(request.getCardIds());
     }
 
     @GetMapping(value = "/cards/{id}/stats", produces = MediaType.APPLICATION_JSON_VALUE)

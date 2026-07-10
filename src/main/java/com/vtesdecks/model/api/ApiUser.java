@@ -1,6 +1,7 @@
 package com.vtesdecks.model.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.vtesdecks.enums.CardPrintingPreference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,5 +23,6 @@ public class ApiUser {
     private Boolean admin;
     private List<String> roles;
     private Integer notificationCount;
+    private CardPrintingPreference cardPrintingPreference;
     private String message;
 }

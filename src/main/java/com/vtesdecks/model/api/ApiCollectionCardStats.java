@@ -8,6 +8,7 @@ import java.util.List;
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiCollectionCardStats {
+    private Integer cardId;
     private Integer collectionNumber;
     private Integer decksNumber;
     private Integer trackedDecksNumber;

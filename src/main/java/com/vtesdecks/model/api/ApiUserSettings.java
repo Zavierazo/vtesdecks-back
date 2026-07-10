@@ -1,6 +1,7 @@
 package com.vtesdecks.model.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.vtesdecks.enums.CardPrintingPreference;
 import lombok.Data;
 
 @Data
@@ -10,4 +11,5 @@ public class ApiUserSettings {
     private String displayName;
     private String password;
     private String newPassword;
+    private CardPrintingPreference cardPrintingPreference;
 }
