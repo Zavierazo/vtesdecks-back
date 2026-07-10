@@ -21,6 +21,13 @@ public abstract class ApiCardInfoMapper {
         }
         String disciplineAlias = rulingSymbol.getText().substring(1, rulingSymbol.getText().length() - 1);
 
+        if (disciplineAlias.equals("MERGED")) {
+            return ApiRulingSymbol
+                    .builder()
+                    .text(disciplineAlias)
+                    .symbol("merged")
+                    .build();
+        }
         String symbol = VtesUtils.getDisciplineIconFromAbbreviation(disciplineAlias);
 
         if (symbol == null) {
