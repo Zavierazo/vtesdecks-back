@@ -90,6 +90,21 @@ public class VtesUtils {
         }
     }
 
+    public static String getIconFromName(String name) {
+        Discipline disciplineEnum = Discipline.getFromName(name);
+        if (disciplineEnum != null) {
+            return disciplineEnum.getIcon() + (StringUtils.isAllUpperCase(name) ? "sup" : "");
+        } else {
+            CardType cardType = CardType.getFromName(name);
+            if (cardType != null) {
+                return cardType.getIcon();
+            } else {
+                log.info("Icon not found for {}", name);
+                return null;
+            }
+        }
+    }
+
     public static String getType(String type) {
         CardType cardType = CardType.getFromName(type);
         if (cardType != null) {

@@ -19,16 +19,16 @@ public abstract class ApiCardInfoMapper {
         if (rulingSymbol == null || rulingSymbol.getText() == null || rulingSymbol.getText().length() < 2) {
             return null;
         }
-        String disciplineAlias = rulingSymbol.getText().substring(1, rulingSymbol.getText().length() - 1);
+        String symbolName = rulingSymbol.getText().substring(1, rulingSymbol.getText().length() - 1);
 
-        if (disciplineAlias.equals("MERGED")) {
+        if (symbolName.equals("MERGED")) {
             return ApiRulingSymbol
                     .builder()
-                    .text(disciplineAlias)
+                    .text(symbolName)
                     .symbol("merged")
                     .build();
         }
-        String symbol = VtesUtils.getDisciplineIconFromAbbreviation(disciplineAlias);
+        String symbol = VtesUtils.getIconFromName(symbolName);
 
         if (symbol == null) {
             return null;
@@ -36,7 +36,7 @@ public abstract class ApiCardInfoMapper {
 
         return ApiRulingSymbol
                 .builder()
-                .text(disciplineAlias)
+                .text(symbolName)
                 .symbol(symbol)
                 .build();
     }
