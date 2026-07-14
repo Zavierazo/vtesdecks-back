@@ -32,6 +32,7 @@ public class ApiDeck {
     private JsonNode extra;
     private Boolean published;
     private Boolean collection;
+    private boolean hasVideo;
     private List<ApiCard> crypt;
     private List<ApiCard> library;
     private List<ApiCard> filterCards;

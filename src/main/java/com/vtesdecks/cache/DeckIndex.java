@@ -139,6 +139,7 @@ public class DeckIndex {
         decks.addIndex(HashIndex.onAttribute(Deck.PATH_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.PRICE_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.ARCHETYPE_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(Deck.HAS_VIDEO_ATTRIBUTE));
     }
 
 
@@ -479,6 +480,9 @@ public class DeckIndex {
         }
         if (deckQuery.isFavorite() && deckQuery.getUserId() != null) {
             query = and(query, in(Deck.FAVORITE_MULTI_ATTRIBUTE, deckQuery.getUserId()));
+        }
+        if (deckQuery.isHasVideo()) {
+            query = and(query, equal(Deck.HAS_VIDEO_ATTRIBUTE, Boolean.TRUE));
         }
         if (deckQuery.getLimitedFormat() != null) {
             query = and(query, contains(Deck.LIMITED_FORMAT_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getLimitedFormat())));

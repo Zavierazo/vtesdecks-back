@@ -58,6 +58,7 @@ public class DeckQuery {
     private String limitedFormat;
     private List<String> paths;
     private Boolean favorite;
+    private Boolean hasVideo;
     private Integer archetype;
     private LocalDate creationDate;
     /** When true, skips both the published filter and the deck-type restriction, returning all non-deleted decks. */
@@ -78,6 +79,10 @@ public class DeckQuery {
 
     public boolean isFavorite() {
         return favorite != null && favorite;
+    }
+
+    public boolean isHasVideo() {
+        return hasVideo != null && hasVideo;
     }
 
     @Data

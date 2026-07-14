@@ -136,6 +136,7 @@ public class DeckFactory {
         value.setUrl(deck.getUrl());
         value.setSource(deck.getSource());
         value.setDescription(deck.getDescription());
+        value.setHasVideo(deck.getDescription() != null && deck.getDescription().contains("[[youtube:"));
         value.setSet(deck.getSet());
         value.setExtra(deck.getExtra());
         value.setPublished(deck.getPublished());

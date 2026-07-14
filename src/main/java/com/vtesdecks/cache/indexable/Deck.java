@@ -93,6 +93,7 @@ public class Deck {
     public static final Attribute<Deck, String> PATH_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, String.class, "path", Deck::getPath);
     public static final Attribute<Deck, BigDecimal> PRICE_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, BigDecimal.class, "price", (Deck deck) -> deck.getStats().getPrice());
     public static final Attribute<Deck, Integer> ARCHETYPE_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, Integer.class, "archetype", Deck::getDeckArchetypeId);
+    public static final Attribute<Deck, Boolean> HAS_VIDEO_ATTRIBUTE = QueryFactory.attribute(Deck.class, Boolean.class, "hasVideo", Deck::isHasVideo);
 
     private String id;
     private DeckType type;
@@ -117,6 +118,7 @@ public class Deck {
     private JsonNode extra;
     private boolean published;
     private boolean collection;
+    private boolean hasVideo;
     private List<Card> crypt = new ArrayList<>();
     private Map<String, List<Card>> libraryByType = new HashMap<>();
     private Set<String> clanIcons;
