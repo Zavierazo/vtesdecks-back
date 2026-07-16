@@ -58,6 +58,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 @Slf4j
 @Component
 public class DeckFactory {
+    private static final int DETAILED_DESCRIPTION_MIN_LENGTH = 1000;
     private static final List<String> DOMAIN_IGNORED = Lists.newArrayList("localhost", "beta.vtesdecks.com");
     private static final List<String> VIEWS_IGNORED =
             Lists.newArrayList("https://vtesdecks.com/",
@@ -137,6 +138,7 @@ public class DeckFactory {
         value.setSource(deck.getSource());
         value.setDescription(deck.getDescription());
         value.setHasVideo(deck.getDescription() != null && deck.getDescription().contains("[[youtube:"));
+        value.setDetailed(value.isHasVideo() || (deck.getDescription() != null && deck.getDescription().length() >= DETAILED_DESCRIPTION_MIN_LENGTH));
         value.setSet(deck.getSet());
         value.setExtra(deck.getExtra());
         value.setPublished(deck.getPublished());

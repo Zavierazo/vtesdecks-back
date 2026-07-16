@@ -135,7 +135,7 @@ public class ApiDeckController {
                                           @RequestParam(name = "absoluteProportion", required = false) Boolean absoluteProportion,
                                           @RequestParam(name = "tags", required = false) List<String> tags,
                                           @RequestParam(name = "favorite", required = false) Boolean favorite,
-                                          @RequestParam(name = "hasVideo", required = false) Boolean hasVideo,
+                                          @RequestParam(name = "detailed", required = false) Boolean detailed,
                                           @RequestParam(name = "limitedFormat", required = false) String limitedFormat,
                                           @RequestParam(name = "paths", required = false) List<String> paths,
                                           @RequestParam(name = "bySimilarity", required = false) String bySimilarity,
@@ -159,7 +159,7 @@ public class ApiDeckController {
                 .singleDiscipline(singleDiscipline)
                 .tags(tags)
                 .favorite(favorite)
-                .hasVideo(hasVideo)
+                .detailed(detailed)
                 .cards(cards)
                 .limitedFormat(limitedFormat)
                 .paths(paths)
