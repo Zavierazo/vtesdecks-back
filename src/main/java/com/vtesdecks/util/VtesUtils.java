@@ -33,6 +33,9 @@ public class VtesUtils {
     private static final int LIBRARY_ID_MAX = 200000;
     private static final int CRYPT_ID_MIN = 200000;
     private static final int CRYPT_ID_MAX = 300000;
+    public static final String PROMO_SET = "Promo";
+    public static final String PFA_SET = "PFA";
+    public static final String PROMO_DEFAULT_SET = "Promo:1";
 
     public static boolean isCrypt(Integer id) {
         return id > CRYPT_ID_MIN && id < CRYPT_ID_MAX;
@@ -271,6 +274,39 @@ public class VtesUtils {
         } else {
             return null;
         }
+    }
+
+    public static boolean containsSet(List<String> sets, String abbrev) {
+        return sets != null && sets.stream().anyMatch(token -> token.split(":")[0].equals(abbrev));
+    }
+
+    public static List<String> addSet(List<String> sets, String token) {
+        if (containsSet(sets, token.split(":")[0])) {
+            return sets;
+        }
+        List<String> result = sets == null ? new ArrayList<>() : new ArrayList<>(sets);
+        result.add(token);
+        return result;
+    }
+
+    public static List<String> removeSet(List<String> sets, String abbrev) {
+        if (sets == null) {
+            return null;
+        }
+        return sets.stream()
+                .filter(token -> !token.split(":")[0].equals(abbrev))
+                .collect(Collectors.toList());
+    }
+
+    public static List<String> applyPromoImageRule(List<String> sets, boolean promoImageExists, boolean pfaImageExists) {
+        boolean hasPromo = containsSet(sets, PROMO_SET);
+        if (hasPromo && !promoImageExists && pfaImageExists) {
+            return removeSet(sets, PROMO_SET);
+        }
+        if (!hasPromo && promoImageExists) {
+            return addSet(sets, PROMO_DEFAULT_SET);
+        }
+        return sets;
     }
 
     public static boolean isPrintOnDemand(List<CardShopEntity> cardShopList) {

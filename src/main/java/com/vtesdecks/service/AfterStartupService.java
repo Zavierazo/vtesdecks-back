@@ -9,6 +9,8 @@ import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.SetCache;
+import com.vtesdecks.cache.redis.entity.ProxyCardOption;
+import com.vtesdecks.cache.redis.repositories.ProxyCardOptionRepository;
 import com.vtesdecks.csv.entity.CryptCsv;
 import com.vtesdecks.csv.entity.CryptI18nCsv;
 import com.vtesdecks.csv.entity.LibraryCsv;
@@ -46,9 +48,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -73,6 +77,7 @@ public class AfterStartupService {
 
     private Set<Integer> fullArtCards;
     private Set<Integer> bcpBusinessCards;
+    private Map<Integer, ProxyCardOption> proxyCardOptions = new HashMap<>();
 
     @Autowired
     private CryptRepository cryptRepository;
@@ -94,6 +99,8 @@ public class AfterStartupService {
     private SetCache setCache;
     @Autowired
     private LoadHistoryService loadHistoryService;
+    @Autowired
+    private ProxyCardOptionRepository proxyCardOptionRepository;
 
     @Transactional
     public void executeAfterStartupTasks() {
@@ -109,6 +116,7 @@ public class AfterStartupService {
         }
         fullArtCards = readSetCardList(FULL_ART_CARDS_FILE);
         bcpBusinessCards = readSetCardList(BCP_BUSSINESS_CARDS_FILE);
+        loadProxyCardOptions();
         if (!loadHistoryService.isLoaded(CRYPT_FILE)) {
             crypt();
             changed = true;
@@ -350,7 +358,19 @@ public class AfterStartupService {
         if (bcpBusinessCards != null && bcpBusinessCards.contains(id)) {
             finalSets.add("BCPBC:1");
         }
-        return String.join(",", finalSets);
+        ProxyCardOption proxyCardOption = proxyCardOptions.get(id);
+        boolean promoImageExists = proxyCardOption != null && proxyCardOption.getSets() != null && proxyCardOption.getSets().contains(VtesUtils.PROMO_SET);
+        boolean pfaImageExists = proxyCardOption != null && proxyCardOption.getSets() != null && proxyCardOption.getSets().contains(VtesUtils.PFA_SET);
+        return String.join(",", VtesUtils.applyPromoImageRule(new ArrayList<>(finalSets), promoImageExists, pfaImageExists));
+    }
+
+    private void loadProxyCardOptions() {
+        proxyCardOptions = new HashMap<>();
+        try {
+            proxyCardOptionRepository.findAll().forEach(option -> proxyCardOptions.put(option.getCardId(), option));
+        } catch (Exception e) {
+            log.warn("Unable to load ProxyCardOptions from Redis, promo image rule will keep CSV values", e);
+        }
     }
 
     private static boolean divideUnleashed(Set<String> finalSets, List<String> setInfo, String oldSet) {
