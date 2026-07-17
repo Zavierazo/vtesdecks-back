@@ -8,6 +8,7 @@ import com.googlecode.cqengine.query.option.QueryOptions;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.Stats;
 import com.vtesdecks.cache.indexable.deck.card.Card;
+import com.vtesdecks.enums.ReactionType;
 import com.vtesdecks.jpa.entity.CardErrataEntity;
 import com.vtesdecks.jpa.entity.UserEntity;
 import lombok.Data;
@@ -104,6 +105,7 @@ public class Deck {
     private Double rate;
     private Integer votes;
     private Long comments;
+    private ReactionType reaction;
     private String tournament;
     private Integer players;
     private Integer year;

@@ -16,13 +16,17 @@ import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.DisciplineStat;
 import com.vtesdecks.cache.indexable.deck.Stats;
 import com.vtesdecks.cache.indexable.deck.card.Card;
+import com.vtesdecks.enums.ReactionTargetType;
+import com.vtesdecks.enums.ReactionType;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.entity.DeckViewEntity;
+import com.vtesdecks.jpa.entity.ReactionEntity;
 import com.vtesdecks.jpa.repositories.CardErrataRepository;
 import com.vtesdecks.jpa.repositories.CommentRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.jpa.repositories.DeckViewRepository;
+import com.vtesdecks.jpa.repositories.ReactionRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.DeckTag;
 import com.vtesdecks.model.DeckWarningLabel;
@@ -105,6 +109,8 @@ public class DeckFactory {
     private CommentRepository commentRepository;
     @Autowired
     private CardErrataRepository cardErrataRepository;
+    @Autowired
+    private ReactionRepository reactionRepository;
 
     public Deck getDeck(DeckEntity deck, List<DeckCard> deckCards, List<LimitedFormatPayload> limitedFormats) {
         Deck value = new Deck();
@@ -130,6 +136,7 @@ public class DeckFactory {
         }
         value.setFavoriteUsers(deckUsers.stream().filter(du -> du.getFavorite() != null && du.getFavorite()).map(du -> du.getId().getUser()).collect(Collectors.toSet()));
         value.setComments(commentRepository.countByPageIdentifierAndDeletedFalse("deck_" + deck.getId()));
+        value.setReaction(computeFeaturedReaction(deck.getId()));
         value.setTournament(deck.getTournament());
         value.setPlayers(deck.getPlayers());
         value.setYear(deck.getYear() != null ? deck.getYear() : deck.getCreationDate().getYear());
@@ -270,6 +277,23 @@ public class DeckFactory {
         return value;
     }
 
+    private ReactionType computeFeaturedReaction(String deckId) {
+        Map<ReactionType, Integer> counts = new EnumMap<>(ReactionType.class);
+        for (ReactionEntity reaction : reactionRepository.findByIdTargetTypeAndIdTargetId(ReactionTargetType.DECK, deckId)) {
+            counts.merge(reaction.getId().getReaction(), 1, Integer::sum);
+        }
+        ReactionType featured = null;
+        int best = 0;
+        for (ReactionType type : ReactionType.values()) {
+            Integer count = counts.get(type);
+            if (count != null && count > best) {
+                best = count;
+                featured = type;
+            }
+        }
+        return featured;
+    }
+
     private <T> Set<T> collectFromCards(List<Card> cards,
                                         Predicate<Integer> idPredicate,
                                         Function<Integer, Collection<T>> getter) {
@@ -320,9 +344,9 @@ public class DeckFactory {
                 ? views
                 .stream()
                 .filter(deckView -> deckView.getSource() == null ||
-                        (!VIEWS_IGNORED.contains(deckView.getSource())
-                                && DOMAIN_IGNORED.stream().noneMatch(deckView.getSource()::contains)
-                                && !deckView.getSource().endsWith(deckId)))
+                                    (!VIEWS_IGNORED.contains(deckView.getSource())
+                                     && DOMAIN_IGNORED.stream().noneMatch(deckView.getSource()::contains)
+                                     && !deckView.getSource().endsWith(deckId)))
                 .count()
                 : 0;
     }

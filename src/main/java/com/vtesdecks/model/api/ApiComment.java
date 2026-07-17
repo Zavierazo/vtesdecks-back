@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -18,4 +19,5 @@ public class ApiComment {
     private String profileImage;
     private boolean createdBySupporter = false;
     private boolean createdByCurrentUser = false;
+    private List<ApiReactionSummary> reactions;
 }

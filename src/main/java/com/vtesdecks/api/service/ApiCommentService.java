@@ -2,18 +2,22 @@ package com.vtesdecks.api.service;
 
 import com.vtesdecks.api.mapper.ApiCommonMapper;
 import com.vtesdecks.api.util.ApiUtils;
+import com.vtesdecks.enums.ReactionTargetType;
 import com.vtesdecks.jpa.entity.CommentEntity;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.CommentRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiComment;
+import com.vtesdecks.model.api.ApiReactionSummary;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.vtesdecks.api.util.ApiUtils.getProfileImage;
@@ -26,6 +30,7 @@ public class ApiCommentService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final ApiUserNotificationService userNotificationService;
+    private final ApiReactionService reactionService;
 
 
     public List<ApiComment> getComments(String deckId) {
@@ -34,7 +39,17 @@ public class ApiCommentService {
         for (CommentEntity commentEntity : getActiveComments(getPageIdentifier(deckId))) {
             comments.add(getComment(user, Optional.of(commentEntity)));
         }
+        fillReactions(user, comments);
         return comments;
+    }
+
+    private void fillReactions(UserEntity user, List<ApiComment> comments) {
+        List<String> commentIds = comments.stream().map(comment -> String.valueOf(comment.getId())).toList();
+        Map<String, List<ApiReactionSummary>> reactionsByComment =
+                reactionService.getReactionsBulk(ReactionTargetType.COMMENT, commentIds, user != null ? user.getId() : null);
+        for (ApiComment comment : comments) {
+            comment.setReactions(reactionsByComment.getOrDefault(String.valueOf(comment.getId()), Collections.emptyList()));
+        }
     }
 
     public ApiComment addComment(ApiComment comment) {
@@ -49,7 +64,11 @@ public class ApiCommentService {
             commentEntity.setDeleted(false);
             commentRepository.save(commentEntity);
             sendNotifications(comment, commentEntity);
-            return getComment(user, commentRepository.findById(commentEntity.getId()));
+            ApiComment apiComment = getComment(user, commentRepository.findById(commentEntity.getId()));
+            if (apiComment != null) {
+                apiComment.setReactions(Collections.emptyList());
+            }
+            return apiComment;
         }
         return null;
     }
@@ -75,7 +94,11 @@ public class ApiCommentService {
                 commentEntity.setContent(comment.getContent());
                 commentRepository.save(commentEntity);
                 userNotificationService.updateCommentNotification(comment.getId(), comment.getContent());
-                return getComment(user, commentRepository.findById(commentEntity.getId()));
+                ApiComment apiComment = getComment(user, commentRepository.findById(commentEntity.getId()));
+                if (apiComment != null) {
+                    apiComment.setReactions(reactionService.getReactions(ReactionTargetType.COMMENT, String.valueOf(commentEntity.getId()), user.getId()));
+                }
+                return apiComment;
             }
         }
         return null;

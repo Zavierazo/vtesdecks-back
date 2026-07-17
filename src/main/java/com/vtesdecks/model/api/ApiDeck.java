@@ -3,6 +3,7 @@ package com.vtesdecks.model.api;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.vtesdecks.cache.indexable.deck.DeckType;
+import com.vtesdecks.enums.ReactionType;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -46,6 +47,8 @@ public class ApiDeck {
     private Set<ApiCardErrata> erratas;
     private Set<ApiDeckWarning> warnings;
     private List<String> tags;
+    private List<ApiReactionSummary> reactions;
+    private ReactionType reaction;
     private LocalDateTime creationDate;
     private LocalDateTime modifyDate;
     private ApiDeckArchetype archetype;

@@ -1,12 +1,14 @@
 package com.vtesdecks.api.mapper;
 
 import com.vtesdecks.api.service.ApiCollectionService;
+import com.vtesdecks.api.service.ApiReactionService;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.CollectionTracker;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.cache.redis.repositories.DeckArchetypeRedisRepository;
+import com.vtesdecks.enums.ReactionTargetType;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.model.api.ApiCard;
@@ -46,6 +48,8 @@ public abstract class ApiDeckMapper {
     private CurrencyExchangeService currencyExchangeService;
     @Autowired
     private DeckArchetypeRedisRepository deckArchetypeRedisRepository;
+    @Autowired
+    private ApiReactionService apiReactionService;
 
 
     @BeanMapping(qualifiedByName = "map")
@@ -66,6 +70,7 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "extra", ignore = true)
     @Mapping(target = "archetype", ignore = true)
     @Mapping(target = "user", source = "deck", qualifiedByName = "mapDeckUser")
+    @Mapping(target = "reaction", source = "reaction")
     public abstract ApiDeck mapSummary(Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode);
 
     @Named("map")
@@ -83,6 +88,7 @@ public abstract class ApiDeckMapper {
             Optional<DeckUserEntity> deckUser = deckUserRepository.findById(new DeckUserEntity.DeckUserId(userId, deck.getId()));
             deckUser.ifPresent(deckUserEntity -> api.setRated(deckUserEntity.getRate() != null));
         }
+        api.setReactions(apiReactionService.getReactions(ReactionTargetType.DECK, deck.getId(), userId));
         if (collectionTracker || (Boolean.TRUE.equals(api.getOwner()) && Boolean.TRUE.equals(api.getCollection()))) {
             Map<Integer, Integer> collectionMap = apiCollectionService.getCollectionCardsMap();
             for (ApiCard apiCard : api.getCrypt()) {

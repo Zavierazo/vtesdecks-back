@@ -2,11 +2,14 @@ package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.ApiCommentService;
 import com.vtesdecks.api.service.ApiDeckService;
+import com.vtesdecks.api.service.ApiReactionService;
 import com.vtesdecks.api.service.ApiUserService;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiComment;
+import com.vtesdecks.model.api.ApiCommentReaction;
+import com.vtesdecks.model.api.ApiDeckReaction;
 import com.vtesdecks.model.api.ApiFavoriteDeck;
 import com.vtesdecks.model.api.ApiFollowUser;
 import com.vtesdecks.model.api.ApiRateDeck;
@@ -49,6 +52,8 @@ public class ApiUserController {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private ApiUserService userService;
+    @Autowired
+    private ApiReactionService apiReactionService;
 
     @RequestMapping(method = RequestMethod.GET, value = "/validate", produces = {
             MediaType.APPLICATION_JSON_VALUE
@@ -101,6 +106,24 @@ public class ApiUserController {
     public Boolean bookmark(@RequestBody ApiFavoriteDeck favoriteDeck) {
         log.debug("Deck bookmark {} user {}", favoriteDeck, ApiUtils.extractUserId());
         return deckUserService.favorite(ApiUtils.extractUserId(), favoriteDeck.getDeck(), favoriteDeck.getFavorite());
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/decks/reaction", produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public Boolean deckReaction(@RequestBody ApiDeckReaction deckReaction) {
+        log.debug("Deck reaction {} user {}", deckReaction, ApiUtils.extractUserId());
+        return apiReactionService.reactDeck(ApiUtils.extractUserId(), deckReaction.getDeck(), deckReaction.getReaction(), deckReaction.getActive());
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/comments/{id}/reaction", produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public Boolean commentReaction(@PathVariable Integer id, @RequestBody ApiCommentReaction commentReaction) {
+        log.debug("Comment {} reaction {} user {}", id, commentReaction, ApiUtils.extractUserId());
+        return apiReactionService.reactComment(ApiUtils.extractUserId(), id, commentReaction.getReaction(), commentReaction.getActive());
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/comments", produces = {
