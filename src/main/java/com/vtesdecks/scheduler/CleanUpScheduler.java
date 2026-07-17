@@ -7,7 +7,6 @@ import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.jpa.repositories.DeckViewRepository;
-import com.vtesdecks.service.AiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,7 +28,6 @@ public class CleanUpScheduler {
     private final DeckCardRepository deckCardRepository;
     private final DeckUserRepository deckUserRepository;
     private final DeckCardHistoryRepository deckCardHistoryRepository;
-    private final AiService aiService;
 
     @Scheduled(cron = "${jobs.deckViewCleanCron:0 0 2 * * *}")
     @Transactional
@@ -77,11 +75,5 @@ public class CleanUpScheduler {
                 deckRepository.flush();
             }
         }
-    }
-
-    @Scheduled(cron = "${jobs.deckCleanCron:0 0 1 * * *}")
-    @Transactional
-    public void aiCleanScheduler() {
-        aiService.cleanupOldAsks();
     }
 }
