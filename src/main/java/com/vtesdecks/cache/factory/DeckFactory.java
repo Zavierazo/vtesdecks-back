@@ -63,37 +63,18 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 @Component
 public class DeckFactory {
     private static final int DETAILED_DESCRIPTION_MIN_LENGTH = 1000;
-    private static final String DETAILED_PARAM = "detailed=true";
     private static final List<String> DOMAIN_IGNORED = Lists.newArrayList("localhost", "beta.vtesdecks.com");
-    private static final List<String> VIEWS_IGNORED =
+    // Listing/home pages whose visits must not inflate a deck's popularity (views last month).
+    private static final List<String> IGNORED_LISTING_PATHS =
             Lists.newArrayList("https://vtesdecks.com/",
                     "https://vtesdecks.com/archetypes",
                     "https://vtesdecks.com/decks",
-                    "https://vtesdecks.com/decks?order=NEWEST",
-                    "https://vtesdecks.com/decks?order=POPULAR",
-                    "https://vtesdecks.com/decks?type=ALL",
-                    "https://vtesdecks.com/decks?type=ALL&order=NEWEST",
-                    "https://vtesdecks.com/decks?type=ALL&order=POPULAR",
-                    "https://vtesdecks.com/decks?type=TOURNAMENT&order=NEWEST",
-                    "https://vtesdecks.com/decks?type=TOURNAMENT&order=POPULAR",
-                    "https://vtesdecks.com/decks?type=TOURNAMENT",
-                    "https://vtesdecks.com/decks?type=COMMUNITY&order=NEWEST",
-                    "https://vtesdecks.com/decks?type=COMMUNITY&order=POPULAR",
-                    "https://vtesdecks.com/decks?type=COMMUNITY",
                     "/",
                     "/archetypes",
-                    "/decks",
-                    "/decks?order=NEWEST",
-                    "/decks?order=POPULAR",
-                    "/decks?type=ALL",
-                    "/decks?type=ALL&order=NEWEST",
-                    "/decks?type=ALL&order=POPULAR",
-                    "/decks?type=TOURNAMENT&order=NEWEST",
-                    "/decks?type=TOURNAMENT&order=POPULAR",
-                    "/decks?type=TOURNAMENT",
-                    "/decks?type=COMMUNITY&order=NEWEST",
-                    "/decks?type=COMMUNITY&order=POPULAR",
-                    "/decks?type=COMMUNITY");
+                    "/decks");
+    // A listing visit is ignored only when it has no filter, or exclusively these list/sort filters.
+    // Any other filter (clan, discipline, cards, ...) makes it count as a genuine visit.
+    private static final Set<String> IGNORED_LISTING_PARAMS = Set.of("type", "order", "detailed");
     @Autowired
     private DeckUserRepository deckUserRepository;
     @Autowired
@@ -344,28 +325,42 @@ public class DeckFactory {
         return views != null
                 ? views
                 .stream()
-                .filter(deckView -> deckView.getSource() == null ||
-                                    (!VIEWS_IGNORED.contains(withoutDetailedParam(deckView.getSource()))
-                                     && DOMAIN_IGNORED.stream().noneMatch(deckView.getSource()::contains)
-                                     && !deckView.getSource().endsWith(deckId)))
+                .filter(deckView -> isCountableView(deckView.getSource(), deckId))
                 .count()
                 : 0;
     }
 
     /**
-     * Removes the {@code detailed=true} filter from a listing-page source URL so that a currently
-     * ignored listing combined with the detailed filter is also ignored, while leaving any other
-     * filter combination that happens to include {@code detailed=true} untouched (and therefore
-     * still counted). Position of the parameter within the query string does not matter.
+     * A view counts towards popularity unless it comes from an ignored domain, from the deck itself,
+     * or from a listing/home page that carries no filter or only list/sort filters ({@code type},
+     * {@code order}, {@code detailed}). A listing visit that uses any other filter (clan, discipline,
+     * cards, ...) is counted as a genuine visit.
      */
-    private String withoutDetailedParam(String source) {
-        if (source == null || !source.contains(DETAILED_PARAM)) {
-            return source;
+    private boolean isCountableView(String source, String deckId) {
+        if (source == null) {
+            return true;
         }
-        return source
-                .replace("&" + DETAILED_PARAM, "")
-                .replace(DETAILED_PARAM + "&", "")
-                .replace("?" + DETAILED_PARAM, "");
+        if (DOMAIN_IGNORED.stream().anyMatch(source::contains) || source.endsWith(deckId)) {
+            return false;
+        }
+        return !isIgnoredListingView(source);
+    }
+
+    private boolean isIgnoredListingView(String source) {
+        String[] pathAndQuery = source.split("\\?", 2);
+        if (!IGNORED_LISTING_PATHS.contains(pathAndQuery[0])) {
+            return false;
+        }
+        if (pathAndQuery.length == 1 || pathAndQuery[1].isEmpty()) {
+            return true;
+        }
+        for (String param : pathAndQuery[1].split("&")) {
+            String key = param.split("=", 2)[0];
+            if (!IGNORED_LISTING_PARAMS.contains(key)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private Stats getDeckStats(DeckEntity deck, List<Card> cards) {
