@@ -63,6 +63,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 @Component
 public class DeckFactory {
     private static final int DETAILED_DESCRIPTION_MIN_LENGTH = 1000;
+    private static final String DETAILED_PARAM = "detailed=true";
     private static final List<String> DOMAIN_IGNORED = Lists.newArrayList("localhost", "beta.vtesdecks.com");
     private static final List<String> VIEWS_IGNORED =
             Lists.newArrayList("https://vtesdecks.com/",
@@ -344,11 +345,27 @@ public class DeckFactory {
                 ? views
                 .stream()
                 .filter(deckView -> deckView.getSource() == null ||
-                                    (!VIEWS_IGNORED.contains(deckView.getSource())
+                                    (!VIEWS_IGNORED.contains(withoutDetailedParam(deckView.getSource()))
                                      && DOMAIN_IGNORED.stream().noneMatch(deckView.getSource()::contains)
                                      && !deckView.getSource().endsWith(deckId)))
                 .count()
                 : 0;
+    }
+
+    /**
+     * Removes the {@code detailed=true} filter from a listing-page source URL so that a currently
+     * ignored listing combined with the detailed filter is also ignored, while leaving any other
+     * filter combination that happens to include {@code detailed=true} untouched (and therefore
+     * still counted). Position of the parameter within the query string does not matter.
+     */
+    private String withoutDetailedParam(String source) {
+        if (source == null || !source.contains(DETAILED_PARAM)) {
+            return source;
+        }
+        return source
+                .replace("&" + DETAILED_PARAM, "")
+                .replace(DETAILED_PARAM + "&", "")
+                .replace("?" + DETAILED_PARAM, "");
     }
 
     private Stats getDeckStats(DeckEntity deck, List<Card> cards) {
