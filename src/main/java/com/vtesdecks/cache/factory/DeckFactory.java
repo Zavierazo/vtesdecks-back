@@ -51,8 +51,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
@@ -274,18 +272,6 @@ public class DeckFactory {
             }
         }
         return featured;
-    }
-
-    private <T> Set<T> collectFromCards(List<Card> cards,
-                                        Predicate<Integer> idPredicate,
-                                        Function<Integer, Collection<T>> getter) {
-        return cards.stream()
-                .map(Card::getId)
-                .filter(idPredicate::test)
-                .map(getter)
-                .filter(Objects::nonNull)
-                .flatMap(Collection::stream)
-                .collect(Collectors.toSet());
     }
 
     private Set<String> intersection(Set<String> set1, Set<String> set2) {

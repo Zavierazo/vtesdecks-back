@@ -155,7 +155,7 @@ public class DeckArchetypeService {
                         .build())) {
                     List<Deck> similarTournamentDecks = tournamentResultSet.stream()
                             .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(candidateDeck, candidateVector, target, CosineSimilarityUtils.getVector(target))))
-                            .filter(pair -> pair.getValue() >= 0.5)
+                            .filter(pair -> pair.getValue() > 0.5)
                             .map(Pair::getKey)
                             .toList();
                     visitedDeckIds.addAll(similarTournamentDecks.stream().map(Deck::getId).toList());
