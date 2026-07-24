@@ -53,6 +53,7 @@ public enum LibraryTaint {
     DEMONSTRATE("Demon", "demon with"),
     MAGE("Mage", "mage with"),
     GARGOYLE("Gargoyle", "gargoyle (creature )?with"),
+    TRIFLE("Trifle", "trifle\\."),
     ADDITIONAL_MASTER_PHASE("+Master Phase", "get \\+\\d master phase action|receives two master phase actions|get an additional master phase action");
 
     @Getter

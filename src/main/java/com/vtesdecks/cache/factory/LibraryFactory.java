@@ -34,8 +34,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
-
 @Mapper(componentModel = "spring")
 public abstract class LibraryFactory {
     @Autowired
@@ -79,12 +77,12 @@ public abstract class LibraryFactory {
             List<BigDecimal> priceList = cardShopList.stream()
                     .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
                     .filter(CardShopEntity::isInStock)
-                    .map(cardShop -> currencyExchangeService.convert(cardShop.getPrice(), cardShop.getCurrency(), DEFAULT_CURRENCY))
+                    .map(CardShopEntity::getPriceDefaultCurrency)
                     .toList();
             if (priceList.isEmpty()) {
                 priceList = cardShopList.stream()
                         .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
-                        .map(cardShop -> currencyExchangeService.convert(cardShop.getPrice(), cardShop.getCurrency(), DEFAULT_CURRENCY))
+                        .map(CardShopEntity::getPriceDefaultCurrency)
                         .toList();
             }
             library.setMinPrice(priceList.stream().min(BigDecimal::compareTo).orElse(null));

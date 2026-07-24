@@ -29,8 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
-
 @Mapper(componentModel = "spring")
 public abstract class CryptFactory {
     @Autowired
@@ -70,12 +68,12 @@ public abstract class CryptFactory {
             List<BigDecimal> priceList = cardShopList.stream()
                     .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
                     .filter(CardShopEntity::isInStock)
-                    .map(cardShop -> currencyExchangeService.convert(cardShop.getPrice(), cardShop.getCurrency(), DEFAULT_CURRENCY))
+                    .map(CardShopEntity::getPriceDefaultCurrency)
                     .toList();
             if (priceList.isEmpty()) {
                 priceList = cardShopList.stream()
                         .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
-                        .map(cardShop -> currencyExchangeService.convert(cardShop.getPrice(), cardShop.getCurrency(), DEFAULT_CURRENCY))
+                        .map(CardShopEntity::getPriceDefaultCurrency)
                         .toList();
             }
             crypt.setMinPrice(priceList.stream().min(BigDecimal::compareTo).orElse(null));
