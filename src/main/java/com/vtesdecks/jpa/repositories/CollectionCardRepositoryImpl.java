@@ -1,6 +1,7 @@
 package com.vtesdecks.jpa.repositories;// CollectionCardRepositoryImpl.java
 
 import com.google.common.base.Splitter;
+import com.vtesdecks.jpa.entity.CardMinPriceEntity;
 import com.vtesdecks.jpa.entity.CollectionCardEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -12,7 +13,7 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import lombok.RequiredArgsConstructor;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -24,15 +25,12 @@ import java.util.List;
 import java.util.Map;
 
 @Repository
-@RequiredArgsConstructor
 public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCustom {
 
     public static final String CARD_ID = "cardId";
     public static final String SET = "set";
     public static final String BINDER_ID = "binderId";
     public static final String NUMBER = "number";
-
-    private final CardShopMinPriceCriteria cardShopMinPriceCriteria;
 
     @PersistenceContext
     private EntityManager em;
@@ -204,12 +202,17 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                 .otherwise(cryptJoin.get("name"));
     }
 
-    private Expression<? extends Number> getCardPriceJoin(CriteriaQuery<?> cq, CriteriaBuilder cb, Root<CollectionCardEntity> root, boolean totalPrice, Expression<Number> numberExpression) {
-        Expression<BigDecimal> minPrice = cardShopMinPriceCriteria.minPriceExpression(cq, cb, root.get(CARD_ID));
+    private static Expression<? extends Number> getCardPriceJoin(CriteriaQuery<?> cq, CriteriaBuilder cb, Root<CollectionCardEntity> root, boolean totalPrice, Expression<Number> numberExpression) {
+        // card_min_price holds the same price shown to users (see CardMinPriceService), so
+        // sorting stays consistent with the displayed value at the cost of a PK lookup per row
+        Subquery<BigDecimal> minPriceSubquery = cq.subquery(BigDecimal.class);
+        Root<CardMinPriceEntity> priceRoot = minPriceSubquery.from(CardMinPriceEntity.class);
+        minPriceSubquery.select(priceRoot.get("minPrice"));
+        minPriceSubquery.where(cb.equal(priceRoot.get(CARD_ID), root.get(CARD_ID)));
         if (totalPrice) {
-            return cb.prod(minPrice, numberExpression);
+            return cb.prod(minPriceSubquery, numberExpression);
         }
-        return minPrice;
+        return minPriceSubquery;
     }
 
     private static List<Predicate> getPredicates(CriteriaBuilder cb, Root<CollectionCardEntity> root, Integer collectionId, Map<String, String> filters) {
