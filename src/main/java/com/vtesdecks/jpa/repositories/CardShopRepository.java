@@ -20,6 +20,4 @@ public interface CardShopRepository extends JpaRepository<CardShopEntity, Intege
     CardShopEntity findByCardIdAndPlatformAndSet(Integer cardId, ShopPlatform platform, String set);
 
     CardShopEntity findByCardIdAndPlatformAndSetAndLocale(Integer cardId, ShopPlatform platform, String set, String locale);
-
-    List<CardShopEntity> findByPriceIsNotNullAndPriceDefaultCurrencyIsNull();
 }

@@ -9,6 +9,7 @@ import com.vtesdecks.model.api.ApiBaseCard;
 import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.dtc.Product;
+import com.vtesdecks.service.CurrencyExchangeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
@@ -24,6 +25,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 import static org.apache.commons.lang3.ObjectUtils.isEmpty;
 
 @Slf4j
@@ -41,6 +43,7 @@ public class DriveThruCardsScheduler {
     private final DTCClient dtcClient;
     private final ApiCardService apiCardService;
     private final CardShopRepository cardShopRepository;
+    private final CurrencyExchangeService currencyExchangeService;
 
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
@@ -173,6 +176,7 @@ public class DriveThruCardsScheduler {
                 .locale(null)
                 .price(price)
                 .currency(DOLLAR)
+                .priceDefaultCurrency(price != null ? currencyExchangeService.convert(price, DOLLAR, DEFAULT_CURRENCY) : null)
                 .inStock(true)
                 .build();
         log.trace("Scrapped card {}", cardShop);

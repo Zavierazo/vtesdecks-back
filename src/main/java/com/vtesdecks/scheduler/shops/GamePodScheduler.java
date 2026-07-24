@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -183,6 +184,8 @@ public class GamePodScheduler {
                 .locale(null)
                 .price(price)
                 .currency(EURO)
+                // Already in the default currency; scale 2 matches the DECIMAL(10,2) column round-trip
+                .priceDefaultCurrency(price != null ? price.setScale(2, RoundingMode.UP) : null)
                 .inStock(true)
                 .build();
         log.trace("Scrapped card {}", cardShop);

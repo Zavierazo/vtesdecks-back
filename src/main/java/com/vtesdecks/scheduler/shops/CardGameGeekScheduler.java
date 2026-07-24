@@ -31,6 +31,7 @@ import org.typesense.model.SearchResult;
 import org.typesense.model.SearchResultHit;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -418,6 +419,8 @@ public class CardGameGeekScheduler {
                 .locale(null)
                 .price(price)
                 .currency(EURO)
+                // Already in the default currency; scale 2 matches the DECIMAL(10,2) column round-trip
+                .priceDefaultCurrency(price.setScale(2, RoundingMode.UP))
                 .inStock(inStock)
                 .data(data)
                 .build());
