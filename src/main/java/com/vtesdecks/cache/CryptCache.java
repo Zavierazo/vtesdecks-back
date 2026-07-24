@@ -23,7 +23,6 @@ import com.vtesdecks.jpa.repositories.CryptRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.LimitedFormatRepository;
 import com.vtesdecks.model.CryptTaint;
-import com.vtesdecks.service.CardMinPriceService;
 import com.vtesdecks.util.Utils;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -35,10 +34,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
-import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -65,7 +61,6 @@ public class CryptCache {
     private final CardShopRepository cardShopRepository;
     private final CryptFactory cryptFactory;
     private final LimitedFormatRepository limitedFormatRepository;
-    private final CardMinPriceService cardMinPriceService;
     private final IndexedCollection<Crypt> cache = new ConcurrentIndexedCollection<>();
 
     @PostConstruct
@@ -106,11 +101,7 @@ public class CryptCache {
             if (!currentKeys.isEmpty()) {
                 log.warn("Deleting form index {}", currentKeys);
                 cache.removeIf(crypt -> currentKeys.contains(crypt.getId()));
-                cardMinPriceService.deleteMinPrices(currentKeys);
             }
-            Map<Integer, BigDecimal> minPrices = new HashMap<>();
-            cache.forEach(crypt -> minPrices.put(crypt.getId(), crypt.getMinPrice()));
-            cardMinPriceService.syncMinPrices(minPrices);
         } finally {
             stopWatch.stop();
             log.info("Index finished in {} ms. Colletion size is {}", stopWatch.lastTaskInfo().getTimeMillis(), cache.size());

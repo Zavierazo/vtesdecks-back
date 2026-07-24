@@ -2,8 +2,9 @@ package com.vtesdecks.jpa.repositories;
 
 import com.google.common.base.Splitter;
 import com.vtesdecks.enums.WishlistPriority;
-import com.vtesdecks.jpa.entity.CardMinPriceEntity;
+import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.WishlistCardEntity;
+import com.vtesdecks.model.ShopPlatform;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -13,6 +14,7 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.domain.Page;
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +35,9 @@ public class WishlistCardRepositoryImpl implements WishlistCardRepositoryCustom 
     private static final String NUMBER = "number";
     private static final String PRIORITY = "priority";
     private static final int CRYPT_ID_THRESHOLD = 200000;
+    private static final List<ShopPlatform> ENABLED_PLATFORMS = Arrays.stream(ShopPlatform.values())
+            .filter(ShopPlatform::isEnabled)
+            .toList();
 
     @PersistenceContext
     private EntityManager em;
@@ -86,12 +92,18 @@ public class WishlistCardRepositoryImpl implements WishlistCardRepositoryCustom 
     }
 
     private static Expression<? extends Number> getCardPriceJoin(CriteriaQuery<?> cq, CriteriaBuilder cb, Root<WishlistCardEntity> root, boolean totalPrice, Expression<Number> numberExpression) {
-        // card_min_price holds the same price shown to users (see CardMinPriceService), so
-        // sorting stays consistent with the displayed value at the cost of a PK lookup per row
+        // Same semantics as the price shown to users (see LibraryFactory/CryptFactory): price in
+        // the default currency, enabled platforms only, in-stock offers preferred over the rest
         Subquery<BigDecimal> minPriceSubquery = cq.subquery(BigDecimal.class);
-        Root<CardMinPriceEntity> priceRoot = minPriceSubquery.from(CardMinPriceEntity.class);
-        minPriceSubquery.select(priceRoot.get("minPrice"));
-        minPriceSubquery.where(cb.equal(priceRoot.get(CARD_ID), root.get(CARD_ID)));
+        Root<CardShopEntity> shopRoot = minPriceSubquery.from(CardShopEntity.class);
+        Path<BigDecimal> price = shopRoot.get("priceDefaultCurrency");
+        Expression<BigDecimal> inStockPrice = cb.<BigDecimal>selectCase()
+                .when(cb.isTrue(shopRoot.get("inStock")), price)
+                .otherwise(cb.nullLiteral(BigDecimal.class));
+        minPriceSubquery.select(cb.coalesce(cb.min(inStockPrice), cb.min(price)));
+        minPriceSubquery.where(
+                cb.equal(shopRoot.get(CARD_ID), root.get(CARD_ID)),
+                shopRoot.get("platform").in(ENABLED_PLATFORMS));
         if (totalPrice) {
             return cb.prod(minPriceSubquery, numberExpression);
         }

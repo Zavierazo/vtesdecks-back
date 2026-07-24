@@ -23,7 +23,6 @@ import com.vtesdecks.jpa.repositories.LibraryI18nRepository;
 import com.vtesdecks.jpa.repositories.LibraryRepository;
 import com.vtesdecks.jpa.repositories.LimitedFormatRepository;
 import com.vtesdecks.model.LibraryTaint;
-import com.vtesdecks.service.CardMinPriceService;
 import com.vtesdecks.util.Utils;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -35,10 +34,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
-import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -65,7 +61,6 @@ public class LibraryCache {
     private final CardShopRepository cardShopRepository;
     private final LibraryFactory libraryFactory;
     private final LimitedFormatRepository limitedFormatRepository;
-    private final CardMinPriceService cardMinPriceService;
     private final IndexedCollection<Library> cache = new ConcurrentIndexedCollection<>();
 
 
@@ -109,11 +104,7 @@ public class LibraryCache {
             if (!currentKeys.isEmpty()) {
                 log.warn("Deleting form index {}", currentKeys);
                 cache.removeIf(library -> currentKeys.contains(library.getId()));
-                cardMinPriceService.deleteMinPrices(currentKeys);
             }
-            Map<Integer, BigDecimal> minPrices = new HashMap<>();
-            cache.forEach(library -> minPrices.put(library.getId(), library.getMinPrice()));
-            cardMinPriceService.syncMinPrices(minPrices);
         } finally {
             stopWatch.stop();
             log.info("Index finished in {} ms. Colletion size is {}", stopWatch.lastTaskInfo().getTimeMillis(), cache.size());

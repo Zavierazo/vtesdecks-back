@@ -2,10 +2,12 @@ package com.vtesdecks.jpa.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.vtesdecks.jpa.entity.converter.JsonNodeConverter;
+import com.vtesdecks.jpa.entity.listener.CardShopEntityListener;
 import com.vtesdecks.model.ShopPlatform;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -25,11 +27,14 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "card_shop")
+@EntityListeners(CardShopEntityListener.class)
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(exclude = {"data", "creationDate", "modificationDate"})
+// priceDefaultCurrency is derived from price+currency on save, so it must not affect equality:
+// schedulers build detached entities without it and use equals() to decide whether to persist
+@EqualsAndHashCode(exclude = {"data", "creationDate", "modificationDate", "priceDefaultCurrency"})
 public class CardShopEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -56,6 +61,9 @@ public class CardShopEntity {
 
     @Column(name = "currency")
     private String currency;
+
+    @Column(name = "price_default_currency")
+    private BigDecimal priceDefaultCurrency;
 
     @Column(name = "in_stock", nullable = false)
     private boolean inStock;
