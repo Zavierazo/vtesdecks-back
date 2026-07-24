@@ -419,8 +419,7 @@ public class CardGameGeekScheduler {
                 .locale(null)
                 .price(price)
                 .currency(EURO)
-                // Already in the default currency; scale 2 matches the DECIMAL(10,2) column round-trip
-                .priceDefaultCurrency(price.setScale(2, RoundingMode.UP))
+                .priceDefaultCurrency(price != null ? price.setScale(2, RoundingMode.UP) : null)
                 .inStock(inStock)
                 .data(data)
                 .build());

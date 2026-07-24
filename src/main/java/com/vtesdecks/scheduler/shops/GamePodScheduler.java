@@ -184,7 +184,6 @@ public class GamePodScheduler {
                 .locale(null)
                 .price(price)
                 .currency(EURO)
-                // Already in the default currency; scale 2 matches the DECIMAL(10,2) column round-trip
                 .priceDefaultCurrency(price != null ? price.setScale(2, RoundingMode.UP) : null)
                 .inStock(true)
                 .build();

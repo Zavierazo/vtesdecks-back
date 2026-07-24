@@ -16,7 +16,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -162,9 +161,7 @@ public class MarketScheduler {
                 .locale(cardOffer.getLanguage())
                 .price(cardOffer.getPrice())
                 .currency(cardOffer.getCurrency())
-                // Scale 2 matches the DECIMAL(10,2) column round-trip (convert only scales when converting)
-                .priceDefaultCurrency(currencyExchangeService.convert(cardOffer.getPrice(), cardOffer.getCurrency(), DEFAULT_CURRENCY)
-                        .setScale(2, RoundingMode.UP))
+                .priceDefaultCurrency(cardOffer.getPrice() != null ? currencyExchangeService.convert(cardOffer.getPrice(), cardOffer.getCurrency(), DEFAULT_CURRENCY) : null)
                 .inStock(true)
                 .data(data)
                 .build());
