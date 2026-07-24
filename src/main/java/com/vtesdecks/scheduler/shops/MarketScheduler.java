@@ -8,6 +8,7 @@ import com.vtesdecks.jpa.repositories.CardShopRepository;
 import com.vtesdecks.model.ShopPlatform;
 import com.vtesdecks.model.market.CardOffer;
 import com.vtesdecks.model.market.CardOffersResponse;
+import com.vtesdecks.service.CurrencyExchangeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,6 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 @Slf4j
@@ -38,6 +40,7 @@ public class MarketScheduler {
     private final CardShopRepository cardShopRepository;
     private final MarketClient marketClient;
     private final ObjectMapper objectMapper;
+    private final CurrencyExchangeService currencyExchangeService;
 
     @Scheduled(cron = "0 0 0/6 * * *")
     @Transactional
@@ -158,6 +161,7 @@ public class MarketScheduler {
                 .locale(cardOffer.getLanguage())
                 .price(cardOffer.getPrice())
                 .currency(cardOffer.getCurrency())
+                .priceDefaultCurrency(cardOffer.getPrice() != null ? currencyExchangeService.convert(cardOffer.getPrice(), cardOffer.getCurrency(), DEFAULT_CURRENCY) : null)
                 .inStock(true)
                 .data(data)
                 .build());

@@ -4,6 +4,7 @@ import com.google.common.base.Splitter;
 import com.vtesdecks.enums.WishlistPriority;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.WishlistCardEntity;
+import com.vtesdecks.model.ShopPlatform;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -13,6 +14,7 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.domain.Page;
@@ -20,7 +22,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +35,9 @@ public class WishlistCardRepositoryImpl implements WishlistCardRepositoryCustom 
     private static final String NUMBER = "number";
     private static final String PRIORITY = "priority";
     private static final int CRYPT_ID_THRESHOLD = 200000;
+    private static final List<ShopPlatform> ENABLED_PLATFORMS = Arrays.stream(ShopPlatform.values())
+            .filter(ShopPlatform::isEnabled)
+            .toList();
 
     @PersistenceContext
     private EntityManager em;
@@ -55,7 +62,7 @@ public class WishlistCardRepositoryImpl implements WishlistCardRepositoryCustom 
                     orders.add(cb.asc(nullsLast));
                     orders.add(order.isAscending() ? cb.asc(root.get(PRIORITY)) : cb.desc(root.get(PRIORITY)));
                 } else if (order.getProperty().equals("price") || order.getProperty().equals("totalPrice")) {
-                    Expression<Number> cardPrice = getCardPriceJoin(cq, cb, root, order.getProperty().equals("totalPrice"), root.get(NUMBER));
+                    Expression<? extends Number> cardPrice = getCardPriceJoin(cq, cb, root, order.getProperty().equals("totalPrice"), root.get(NUMBER));
                     orders.add(order.isAscending() ? cb.asc(cardPrice) : cb.desc(cardPrice));
                 } else {
                     orders.add(order.isAscending() ? cb.asc(root.get(order.getProperty())) : cb.desc(root.get(order.getProperty())));
@@ -84,11 +91,19 @@ public class WishlistCardRepositoryImpl implements WishlistCardRepositoryCustom 
                 .otherwise(cryptJoin.get("name"));
     }
 
-    private static Expression<Number> getCardPriceJoin(CriteriaQuery<?> cq, CriteriaBuilder cb, Root<WishlistCardEntity> root, boolean totalPrice, Expression<Number> numberExpression) {
-        Subquery<Number> minPriceSubquery = cq.subquery(Number.class);
+    private static Expression<? extends Number> getCardPriceJoin(CriteriaQuery<?> cq, CriteriaBuilder cb, Root<WishlistCardEntity> root, boolean totalPrice, Expression<Number> numberExpression) {
+        // Same semantics as the price shown to users (see LibraryFactory/CryptFactory): price in
+        // the default currency, enabled platforms only, in-stock offers preferred over the rest
+        Subquery<BigDecimal> minPriceSubquery = cq.subquery(BigDecimal.class);
         Root<CardShopEntity> shopRoot = minPriceSubquery.from(CardShopEntity.class);
-        minPriceSubquery.select(cb.min(shopRoot.get("price")));
-        minPriceSubquery.where(cb.equal(shopRoot.get(CARD_ID), root.get(CARD_ID)));
+        Path<BigDecimal> price = shopRoot.get("priceDefaultCurrency");
+        Expression<BigDecimal> inStockPrice = cb.<BigDecimal>selectCase()
+                .when(cb.isTrue(shopRoot.get("inStock")), price)
+                .otherwise(cb.nullLiteral(BigDecimal.class));
+        minPriceSubquery.select(cb.coalesce(cb.min(inStockPrice), cb.min(price)));
+        minPriceSubquery.where(
+                cb.equal(shopRoot.get(CARD_ID), root.get(CARD_ID)),
+                shopRoot.get("platform").in(ENABLED_PLATFORMS));
         if (totalPrice) {
             return cb.prod(minPriceSubquery, numberExpression);
         }

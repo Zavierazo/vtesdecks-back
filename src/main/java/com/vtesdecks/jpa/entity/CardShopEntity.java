@@ -57,6 +57,9 @@ public class CardShopEntity {
     @Column(name = "currency")
     private String currency;
 
+    @Column(name = "price_default_currency")
+    private BigDecimal priceDefaultCurrency;
+
     @Column(name = "in_stock", nullable = false)
     private boolean inStock;
 
