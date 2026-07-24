@@ -1,7 +1,6 @@
 package com.vtesdecks.jpa.repositories;// CollectionCardRepositoryImpl.java
 
 import com.google.common.base.Splitter;
-import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.CollectionCardEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -13,23 +12,27 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import jakarta.persistence.criteria.Subquery;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 @Repository
+@RequiredArgsConstructor
 public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCustom {
 
     public static final String CARD_ID = "cardId";
     public static final String SET = "set";
     public static final String BINDER_ID = "binderId";
     public static final String NUMBER = "number";
+
+    private final CardShopMinPriceCriteria cardShopMinPriceCriteria;
 
     @PersistenceContext
     private EntityManager em;
@@ -70,7 +73,7 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                 } else if (order.getProperty().equals("price") || order.getProperty().equals("totalPrice")) {
                     // In a GROUP BY context, use SUM(number) to comply with sql_mode=ONLY_FULL_GROUP_BY
                     Expression<Number> groupedNumber = cb.sum(root.get(NUMBER));
-                    Expression<Number> cardPrice = getCardPriceJoin(cq, cb, root, order.getProperty().equals("totalPrice"), groupedNumber);
+                    Expression<? extends Number> cardPrice = getCardPriceJoin(cq, cb, root, order.getProperty().equals("totalPrice"), groupedNumber);
                     if (order.isAscending()) {
                         orders.add(cb.asc(cardPrice));
                     } else {
@@ -164,7 +167,7 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                         orders.add(cb.desc(cardName));
                     }
                 } else if (order.getProperty().equals("price") || order.getProperty().equals("totalPrice")) {
-                    Expression<Number> cardPrice = getCardPriceJoin(cq, cb, root, order.getProperty().equals("totalPrice"), root.get(NUMBER));
+                    Expression<? extends Number> cardPrice = getCardPriceJoin(cq, cb, root, order.getProperty().equals("totalPrice"), root.get(NUMBER));
                     if (order.isAscending()) {
                         orders.add(cb.asc(cardPrice));
                     } else {
@@ -201,15 +204,12 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                 .otherwise(cryptJoin.get("name"));
     }
 
-    private static Expression<Number> getCardPriceJoin(CriteriaQuery<?> cq, CriteriaBuilder cb, Root<CollectionCardEntity> root, boolean totalPrice, Expression<Number> numberExpression) {
-        Subquery<Number> minPriceSubquery = cq.subquery(Number.class);
-        Root<CardShopEntity> shopRoot = minPriceSubquery.from(CardShopEntity.class);
-        minPriceSubquery.select(cb.min(shopRoot.get("price")));
-        minPriceSubquery.where(cb.equal(shopRoot.get(CARD_ID), root.get(CARD_ID)));
+    private Expression<? extends Number> getCardPriceJoin(CriteriaQuery<?> cq, CriteriaBuilder cb, Root<CollectionCardEntity> root, boolean totalPrice, Expression<Number> numberExpression) {
+        Expression<BigDecimal> minPrice = cardShopMinPriceCriteria.minPriceExpression(cq, cb, root.get(CARD_ID));
         if (totalPrice) {
-            return cb.prod(minPriceSubquery, numberExpression);
+            return cb.prod(minPrice, numberExpression);
         }
-        return minPriceSubquery;
+        return minPrice;
     }
 
     private static List<Predicate> getPredicates(CriteriaBuilder cb, Root<CollectionCardEntity> root, Integer collectionId, Map<String, String> filters) {
