@@ -1,4 +1,4 @@
-package com.vtesdecks.scheduler;
+package com.vtesdecks.scheduler.tournament;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,9 +46,9 @@ import java.util.regex.Pattern;
  * Imports tournament winning decks published in the
  * <a href="https://github.com/gurchon-hall/eternal-vigilance">eternal-vigilance</a> repository.
  * <p>
- * Decks are only imported when they do not already come from the legacy
- * {@code vekn.fr/decks/twd.htm} scrap ({@link TournamentDeckScheduler}) and are not manually
- * verified, so curated/verified data is never overwritten.
+ * Decks are only imported when they do not already come from the TWDA import
+ * ({@link TournamentDeckScheduler}, which keeps the {@code vekn.fr/decks/twd.htm} source ids) and
+ * are not manually verified, so curated/verified data is never overwritten.
  */
 @Slf4j
 @Component

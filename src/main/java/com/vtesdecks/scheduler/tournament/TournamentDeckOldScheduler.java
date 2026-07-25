@@ -1,4 +1,4 @@
-package com.vtesdecks.scheduler;
+package com.vtesdecks.scheduler.tournament;
 
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,10 +46,15 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Legacy tournament winning decks scraper of {@code vekn.fr/decks/twd.htm}, superseded by the
+ * twda.json import ({@link TournamentDeckScheduler}). Kept only as a manual fallback via the
+ * admin endpoint; its schedule is disabled.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class TournamentDeckScheduler {
+public class TournamentDeckOldScheduler {
 
     private static final DateTimeFormatter FORMATTER_TOURNAMENT = DateTimeFormatter.ofPattern("MMMM d yyyy", Locale.ENGLISH);
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", Locale.ENGLISH);
@@ -70,8 +74,8 @@ public class TournamentDeckScheduler {
     private final DeckCardRepository deckCardRepository;
     private final ApiCardService apiCardService;
 
-    //Update tournament decks once a day at 06:30
-    @Scheduled(cron = "${jobs.scrappingDecksCron:0 30 6 * * *}")
+    //Disabled: replaced by the twda.json import (TournamentDeckScheduler)
+    //@Scheduled(cron = "${jobs.scrappingDecksCron:0 30 6 * * *}")
     @Transactional
     public void scrappingDecks() {
         log.info("Starting tournament decks scrapping...");

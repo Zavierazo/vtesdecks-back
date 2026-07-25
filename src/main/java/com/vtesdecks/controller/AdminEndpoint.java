@@ -5,14 +5,15 @@ import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import com.vtesdecks.scheduler.PatreonReminderScheduler;
 import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
-import com.vtesdecks.scheduler.TournamentDeckScheduler;
-import com.vtesdecks.scheduler.TournamentEternalVigilanceDeckScheduler;
 import com.vtesdecks.scheduler.UserMonthScheduler;
 import com.vtesdecks.scheduler.VtesdleTodayScheduler;
 import com.vtesdecks.scheduler.shops.CardGameGeekScheduler;
 import com.vtesdecks.scheduler.shops.DriveThruCardsScheduler;
 import com.vtesdecks.scheduler.shops.GamePodScheduler;
 import com.vtesdecks.scheduler.shops.MarketScheduler;
+import com.vtesdecks.scheduler.tournament.TournamentDeckOldScheduler;
+import com.vtesdecks.scheduler.tournament.TournamentDeckScheduler;
+import com.vtesdecks.scheduler.tournament.TournamentEternalVigilanceDeckScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminEndpoint {
     private final CleanUpScheduler cleanUpScheduler;
     private final TournamentDeckScheduler tournamentDeckScheduler;
+    private final TournamentDeckOldScheduler tournamentDeckOldScheduler;
     private final TournamentEternalVigilanceDeckScheduler tournamentEternalVigilanceDeckScheduler;
     private final DriveThruCardsScheduler driveThruCardsScheduler;
     private final GamePodScheduler gamePodScheduler;
@@ -60,6 +62,14 @@ public class AdminEndpoint {
     })
     public String scrappingDecks() {
         tournamentDeckScheduler.scrappingDecks();
+        return "OK";
+    }
+
+    @GetMapping(value = "/scheduler/scrap_decks_old", produces = {
+            MediaType.TEXT_PLAIN_VALUE
+    })
+    public String scrappingDecksOld() {
+        tournamentDeckOldScheduler.scrappingDecks();
         return "OK";
     }
 
