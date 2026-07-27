@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
  * Manually verified decks are still scanned, but never modified: any difference against the
  * archive is only logged as a warning.
  * <p>
- * After each import, decks whose deck and deck_card rows have not been modified for a month are
+ * While scanning, decks whose deck and deck_card rows have not been modified for a month are
  * automatically promoted to verified.
  */
 @Slf4j
@@ -96,43 +96,7 @@ public class TournamentDeckScheduler {
         } catch (Exception e) {
             log.error("Unable to import TWDA decks", e);
         }
-        autoVerifyStaleDecks();
         log.info("Finished tournament decks import from TWDA");
-    }
-
-    /**
-     * Tournament decks left untouched by the archive import for a month are considered stable and
-     * promoted to verified, which locks them against future automatic modifications. Runs after
-     * the import so decks changed by the current run are excluded by their fresh timestamps.
-     */
-    void autoVerifyStaleDecks() {
-        try {
-            LocalDateTime threshold = LocalDateTime.now().minusMonths(1);
-            int verifiedCount = 0;
-            for (DeckEntity deck : deckRepository.findAll()) {
-                if (deck.getType() != DeckType.TOURNAMENT
-                        || Boolean.TRUE.equals(deck.getVerified())
-                        || Boolean.TRUE.equals(deck.getDeleted())
-                        || deck.getModificationDate() == null
-                        || !deck.getModificationDate().isBefore(threshold)) {
-                    continue;
-                }
-                boolean cardsStale = deckCardRepository.findByIdDeckId(deck.getId()).stream()
-                        .allMatch(card -> card.getModificationDate() != null && card.getModificationDate().isBefore(threshold));
-                if (!cardsStale) {
-                    continue;
-                }
-                deck.setVerified(true);
-                deckRepository.saveAndFlush(deck);
-                log.debug("Auto-verified deck {}", deck.getId());
-                verifiedCount++;
-            }
-            if (verifiedCount > 0) {
-                log.info("Auto-verified {} tournament decks unmodified for a month", verifiedCount);
-            }
-        } catch (Exception e) {
-            log.error("Unable to auto-verify tournament decks", e);
-        }
     }
 
     void parseDeck(TwdaDeck source) {
@@ -347,12 +311,15 @@ public class TournamentDeckScheduler {
 
     private void persist(DeckEntity actual, DeckEntity deck, Map<Integer, DeckCardEntity> deckCards) {
         boolean insert = actual == null;
+        boolean changed = false;
         if (insert) {
             deckRepository.saveAndFlush(deck);
             log.debug("Insert deck {}", deck.getId());
+            changed = true;
         } else if (!actual.equals(deck) || !Objects.equals(actual.getCreationDate(), deck.getCreationDate())) {
             log.warn("Deck {} updated metadata", deck.getId());
             deckRepository.saveAndFlush(deck);
+            changed = true;
         }
         List<DeckCardEntity> dbCards = deckCardRepository.findByIdDeckId(deck.getId());
         for (DeckCardEntity card : deckCards.values()) {
@@ -364,9 +331,11 @@ public class TournamentDeckScheduler {
                     log.warn("New card detected for card {} of deck {}", card, deck.getId());
                 }
                 deckCardRepository.saveAndFlush(card);
+                changed = true;
             } else if (!dbCard.equals(card)) {
                 log.warn("Found new card count for card {} of deck {}", card, deck.getId());
                 deckCardRepository.saveAndFlush(card);
+                changed = true;
             }
         }
         //Delete removed cards
@@ -374,8 +343,24 @@ public class TournamentDeckScheduler {
             if (!deckCards.containsKey(card.getId().getCardId())) {
                 log.warn("Missing card {} of deck {}", card, deck.getId());
                 deckCardRepository.deleteById(card.getId());
+                changed = true;
             }
         }
+        //A deck stable for a month is promoted to verified, locking it against future scans
+        if (!insert && !changed && isUnmodifiedForAMonth(actual, dbCards)) {
+            deck.setVerified(true);
+            deckRepository.saveAndFlush(deck);
+            log.info("Auto-verified deck {} unmodified for a month", deck.getId());
+        }
+    }
+
+    private boolean isUnmodifiedForAMonth(DeckEntity actual, List<DeckCardEntity> dbCards) {
+        LocalDateTime threshold = LocalDateTime.now().minusMonths(1);
+        if (actual.getModificationDate() == null || !actual.getModificationDate().isBefore(threshold)) {
+            return false;
+        }
+        return dbCards.stream()
+                .allMatch(card -> card.getModificationDate() != null && card.getModificationDate().isBefore(threshold));
     }
 
     /**

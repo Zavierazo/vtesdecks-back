@@ -270,58 +270,65 @@ public class TournamentDeckSchedulerTest {
 
     @Test
     public void shouldAutoVerifyDeckUnmodifiedForAMonth() {
-        DeckEntity deck = existingDeck(false);
-        deck.setModificationDate(LocalDateTime.now().minusMonths(2));
-        when(deckRepository.findAll()).thenReturn(List.of(deck));
-        DeckCardEntity card = deckCard(CRYPT_ID, 12);
-        card.setModificationDate(LocalDateTime.now().minusMonths(2));
-        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(card));
+        DeckEntity actual = existingDeck(false);
+        actual.setModificationDate(LocalDateTime.now().minusMonths(2));
+        when(deckRepository.findById("tournament-2023event")).thenReturn(Optional.of(actual));
+        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(
+                deckCard(CRYPT_ID, 12, LocalDateTime.now().minusMonths(2)),
+                deckCard(LIBRARY_ID, 60, LocalDateTime.now().minusMonths(2))));
 
-        scheduler.autoVerifyStaleDecks();
+        scheduler.parseDeck(twdaDeck());
 
         ArgumentCaptor<DeckEntity> deckCaptor = ArgumentCaptor.forClass(DeckEntity.class);
         verify(deckRepository).saveAndFlush(deckCaptor.capture());
         assertEquals(true, deckCaptor.getValue().getVerified());
+        verify(deckCardRepository, never()).saveAndFlush(any());
     }
 
     @Test
     public void shouldNotAutoVerifyRecentlyModifiedDeck() {
-        DeckEntity deck = existingDeck(false);
-        deck.setModificationDate(LocalDateTime.now().minusDays(5));
-        when(deckRepository.findAll()).thenReturn(List.of(deck));
+        DeckEntity actual = existingDeck(false);
+        actual.setModificationDate(LocalDateTime.now().minusDays(5));
+        when(deckRepository.findById("tournament-2023event")).thenReturn(Optional.of(actual));
+        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(
+                deckCard(CRYPT_ID, 12, LocalDateTime.now().minusMonths(2)),
+                deckCard(LIBRARY_ID, 60, LocalDateTime.now().minusMonths(2))));
 
-        scheduler.autoVerifyStaleDecks();
+        scheduler.parseDeck(twdaDeck());
 
         verify(deckRepository, never()).saveAndFlush(any());
     }
 
     @Test
     public void shouldNotAutoVerifyDeckWithRecentlyModifiedCards() {
-        DeckEntity deck = existingDeck(false);
-        deck.setModificationDate(LocalDateTime.now().minusMonths(2));
-        when(deckRepository.findAll()).thenReturn(List.of(deck));
-        DeckCardEntity card = deckCard(CRYPT_ID, 12);
-        card.setModificationDate(LocalDateTime.now().minusDays(5));
-        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(card));
+        DeckEntity actual = existingDeck(false);
+        actual.setModificationDate(LocalDateTime.now().minusMonths(2));
+        when(deckRepository.findById("tournament-2023event")).thenReturn(Optional.of(actual));
+        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(
+                deckCard(CRYPT_ID, 12, LocalDateTime.now().minusMonths(2)),
+                deckCard(LIBRARY_ID, 60, LocalDateTime.now().minusDays(5))));
 
-        scheduler.autoVerifyStaleDecks();
+        scheduler.parseDeck(twdaDeck());
 
         verify(deckRepository, never()).saveAndFlush(any());
     }
 
     @Test
-    public void shouldNotAutoVerifyAlreadyVerifiedOrCommunityDecks() {
-        DeckEntity verifiedDeck = existingDeck(true);
-        verifiedDeck.setModificationDate(LocalDateTime.now().minusMonths(2));
-        DeckEntity communityDeck = existingDeck(false);
-        communityDeck.setId("community-deck");
-        communityDeck.setType(DeckType.COMMUNITY);
-        communityDeck.setModificationDate(LocalDateTime.now().minusMonths(2));
-        when(deckRepository.findAll()).thenReturn(List.of(verifiedDeck, communityDeck));
+    public void shouldNotAutoVerifyDeckChangedInThisScan() {
+        DeckEntity actual = existingDeck(false);
+        //Metadata differs from the archive, so the deck is updated instead of promoted
+        actual.setPlayers(10);
+        actual.setModificationDate(LocalDateTime.now().minusMonths(2));
+        when(deckRepository.findById("tournament-2023event")).thenReturn(Optional.of(actual));
+        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(
+                deckCard(CRYPT_ID, 12, LocalDateTime.now().minusMonths(2)),
+                deckCard(LIBRARY_ID, 60, LocalDateTime.now().minusMonths(2))));
 
-        scheduler.autoVerifyStaleDecks();
+        scheduler.parseDeck(twdaDeck());
 
-        verify(deckRepository, never()).saveAndFlush(any());
+        ArgumentCaptor<DeckEntity> deckCaptor = ArgumentCaptor.forClass(DeckEntity.class);
+        verify(deckRepository).saveAndFlush(deckCaptor.capture());
+        assertEquals(false, deckCaptor.getValue().getVerified());
     }
 
     @Test
@@ -381,6 +388,12 @@ public class TournamentDeckSchedulerTest {
         card.getId().setDeckId("tournament-2023event");
         card.getId().setCardId(cardId);
         card.setNumber(number);
+        return card;
+    }
+
+    private DeckCardEntity deckCard(int cardId, int number, LocalDateTime modificationDate) {
+        DeckCardEntity card = deckCard(cardId, number);
+        card.setModificationDate(modificationDate);
         return card;
     }
 
