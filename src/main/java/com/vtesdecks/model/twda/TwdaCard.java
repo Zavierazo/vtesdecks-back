@@ -5,7 +5,7 @@ import lombok.Data;
 
 /**
  * A card entry of a TWDA deck. {@code id} is the VEKN card id, shared with the application
- * database (library 1xxxxx, crypt 2xxxxx). {@code comments} is the inline annotation of the
+ * database (library 1xxxxx, crypt 2xxxxx). {@code comment} is the inline annotation of the
  * decklist line and is not imported.
  */
 @Data
@@ -13,6 +13,7 @@ import lombok.Data;
 public class TwdaCard {
     private Integer id;
     private Integer count;
-    private String name;
-    private String comments;
+    private String printedName;
+    private String kind;
+    private String comment;
 }

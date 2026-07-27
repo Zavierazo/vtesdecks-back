@@ -13,7 +13,7 @@ import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.model.twda.TwdaCard;
 import com.vtesdecks.model.twda.TwdaDeck;
-import com.vtesdecks.model.twda.TwdaLibrarySection;
+import com.vtesdecks.model.twda.TwdaEvent;
 import com.vtesdecks.util.VtesUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -38,10 +38,10 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * Imports tournament winning decks from the <a href="https://static.krcg.org/data/twda.json">KRCG
- * TWDA</a> archive. Deck ids match the anchor ids of the official {@code vekn.fr/decks/twd.htm}
- * archive previously scrapped by {@link TournamentDeckOldScheduler}, and card entries carry the
- * VEKN card ids used by the database, so no name matching is needed.
+ * Imports tournament winning decks from the <a href="https://static.krcg.org/data/v5/twda.json">
+ * KRCG TWDA v5</a> archive. Deck ids of legacy decks match the anchor ids of the official
+ * {@code vekn.fr/decks/twd.htm} archive previously scrapped by {@link TournamentDeckOldScheduler},
+ * and card entries carry the VEKN card ids used by the database, so no name matching is needed.
  * <p>
  * Manually verified decks are still scanned, but never modified: any difference against the
  * archive is only logged as a warning.
@@ -65,7 +65,7 @@ public class TournamentDeckScheduler {
     private final LibraryCache libraryCache;
     private final PlatformTransactionManager transactionManager;
 
-    @Value("${jobs.twda.url:https://static.krcg.org/data/twda.json}")
+    @Value("${jobs.twda.url:https://static.krcg.org/data/v5/twda.json}")
     private String twdaUrl;
 
     private final ObjectMapper jsonMapper = new ObjectMapper()
@@ -83,10 +83,10 @@ public class TournamentDeckScheduler {
     public void scrappingDecks() {
         log.info("Starting tournament decks import from TWDA...");
         try {
-            List<TwdaDeck> decks = jsonMapper.readValue(fetch(twdaUrl), new TypeReference<List<TwdaDeck>>() {
+            Map<String, TwdaDeck> decks = jsonMapper.readValue(fetch(twdaUrl), new TypeReference<Map<String, TwdaDeck>>() {
             });
             log.info("Found {} TWDA decks", decks.size());
-            for (TwdaDeck deck : decks) {
+            for (TwdaDeck deck : decks.values()) {
                 try {
                     parseDeck(deck);
                 } catch (Exception e) {
@@ -101,8 +101,9 @@ public class TournamentDeckScheduler {
 
     void parseDeck(TwdaDeck source) {
         String id = "tournament-" + source.getId();
-        if (source.getDate() == null) {
-            log.warn("Deck {} has no date, skipping", id);
+        TwdaEvent event = source.getEvent();
+        if (event == null || event.getDate() == null) {
+            log.warn("Deck {} has no event date, skipping", id);
             return;
         }
         DeckEntity actual = deckRepository.findById(id).orElse(null);
@@ -111,11 +112,12 @@ public class TournamentDeckScheduler {
         deck.setId(id);
         deck.setType(DeckType.TOURNAMENT);
         deck.setSource(SOURCE_PREFIX + source.getId());
-        deck.setTournament(source.getEvent());
-        deck.setPlayers(source.getPlayersCount());
-        deck.setYear(source.getDate().getYear());
+        deck.setTournament(event.getName());
+        //The archive reports 0 players when the attendance is unknown
+        deck.setPlayers(event.getPlayersCount() != null && event.getPlayersCount() > 0 ? event.getPlayersCount() : null);
+        deck.setYear(event.getDate().getYear());
         deck.setAuthor(source.getPlayer());
-        deck.setUrl(source.getEventLink());
+        deck.setUrl(StringUtils.isNotBlank(event.getUrl()) ? event.getUrl() : null);
         deck.setViews(actual != null ? actual.getViews() : 0);
         deck.setVerified(actual != null ? actual.getVerified() : false);
         String name = source.getName();
@@ -128,7 +130,7 @@ public class TournamentDeckScheduler {
             log.warn("Unable to define name for deck {}, skipping", id);
             return;
         }
-        String comments = StringUtils.trimToNull(source.getComments());
+        String comments = StringUtils.trimToNull(source.getComment());
         if (comments != null) {
             comments = StringUtils.trimToNull(DESCRIPTION_LABEL.matcher(comments).replaceFirst(""));
         }
@@ -140,10 +142,10 @@ public class TournamentDeckScheduler {
         deck.setDescription(comments);
         //The legacy scraper enriched creation dates with the time of day of the event page, keep
         //them when the archive only differs on the time part
-        if (actual != null && actual.getCreationDate() != null && actual.getCreationDate().toLocalDate().equals(source.getDate())) {
+        if (actual != null && actual.getCreationDate() != null && actual.getCreationDate().toLocalDate().equals(event.getDate())) {
             deck.setCreationDate(actual.getCreationDate());
         } else {
-            deck.setCreationDate(source.getDate().atStartOfDay());
+            deck.setCreationDate(event.getDate().atStartOfDay());
         }
 
         Map<Integer, DeckCardEntity> deckCards = buildCards(deck.getId(), source);
@@ -163,27 +165,20 @@ public class TournamentDeckScheduler {
     }
 
     private String getFallbackName(TwdaDeck source) {
-        if (source.getPlayer() != null && source.getEvent() != null) {
-            return source.getPlayer() + ", " + source.getEvent() + ", " + source.getDate().getYear();
-        } else if (source.getEvent() != null) {
-            return source.getEvent() + ", " + source.getDate().getYear();
+        TwdaEvent event = source.getEvent();
+        if (StringUtils.isBlank(event.getName())) {
+            return null;
         }
-        return null;
+        if (StringUtils.isNotBlank(source.getPlayer())) {
+            return source.getPlayer() + ", " + event.getName() + ", " + event.getDate().getYear();
+        }
+        return event.getName() + ", " + event.getDate().getYear();
     }
 
     private Map<Integer, DeckCardEntity> buildCards(String deckId, TwdaDeck source) {
         Map<Integer, DeckCardEntity> deckCards = new HashMap<>();
-        if (source.getCrypt() != null) {
-            for (TwdaCard card : source.getCrypt().getCards()) {
-                storeDeckCard(deckId, deckCards, card);
-            }
-        }
-        if (source.getLibrary() != null) {
-            for (TwdaLibrarySection section : source.getLibrary().getCards()) {
-                for (TwdaCard card : section.getCards()) {
-                    storeDeckCard(deckId, deckCards, card);
-                }
-            }
+        for (TwdaCard card : source.getCards()) {
+            storeDeckCard(deckId, deckCards, card);
         }
         return deckCards;
     }
@@ -191,7 +186,7 @@ public class TournamentDeckScheduler {
     private void storeDeckCard(String deckId, Map<Integer, DeckCardEntity> deckCards, TwdaCard card) {
         Integer cardId = card.getId();
         if (cardId == null || !existsCard(cardId)) {
-            log.error("Unknown card {} ('{}') on deck {}", cardId, card.getName(), deckId);
+            log.error("Unknown card {} ('{}') on deck {}", cardId, card.getPrintedName(), deckId);
             return;
         }
         DeckCardEntity existing = deckCards.get(cardId);

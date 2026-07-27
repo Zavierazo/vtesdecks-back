@@ -13,10 +13,8 @@ import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.model.twda.TwdaCard;
-import com.vtesdecks.model.twda.TwdaCrypt;
 import com.vtesdecks.model.twda.TwdaDeck;
-import com.vtesdecks.model.twda.TwdaLibrary;
-import com.vtesdecks.model.twda.TwdaLibrarySection;
+import com.vtesdecks.model.twda.TwdaEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +31,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -137,13 +136,10 @@ public class TournamentDeckSchedulerTest {
     }
 
     @Test
-    public void shouldMergeDuplicateCardAcrossSections() {
+    public void shouldMergeDuplicateCardEntries() {
         TwdaDeck source = twdaDeck();
-        TwdaLibrarySection extraSection = new TwdaLibrarySection();
-        extraSection.setType("Combat");
-        extraSection.getCards().add(twdaCard(LIBRARY_ID, 10));
-        source.getLibrary().getCards().add(extraSection);
-        source.getLibrary().getCards().getFirst().getCards().getFirst().setCount(50);
+        card(source, LIBRARY_ID).setCount(50);
+        source.getCards().add(twdaCard(LIBRARY_ID, 10));
 
         scheduler.parseDeck(source);
 
@@ -166,9 +162,9 @@ public class TournamentDeckSchedulerTest {
     @Test
     public void shouldBeLenientWithOldDeckSizes() {
         TwdaDeck source = twdaDeck();
-        source.setDate(LocalDate.of(2010, 5, 13));
-        source.getCrypt().getCards().getFirst().setCount(11);
-        source.getLibrary().getCards().getFirst().getCards().getFirst().setCount(91);
+        source.getEvent().setDate(LocalDate.of(2010, 5, 13));
+        card(source, CRYPT_ID).setCount(11);
+        card(source, LIBRARY_ID).setCount(91);
 
         scheduler.parseDeck(source);
 
@@ -178,7 +174,7 @@ public class TournamentDeckSchedulerTest {
     @Test
     public void shouldRejectModernDeckWithIllegalSizes() {
         TwdaDeck source = twdaDeck();
-        source.getCrypt().getCards().getFirst().setCount(11);
+        card(source, CRYPT_ID).setCount(11);
 
         scheduler.parseDeck(source);
 
@@ -247,7 +243,7 @@ public class TournamentDeckSchedulerTest {
     @Test
     public void shouldStripDescriptionLabelAndIndentation() {
         TwdaDeck source = twdaDeck();
-        source.setComments("  Description:  First line \r\n   Second line\r\n\nNew paragraph\r");
+        source.setComment("  Description:  First line \r\n   Second line\r\n\nNew paragraph\r");
 
         scheduler.parseDeck(source);
 
@@ -337,20 +333,22 @@ public class TournamentDeckSchedulerTest {
         ObjectMapper mapper = new ObjectMapper()
                 .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
                 .findAndRegisterModules();
-        List<TwdaDeck> decks = mapper.readValue(getClass().getResourceAsStream("/twda-sample.json"), new TypeReference<List<TwdaDeck>>() {
-        });
+        Map<String, TwdaDeck> decks = mapper.readValue(getClass().getResourceAsStream("/twda-sample.json"),
+                new TypeReference<Map<String, TwdaDeck>>() {
+                });
         assertEquals(2, decks.size());
-        TwdaDeck modern = decks.getFirst();
+        TwdaDeck modern = decks.get("10043");
         assertEquals("10043", modern.getId());
-        assertEquals("Shroud Mastery", modern.getEvent());
-        assertEquals("https://www.vekn.net/event-calendar/event/10043", modern.getEventLink());
-        assertEquals(LocalDate.of(2022, 2, 6), modern.getDate());
-        assertEquals(12, modern.getPlayersCount());
+        assertEquals("Shroud Mastery", modern.getEvent().getName());
+        assertEquals("https://www.vekn.net/event-calendar/event/10043", modern.getEvent().getUrl());
+        assertEquals(LocalDate.of(2022, 2, 6), modern.getEvent().getDate());
+        assertEquals(12, modern.getEvent().getPlayersCount());
         assertEquals("Alex Romano", modern.getPlayer());
         assertEquals("Daylily", modern.getName());
-        assertEquals(12, modern.getCrypt().getCards().stream().mapToInt(TwdaCard::getCount).sum());
-        assertEquals(90, modern.getLibrary().getCards().stream()
-                .flatMap(section -> section.getCards().stream()).mapToInt(TwdaCard::getCount).sum());
+        assertEquals(12, modern.getCards().stream()
+                .filter(card -> "Crypt".equals(card.getKind())).mapToInt(TwdaCard::getCount).sum());
+        assertEquals(90, modern.getCards().stream()
+                .filter(card -> "Library".equals(card.getKind())).mapToInt(TwdaCard::getCount).sum());
 
         scheduler.parseDeck(modern);
         ArgumentCaptor<DeckEntity> deckCaptor = ArgumentCaptor.forClass(DeckEntity.class);
@@ -362,23 +360,18 @@ public class TournamentDeckSchedulerTest {
     private TwdaDeck twdaDeck() {
         TwdaDeck deck = new TwdaDeck();
         deck.setId("2023event");
-        deck.setEvent("My Event 2023");
-        deck.setPlace("Somewhere, Spain");
-        deck.setDate(DATE);
-        deck.setPlayersCount(20);
+        TwdaEvent event = new TwdaEvent();
+        event.setName("My Event 2023");
+        event.setPlace("Somewhere, Spain");
+        event.setDate(DATE);
+        event.setPlayersCount(20);
+        event.setUrl("https://example.org/event");
+        deck.setEvent(event);
         deck.setPlayer("John Doe");
-        deck.setEventLink("https://example.org/event");
         deck.setName("My Deck");
-        deck.setComments("Description: First line\nSecond line");
-        TwdaCrypt crypt = new TwdaCrypt();
-        crypt.getCards().add(twdaCard(CRYPT_ID, 12));
-        deck.setCrypt(crypt);
-        TwdaLibrary library = new TwdaLibrary();
-        TwdaLibrarySection section = new TwdaLibrarySection();
-        section.setType("Master");
-        section.getCards().add(twdaCard(LIBRARY_ID, 60));
-        library.getCards().add(section);
-        deck.setLibrary(library);
+        deck.setComment("Description: First line\nSecond line");
+        deck.getCards().add(twdaCard(CRYPT_ID, 12));
+        deck.getCards().add(twdaCard(LIBRARY_ID, 60));
         return deck;
     }
 
@@ -397,11 +390,16 @@ public class TournamentDeckSchedulerTest {
         return card;
     }
 
+    private TwdaCard card(TwdaDeck deck, int id) {
+        return deck.getCards().stream().filter(card -> card.getId() == id).findFirst().orElseThrow();
+    }
+
     private TwdaCard twdaCard(int id, int count) {
         TwdaCard card = new TwdaCard();
         card.setId(id);
         card.setCount(count);
-        card.setName("Card " + id);
+        card.setPrintedName("Card " + id);
+        card.setKind(id >= 200000 ? "Crypt" : "Library");
         return card;
     }
 

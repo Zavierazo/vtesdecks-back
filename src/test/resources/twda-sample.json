@@ -1,609 +1,1175 @@
-[
-  {
+{
+  "10043": {
     "id": "10043",
-    "event": "Shroud Mastery",
-    "event_link": "https://www.vekn.net/event-calendar/event/10043",
-    "place": "Newark (OH), USA",
-    "date": "2022-02-06",
-    "tournament_format": "2R+F",
-    "players_count": 12,
-    "player": "Alex Romano",
-    "score": "1GW5+2",
     "name": "Daylily",
-    "comments": "Description: This deck is based on a similar deck I saw Randall Rudstam play back in 2011. It's pretty straightforward with what it does. Get out 2-3 PRO ANI vamps and abuse the combo of Deep Song and Earth Meld to tap down all of your preys vamps and launch massive bleeds with codex and heidelburg. Selectively block actions you don't like and Earth Meld out of those combats.\n\nThe final of this tournament was pretty interesting as we had 5 Protean decks including three Gangrel anti decks at the table. Seating was\n\nJohn Mathys--->Ministry stealth bleed\nKurt Kopp--->Gangrel ANI wall\nKarl Schaefer--->Enkidu Anarch multi rush\nMe--->ANI PRO shenanigans\nJeremy Thompson--->Gangrel Anti with Dominate\n\nThe game started fast as almost right away Jeremy had John down to less than 8 or so pool. Shortly thereafter Kurt got blocked by Enkidu and his Gangrel with a murder of crows, the Rack, Vessel, Blood Doll and a Raven Spy got burnt by an additional hands for 3 agg from enki. This put both Kurt and John in a tough spot maybe thirty minutes into the game. Jeremy made a miscalculation and dropped very low on pool, within ousting range if I drew a card. I didn't draw it unfortunately but Jeremy was at 1 pool as John was able to stick around for another turn, thus ensuring a chance at getting both of them. Next time around Karl rushed a famous Celeste four times in one turn and it was not until the last combat he was able to dunk Doyle so he couldn't benefit from the Fame dunk. Due to this I was able to get Jeremy before he could get through John who was down to 2 pool. I had the oust of John in my hand but decided not to get him because if he got Kurt(who was down to 3 pool while tapped out) then all I had to do was get John and I win. So John gets Kurt quite quick and Karl only had one rush for one of my minions which I was able to Earth Meld out of. I had to do a little bit of drawing but due to a club illusion, played by John, I was able to bleed for two unblockable due to a horrific countenance and then just conceded my VP to Karl because it didn't matter much beyond that. A pretty quick game clocking in at just over an hour but a really fun one.\n\nAs far as the deck goes I considered trimming it down, and it appears the original version of it was only 75ish cards, but our local meta is so combat heavy, having all of the end combat is almost essential to make it flow correctly. In the final round I played 14 Earth Meld and still had gotten a combat that didn't go the way I was hoping earlier. The misdirection is about the only card I know I would take out as I ended up discarding it multiple times throughout the tournament. One of the daring the dawn could come out too, but I'm not sure what either of them would be better off being,\n\nAlso too much Janey is way worse than not enough as although her text is such a deterrent you end up generally using it once or twice a game, so upping the number of her in the deck would be an error, but it certainly has an effect on the table when she comes out.\n\nA big thank you to Mark and the Comic Shop Plus for hosting as always.\n",
-    "crypt": {
-      "count": 12,
-      "cards": [
-        {
-          "id": 200673,
-          "count": 3,
-          "name": "Janey Pickman"
-        },
-        {
-          "id": 200372,
-          "count": 2,
-          "name": "Doyle Fincher"
-        },
-        {
-          "id": 200259,
-          "count": 2,
-          "name": "Céleste Lamontagne"
-        },
-        {
-          "id": 200723,
-          "count": 1,
-          "name": "Joseph Fischer"
-        },
-        {
-          "id": 200836,
-          "count": 1,
-          "name": "Lillian"
-        },
-        {
-          "id": 200831,
-          "count": 1,
-          "name": "Leo Washington"
-        },
-        {
-          "id": 201192,
-          "count": 1,
-          "name": "Robert Price"
-        },
-        {
-          "id": 200641,
-          "count": 1,
-          "name": "Iris Bennett"
-        }
-      ]
+    "cards": [
+      {
+        "id": 200836,
+        "printed_name": "Lillian",
+        "unicity_suffix": "",
+        "suffix": "G5",
+        "count": 1,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101384,
+        "printed_name": "Pentex™ Subversion",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100492,
+        "printed_name": "Daring the Dawn",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Action Modifier"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 200723,
+        "printed_name": "Joseph Fischer",
+        "unicity_suffix": "",
+        "suffix": "G5",
+        "count": 1,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100374,
+        "printed_name": "Codex of the Edenic Groundskeepers",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Equipment"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101015,
+        "printed_name": "J. S. Simmons, Esq.",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Retainer"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 102050,
+        "printed_name": "Twisted Forest",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100515,
+        "printed_name": "Deep Song",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 10,
+        "kind": "Library",
+        "types": [
+          "Action"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100771,
+        "printed_name": "Form of Mist",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 8,
+        "kind": "Library",
+        "types": [
+          "Combat"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100646,
+        "printed_name": "Ennoia's Theater",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100006,
+        "printed_name": "Abbot",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Action"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100903,
+        "printed_name": "Heart of Nizchetus",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Equipment"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100519,
+        "printed_name": "Delaying Tactics",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Reaction"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100908,
+        "printed_name": "Heidelberg Castle, Germany",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101550,
+        "printed_name": "Raven Spy",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 5,
+        "kind": "Library",
+        "types": [
+          "Retainer"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 200372,
+        "printed_name": "Doyle Fincher",
+        "unicity_suffix": "",
+        "suffix": "G4",
+        "count": 2,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100788,
+        "printed_name": "Freak Drive",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 5,
+        "kind": "Library",
+        "types": [
+          "Action Modifier"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101943,
+        "printed_name": "Tasha Morgan",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Retainer"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100288,
+        "printed_name": "Campground Hunting Ground",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 200641,
+        "printed_name": "Iris Bennett",
+        "unicity_suffix": "",
+        "suffix": "G5",
+        "count": 1,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100545,
+        "printed_name": "Direct Intervention",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 200259,
+        "printed_name": "Céleste Lamontagne",
+        "unicity_suffix": "",
+        "suffix": "G4",
+        "count": 2,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100936,
+        "printed_name": "Horrific Countenance",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Action Modifier"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101321,
+        "printed_name": "On the Qui Vive",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 4,
+        "kind": "Library",
+        "types": [
+          "Reaction"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100435,
+        "printed_name": "The Coven",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100308,
+        "printed_name": "Cats' Guidance",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 4,
+        "kind": "Library",
+        "types": [
+          "Reaction"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100824,
+        "printed_name": "Giant's Blood",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100058,
+        "printed_name": "Anarch Troublemaker",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101340,
+        "printed_name": "Owl Companion",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Retainer"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101342,
+        "printed_name": "Pack Alpha",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 3,
+        "kind": "Library",
+        "types": [
+          "Combat"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 200673,
+        "printed_name": "Janey Pickman",
+        "unicity_suffix": "",
+        "suffix": "G4",
+        "count": 3,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 102113,
+        "printed_name": "Vessel",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 3,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100070,
+        "printed_name": "Animalism",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100710,
+        "printed_name": "Fear of Mekhet",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 201192,
+        "printed_name": "Robert Price",
+        "unicity_suffix": "",
+        "suffix": "G4",
+        "count": 1,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101225,
+        "printed_name": "Misdirection",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100588,
+        "printed_name": "Dreams of the Sphinx",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100085,
+        "printed_name": "Archon Investigation",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100984,
+        "printed_name": "Information Highway",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100601,
+        "printed_name": "Earth Meld",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 19,
+        "kind": "Library",
+        "types": [
+          "Combat"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 200831,
+        "printed_name": "Leo Washington",
+        "unicity_suffix": "",
+        "suffix": "G4",
+        "count": 1,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      }
+    ],
+    "comment": "Description: This deck is based on a similar deck I saw Randall Rudstam play back in 2011. It's pretty straightforward with what it does. Get out 2-3 PRO ANI vamps and abuse the combo of Deep Song and Earth Meld to tap down all of your preys vamps and launch massive bleeds with codex and heidelburg. Selectively block actions you don't like and Earth Meld out of those combats.\n\nThe final of this tournament was pretty interesting as we had 5 Protean decks including three Gangrel anti decks at the table. Seating was\n\nJohn Mathys--->Ministry stealth bleed\nKurt Kopp--->Gangrel ANI wall\nKarl Schaefer--->Enkidu Anarch multi rush\nMe--->ANI PRO shenanigans\nJeremy Thompson--->Gangrel Anti with Dominate\n\nThe game started fast as almost right away Jeremy had John down to less than 8 or so pool. Shortly thereafter Kurt got blocked by Enkidu and his Gangrel with a murder of crows, the Rack, Vessel, Blood Doll and a Raven Spy got burnt by an additional hands for 3 agg from enki. This put both Kurt and John in a tough spot maybe thirty minutes into the game. Jeremy made a miscalculation and dropped very low on pool, within ousting range if I drew a card. I didn't draw it unfortunately but Jeremy was at 1 pool as John was able to stick around for another turn, thus ensuring a chance at getting both of them. Next time around Karl rushed a famous Celeste four times in one turn and it was not until the last combat he was able to dunk Doyle so he couldn't benefit from the Fame dunk. Due to this I was able to get Jeremy before he could get through John who was down to 2 pool. I had the oust of John in my hand but decided not to get him because if he got Kurt(who was down to 3 pool while tapped out) then all I had to do was get John and I win. So John gets Kurt quite quick and Karl only had one rush for one of my minions which I was able to Earth Meld out of. I had to do a little bit of drawing but due to a club illusion, played by John, I was able to bleed for two unblockable due to a horrific countenance and then just conceded my VP to Karl because it didn't matter much beyond that. A pretty quick game clocking in at just over an hour but a really fun one.\n\nAs far as the deck goes I considered trimming it down, and it appears the original version of it was only 75ish cards, but our local meta is so combat heavy, having all of the end combat is almost essential to make it flow correctly. In the final round I played 14 Earth Meld and still had gotten a combat that didn't go the way I was hoping earlier. The misdirection is about the only card I know I would take out as I ended up discarding it multiple times throughout the tournament. One of the daring the dawn could come out too, but I'm not sure what either of them would be better off being,\n\nAlso too much Janey is way worse than not enough as although her text is such a deterrent you end up generally using it once or twice a game, so upping the number of her in the deck would be an error, but it certainly has an effect on the table when she comes out.\n\nA big thank you to Mark and the Comic Shop Plus for hosting as always.\n",
+    "author": "",
+    "event": {
+      "name": "Shroud Mastery",
+      "date": "2022-02-06",
+      "end_date": null,
+      "online": false,
+      "format": "Standard",
+      "players_count": 12,
+      "rounds": 2,
+      "finals": true,
+      "place": "Newark (OH), USA",
+      "country": {
+        "name": "United States",
+        "code": "US",
+        "flag": "🇺🇸",
+        "continent": "NA"
+      },
+      "url": "https://www.vekn.net/event-calendar/event/10043"
     },
-    "library": {
-      "count": 90,
-      "cards": [
-        {
-          "type": "Master",
-          "count": 20,
-          "cards": [
-            {
-              "id": 100058,
-              "count": 2,
-              "name": "Anarch Troublemaker"
-            },
-            {
-              "id": 100070,
-              "count": 1,
-              "name": "Animalism"
-            },
-            {
-              "id": 100085,
-              "count": 1,
-              "name": "Archon Investigation"
-            },
-            {
-              "id": 100288,
-              "count": 1,
-              "name": "Campground Hunting Ground"
-            },
-            {
-              "id": 100435,
-              "count": 1,
-              "name": "The Coven"
-            },
-            {
-              "id": 100545,
-              "count": 1,
-              "name": "Direct Intervention"
-            },
-            {
-              "id": 100588,
-              "count": 1,
-              "name": "Dreams of the Sphinx"
-            },
-            {
-              "id": 100646,
-              "count": 1,
-              "name": "Ennoia's Theater"
-            },
-            {
-              "id": 100710,
-              "count": 1,
-              "name": "Fear of Mekhet"
-            },
-            {
-              "id": 100824,
-              "count": 1,
-              "name": "Giant's Blood"
-            },
-            {
-              "id": 100908,
-              "count": 2,
-              "name": "Heidelberg Castle, Germany"
-            },
-            {
-              "id": 100984,
-              "count": 1,
-              "name": "Information Highway"
-            },
-            {
-              "id": 101225,
-              "count": 1,
-              "name": "Misdirection"
-            },
-            {
-              "id": 101384,
-              "count": 1,
-              "name": "Pentex™ Subversion"
-            },
-            {
-              "id": 102050,
-              "count": 1,
-              "name": "Twisted Forest"
-            },
-            {
-              "id": 102113,
-              "count": 3,
-              "name": "Vessel"
-            }
-          ]
-        },
-        {
-          "type": "Action",
-          "count": 12,
-          "cards": [
-            {
-              "id": 100006,
-              "count": 2,
-              "name": "Abbot"
-            },
-            {
-              "id": 100515,
-              "count": 10,
-              "name": "Deep Song"
-            }
-          ]
-        },
-        {
-          "type": "Equipment",
-          "count": 3,
-          "cards": [
-            {
-              "id": 100374,
-              "count": 2,
-              "name": "Codex of the Edenic Groundskeepers"
-            },
-            {
-              "id": 100903,
-              "count": 1,
-              "name": "Heart of Nizchetus"
-            }
-          ]
-        },
-        {
-          "type": "Retainer",
-          "count": 8,
-          "cards": [
-            {
-              "id": 101015,
-              "count": 1,
-              "name": "J. S. Simmons, Esq."
-            },
-            {
-              "id": 101340,
-              "count": 1,
-              "name": "Owl Companion"
-            },
-            {
-              "id": 101550,
-              "count": 5,
-              "name": "Raven Spy"
-            },
-            {
-              "id": 101943,
-              "count": 1,
-              "name": "Tasha Morgan"
-            }
-          ]
-        },
-        {
-          "type": "Action Modifier",
-          "count": 8,
-          "cards": [
-            {
-              "id": 100492,
-              "count": 2,
-              "name": "Daring the Dawn"
-            },
-            {
-              "id": 100788,
-              "count": 5,
-              "name": "Freak Drive"
-            },
-            {
-              "id": 100936,
-              "count": 1,
-              "name": "Horrific Countenance"
-            }
-          ]
-        },
-        {
-          "type": "Reaction",
-          "count": 9,
-          "cards": [
-            {
-              "id": 100308,
-              "count": 4,
-              "name": "Cats' Guidance"
-            },
-            {
-              "id": 100519,
-              "count": 1,
-              "name": "Delaying Tactics"
-            },
-            {
-              "id": 101321,
-              "count": 4,
-              "name": "On the Qui Vive"
-            }
-          ]
-        },
-        {
-          "type": "Combat",
-          "count": 30,
-          "cards": [
-            {
-              "id": 100601,
-              "count": 19,
-              "name": "Earth Meld"
-            },
-            {
-              "id": 100771,
-              "count": 8,
-              "name": "Form of Mist"
-            },
-            {
-              "id": 101342,
-              "count": 3,
-              "name": "Pack Alpha"
-            }
-          ]
-        }
-      ]
-    }
+    "player": "Alex Romano",
+    "score": {
+      "round_gw": 1,
+      "round_vp": 5.0,
+      "finals_vp": 2.0,
+      "win": true
+    },
+    "raven": 0
   },
-  {
+  "zink2k1": {
     "id": "zink2k1",
-    "event": "Judgement: Camarilla Segregation",
-    "event_link": "https://groups.google.com/g/rec.games.trading-cards.jyhad/c/XhVaKTMr08o",
-    "place": "Raleigh (NC), USA",
-    "date": "2001-09-01",
-    "tournament_format": "3R+F",
-    "players_count": 14,
-    "player": "Richard Conrad Zink",
-    "score": "+3",
-    "comments": "12-vamp Crypt, 90-card library.\n\nDeck: Indecision 2001\n",
-    "crypt": {
-      "count": 12,
-      "cards": [
-        {
-          "id": 200517,
-          "count": 3,
-          "name": "Gilbert Duane"
-        },
-        {
-          "id": 200870,
-          "count": 2,
-          "name": "Lucian"
-        },
-        {
-          "id": 200291,
-          "count": 2,
-          "name": "Cornelius Ottavio"
-        },
-        {
-          "id": 200538,
-          "count": 2,
-          "name": "Greger Anderssen"
-        },
-        {
-          "id": 200929,
-          "count": 1,
-          "name": "Mariel, Lady Thunder"
-        },
-        {
-          "id": 200343,
-          "count": 1,
-          "name": "Didi Meyers"
-        },
-        {
-          "id": 201443,
-          "count": 1,
-          "name": "Victoria"
-        }
-      ]
+    "name": "",
+    "cards": [
+      {
+        "id": 101249,
+        "printed_name": "Mr. Winthrop",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Retainer"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101250,
+        "printed_name": "Muddled Vampire Hunter",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Ally"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101125,
+        "printed_name": "Lost in Crowds",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 5,
+        "kind": "Library",
+        "types": [
+          "Action Modifier"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101896,
+        "printed_name": "Sudden Reversal",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100362,
+        "printed_name": "Cloak the Gathering",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Action Modifier"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100108,
+        "printed_name": "Asylum Hunting Ground",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100364,
+        "printed_name": "Closed Session",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Action Modifier"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 200343,
+        "printed_name": "Didi Meyers",
+        "unicity_suffix": "",
+        "suffix": "G1",
+        "count": 1,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100760,
+        "printed_name": "Forced Awakening",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Reaction"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101913,
+        "printed_name": "Swallowed by the Night",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 3,
+        "kind": "Library",
+        "types": [
+          "Action Modifier",
+          "Combat"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100251,
+        "printed_name": "Bribes",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Action Modifier"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101662,
+        "printed_name": "The Rumor Mill, Tabloid Newspaper",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100769,
+        "printed_name": "Forgotten Labyrinth",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 3,
+        "kind": "Library",
+        "types": [
+          "Action Modifier"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101154,
+        "printed_name": "Malkavian Justicar",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Political Action"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100131,
+        "printed_name": "Banishment",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Political Action"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100644,
+        "printed_name": "Enhanced Senses",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Reaction"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101156,
+        "printed_name": "Malkavian Rider Clause",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Reaction"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 200870,
+        "printed_name": "Lucian",
+        "unicity_suffix": "",
+        "suffix": "G1",
+        "count": 2,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100135,
+        "printed_name": "The Barrens",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100518,
+        "printed_name": "Deflection",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 4,
+        "kind": "Library",
+        "types": [
+          "Reaction"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100149,
+        "printed_name": "Behind You!",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Combat"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100478,
+        "printed_name": "Cryptic Rider",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Action Modifier"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101948,
+        "printed_name": "Telepathic Counter",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Reaction"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101309,
+        "printed_name": "Obedience",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Reaction"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100414,
+        "printed_name": "Conservative Agitation",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 3,
+        "kind": "Library",
+        "types": [
+          "Political Action"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101951,
+        "printed_name": "Telepathic Vote Counting",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Action Modifier"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101056,
+        "printed_name": "Kine Resources Contested",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 7,
+        "kind": "Library",
+        "types": [
+          "Political Action"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 200517,
+        "printed_name": "Gilbert Duane",
+        "unicity_suffix": "G1",
+        "suffix": "G1",
+        "count": 3,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101706,
+        "printed_name": "Second Tradition: Domain",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 6,
+        "kind": "Library",
+        "types": [
+          "Reaction"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100557,
+        "printed_name": "Disputed Territory",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Political Action"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101711,
+        "printed_name": "Secure Haven",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100824,
+        "printed_name": "Giant's Blood",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101081,
+        "printed_name": "Leather Jacket",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Equipment"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 200538,
+        "printed_name": "Greger Anderssen",
+        "unicity_suffix": "",
+        "suffix": "G2",
+        "count": 2,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100059,
+        "printed_name": "Anarchist Uprising",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Political Action"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100572,
+        "printed_name": "Dominate",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101978,
+        "printed_name": "Threats",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Action Modifier"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100703,
+        "printed_name": "Far Mastery",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Action"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 200929,
+        "printed_name": "Mariel, Lady Thunder",
+        "unicity_suffix": "",
+        "suffix": "G1",
+        "count": 1,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101217,
+        "printed_name": "Minion Tap",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 3,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 200291,
+        "printed_name": "Cornelius Ottavio",
+        "unicity_suffix": "",
+        "suffix": "G2",
+        "count": 2,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 201443,
+        "printed_name": "Victoria",
+        "unicity_suffix": "",
+        "suffix": "G2",
+        "count": 1,
+        "kind": "Crypt",
+        "types": [
+          "Vampire"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100199,
+        "printed_name": "Blood Doll",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 3,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100588,
+        "printed_name": "Dreams of the Sphinx",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100845,
+        "printed_name": "Govern the Unaligned",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 3,
+        "kind": "Library",
+        "types": [
+          "Action"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100598,
+        "printed_name": "Eagle's Sight",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Reaction"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100727,
+        "printed_name": "Fifth Tradition: Hospitality",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 3,
+        "kind": "Library",
+        "types": [
+          "Action"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100984,
+        "printed_name": "Information Highway",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Master"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 102137,
+        "printed_name": "Wake with Evening's Freshness",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 2,
+        "kind": "Library",
+        "types": [
+          "Reaction"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 101499,
+        "printed_name": "Protect Thine Own",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Political Action"
+        ],
+        "comment": ""
+      },
+      {
+        "id": 100094,
+        "printed_name": "Arson",
+        "unicity_suffix": "",
+        "suffix": "",
+        "count": 1,
+        "kind": "Library",
+        "types": [
+          "Action"
+        ],
+        "comment": ""
+      }
+    ],
+    "comment": "12-vamp Crypt, 90-card library.\n\nDeck: Indecision 2001\n",
+    "author": "",
+    "event": {
+      "name": "Judgement: Camarilla Segregation",
+      "date": "2001-09-01",
+      "end_date": null,
+      "online": false,
+      "format": "Standard",
+      "players_count": 14,
+      "rounds": 3,
+      "finals": true,
+      "place": "Raleigh (NC), USA",
+      "country": {
+        "name": "United States",
+        "code": "US",
+        "flag": "🇺🇸",
+        "continent": "NA"
+      },
+      "url": "https://groups.google.com/g/rec.games.trading-cards.jyhad/c/XhVaKTMr08o"
     },
-    "library": {
-      "count": 90,
-      "cards": [
-        {
-          "type": "Master",
-          "count": 18,
-          "cards": [
-            {
-              "id": 100108,
-              "count": 2,
-              "name": "Asylum Hunting Ground"
-            },
-            {
-              "id": 100135,
-              "count": 1,
-              "name": "The Barrens"
-            },
-            {
-              "id": 100199,
-              "count": 3,
-              "name": "Blood Doll"
-            },
-            {
-              "id": 100572,
-              "count": 2,
-              "name": "Dominate"
-            },
-            {
-              "id": 100588,
-              "count": 2,
-              "name": "Dreams of the Sphinx"
-            },
-            {
-              "id": 100824,
-              "count": 1,
-              "name": "Giant's Blood"
-            },
-            {
-              "id": 100984,
-              "count": 1,
-              "name": "Information Highway"
-            },
-            {
-              "id": 101217,
-              "count": 3,
-              "name": "Minion Tap"
-            },
-            {
-              "id": 101662,
-              "count": 1,
-              "name": "The Rumor Mill, Tabloid Newspaper"
-            },
-            {
-              "id": 101711,
-              "count": 1,
-              "name": "Secure Haven"
-            },
-            {
-              "id": 101896,
-              "count": 1,
-              "name": "Sudden Reversal"
-            }
-          ]
-        },
-        {
-          "type": "Action",
-          "count": 8,
-          "cards": [
-            {
-              "id": 100094,
-              "count": 1,
-              "name": "Arson"
-            },
-            {
-              "id": 100703,
-              "count": 1,
-              "name": "Far Mastery"
-            },
-            {
-              "id": 100727,
-              "count": 3,
-              "name": "Fifth Tradition: Hospitality"
-            },
-            {
-              "id": 100845,
-              "count": 3,
-              "name": "Govern the Unaligned"
-            }
-          ]
-        },
-        {
-          "type": "Ally",
-          "count": 1,
-          "cards": [
-            {
-              "id": 101250,
-              "count": 1,
-              "name": "Muddled Vampire Hunter"
-            }
-          ]
-        },
-        {
-          "type": "Equipment",
-          "count": 2,
-          "cards": [
-            {
-              "id": 101081,
-              "count": 2,
-              "name": "Leather Jacket"
-            }
-          ]
-        },
-        {
-          "type": "Political Action",
-          "count": 15,
-          "cards": [
-            {
-              "id": 100059,
-              "count": 1,
-              "name": "Anarchist Uprising"
-            },
-            {
-              "id": 100131,
-              "count": 1,
-              "name": "Banishment"
-            },
-            {
-              "id": 100414,
-              "count": 3,
-              "name": "Conservative Agitation"
-            },
-            {
-              "id": 100557,
-              "count": 1,
-              "name": "Disputed Territory"
-            },
-            {
-              "id": 101056,
-              "count": 7,
-              "name": "Kine Resources Contested"
-            },
-            {
-              "id": 101154,
-              "count": 1,
-              "name": "Malkavian Justicar"
-            },
-            {
-              "id": 101499,
-              "count": 1,
-              "name": "Protect Thine Own"
-            }
-          ]
-        },
-        {
-          "type": "Retainer",
-          "count": 1,
-          "cards": [
-            {
-              "id": 101249,
-              "count": 1,
-              "name": "Mr. Winthrop"
-            }
-          ]
-        },
-        {
-          "type": "Action Modifier",
-          "count": 17,
-          "cards": [
-            {
-              "id": 100251,
-              "count": 1,
-              "name": "Bribes"
-            },
-            {
-              "id": 100362,
-              "count": 1,
-              "name": "Cloak the Gathering"
-            },
-            {
-              "id": 100364,
-              "count": 2,
-              "name": "Closed Session"
-            },
-            {
-              "id": 100478,
-              "count": 2,
-              "name": "Cryptic Rider"
-            },
-            {
-              "id": 100769,
-              "count": 3,
-              "name": "Forgotten Labyrinth"
-            },
-            {
-              "id": 101125,
-              "count": 5,
-              "name": "Lost in Crowds"
-            },
-            {
-              "id": 101951,
-              "count": 1,
-              "name": "Telepathic Vote Counting"
-            },
-            {
-              "id": 101978,
-              "count": 2,
-              "name": "Threats"
-            }
-          ]
-        },
-        {
-          "type": "Action Modifier/Combat",
-          "count": 3,
-          "cards": [
-            {
-              "id": 101913,
-              "count": 3,
-              "name": "Swallowed by the Night"
-            }
-          ]
-        },
-        {
-          "type": "Reaction",
-          "count": 23,
-          "cards": [
-            {
-              "id": 100518,
-              "count": 4,
-              "name": "Deflection"
-            },
-            {
-              "id": 100598,
-              "count": 1,
-              "name": "Eagle's Sight"
-            },
-            {
-              "id": 100644,
-              "count": 2,
-              "name": "Enhanced Senses"
-            },
-            {
-              "id": 100760,
-              "count": 2,
-              "name": "Forced Awakening"
-            },
-            {
-              "id": 101156,
-              "count": 2,
-              "name": "Malkavian Rider Clause"
-            },
-            {
-              "id": 101309,
-              "count": 2,
-              "name": "Obedience"
-            },
-            {
-              "id": 101706,
-              "count": 6,
-              "name": "Second Tradition: Domain"
-            },
-            {
-              "id": 101948,
-              "count": 2,
-              "name": "Telepathic Counter"
-            },
-            {
-              "id": 102137,
-              "count": 2,
-              "name": "Wake with Evening's Freshness"
-            }
-          ]
-        },
-        {
-          "type": "Combat",
-          "count": 2,
-          "cards": [
-            {
-              "id": 100149,
-              "count": 2,
-              "name": "Behind You!"
-            }
-          ]
-        }
-      ]
-    }
+    "player": "Richard Conrad Zink",
+    "score": {
+      "round_gw": 0,
+      "round_vp": 0.0,
+      "finals_vp": 3.0,
+      "win": true
+    },
+    "raven": 0
   }
-]
+}
