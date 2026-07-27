@@ -29,6 +29,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,6 +45,9 @@ import java.util.regex.Pattern;
  * <p>
  * Manually verified decks are still scanned, but never modified: any difference against the
  * archive is only logged as a warning.
+ * <p>
+ * While scanning, decks whose deck and deck_card rows have not been modified for a month are
+ * automatically promoted to verified.
  */
 @Slf4j
 @Component
@@ -307,12 +311,15 @@ public class TournamentDeckScheduler {
 
     private void persist(DeckEntity actual, DeckEntity deck, Map<Integer, DeckCardEntity> deckCards) {
         boolean insert = actual == null;
+        boolean changed = false;
         if (insert) {
             deckRepository.saveAndFlush(deck);
             log.debug("Insert deck {}", deck.getId());
+            changed = true;
         } else if (!actual.equals(deck) || !Objects.equals(actual.getCreationDate(), deck.getCreationDate())) {
             log.warn("Deck {} updated metadata", deck.getId());
             deckRepository.saveAndFlush(deck);
+            changed = true;
         }
         List<DeckCardEntity> dbCards = deckCardRepository.findByIdDeckId(deck.getId());
         for (DeckCardEntity card : deckCards.values()) {
@@ -324,9 +331,11 @@ public class TournamentDeckScheduler {
                     log.warn("New card detected for card {} of deck {}", card, deck.getId());
                 }
                 deckCardRepository.saveAndFlush(card);
+                changed = true;
             } else if (!dbCard.equals(card)) {
                 log.warn("Found new card count for card {} of deck {}", card, deck.getId());
                 deckCardRepository.saveAndFlush(card);
+                changed = true;
             }
         }
         //Delete removed cards
@@ -334,8 +343,24 @@ public class TournamentDeckScheduler {
             if (!deckCards.containsKey(card.getId().getCardId())) {
                 log.warn("Missing card {} of deck {}", card, deck.getId());
                 deckCardRepository.deleteById(card.getId());
+                changed = true;
             }
         }
+        //A deck stable for a month is promoted to verified, locking it against future scans
+        if (!insert && !changed && isUnmodifiedForAMonth(actual, dbCards)) {
+            deck.setVerified(true);
+            deckRepository.saveAndFlush(deck);
+            log.info("Auto-verified deck {} unmodified for a month", deck.getId());
+        }
+    }
+
+    private boolean isUnmodifiedForAMonth(DeckEntity actual, List<DeckCardEntity> dbCards) {
+        LocalDateTime threshold = LocalDateTime.now().minusMonths(1);
+        if (actual.getModificationDate() == null || !actual.getModificationDate().isBefore(threshold)) {
+            return false;
+        }
+        return dbCards.stream()
+                .allMatch(card -> card.getModificationDate() != null && card.getModificationDate().isBefore(threshold));
     }
 
     /**

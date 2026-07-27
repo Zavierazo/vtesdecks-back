@@ -30,6 +30,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -268,6 +269,69 @@ public class TournamentDeckSchedulerTest {
     }
 
     @Test
+    public void shouldAutoVerifyDeckUnmodifiedForAMonth() {
+        DeckEntity actual = existingDeck(false);
+        actual.setModificationDate(LocalDateTime.now().minusMonths(2));
+        when(deckRepository.findById("tournament-2023event")).thenReturn(Optional.of(actual));
+        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(
+                deckCard(CRYPT_ID, 12, LocalDateTime.now().minusMonths(2)),
+                deckCard(LIBRARY_ID, 60, LocalDateTime.now().minusMonths(2))));
+
+        scheduler.parseDeck(twdaDeck());
+
+        ArgumentCaptor<DeckEntity> deckCaptor = ArgumentCaptor.forClass(DeckEntity.class);
+        verify(deckRepository).saveAndFlush(deckCaptor.capture());
+        assertEquals(true, deckCaptor.getValue().getVerified());
+        verify(deckCardRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    public void shouldNotAutoVerifyRecentlyModifiedDeck() {
+        DeckEntity actual = existingDeck(false);
+        actual.setModificationDate(LocalDateTime.now().minusDays(5));
+        when(deckRepository.findById("tournament-2023event")).thenReturn(Optional.of(actual));
+        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(
+                deckCard(CRYPT_ID, 12, LocalDateTime.now().minusMonths(2)),
+                deckCard(LIBRARY_ID, 60, LocalDateTime.now().minusMonths(2))));
+
+        scheduler.parseDeck(twdaDeck());
+
+        verify(deckRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    public void shouldNotAutoVerifyDeckWithRecentlyModifiedCards() {
+        DeckEntity actual = existingDeck(false);
+        actual.setModificationDate(LocalDateTime.now().minusMonths(2));
+        when(deckRepository.findById("tournament-2023event")).thenReturn(Optional.of(actual));
+        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(
+                deckCard(CRYPT_ID, 12, LocalDateTime.now().minusMonths(2)),
+                deckCard(LIBRARY_ID, 60, LocalDateTime.now().minusDays(5))));
+
+        scheduler.parseDeck(twdaDeck());
+
+        verify(deckRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    public void shouldNotAutoVerifyDeckChangedInThisScan() {
+        DeckEntity actual = existingDeck(false);
+        //Metadata differs from the archive, so the deck is updated instead of promoted
+        actual.setPlayers(10);
+        actual.setModificationDate(LocalDateTime.now().minusMonths(2));
+        when(deckRepository.findById("tournament-2023event")).thenReturn(Optional.of(actual));
+        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(
+                deckCard(CRYPT_ID, 12, LocalDateTime.now().minusMonths(2)),
+                deckCard(LIBRARY_ID, 60, LocalDateTime.now().minusMonths(2))));
+
+        scheduler.parseDeck(twdaDeck());
+
+        ArgumentCaptor<DeckEntity> deckCaptor = ArgumentCaptor.forClass(DeckEntity.class);
+        verify(deckRepository).saveAndFlush(deckCaptor.capture());
+        assertEquals(false, deckCaptor.getValue().getVerified());
+    }
+
+    @Test
     public void shouldParseRealTwdaSample() throws Exception {
         //Same mapper configuration as the scheduler, against real archive entries
         ObjectMapper mapper = new ObjectMapper()
@@ -324,6 +388,12 @@ public class TournamentDeckSchedulerTest {
         card.getId().setDeckId("tournament-2023event");
         card.getId().setCardId(cardId);
         card.setNumber(number);
+        return card;
+    }
+
+    private DeckCardEntity deckCard(int cardId, int number, LocalDateTime modificationDate) {
+        DeckCardEntity card = deckCard(cardId, number);
+        card.setModificationDate(modificationDate);
         return card;
     }
 
