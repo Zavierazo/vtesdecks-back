@@ -223,7 +223,7 @@ public class TournamentDeckScheduler {
         }
         if (crypt >= 12 && library >= 60 && library <= 90) {
             return true;
-        } else if (deck.getYear() < 2015 && crypt >= 11 && library >= 59 && library <= 91) {
+        } else if (deck.getYear() < 2015) {
             //Some old decks have an illegal amount of cards, be lenient with them
             return true;
         } else {
