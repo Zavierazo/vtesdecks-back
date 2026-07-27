@@ -30,6 +30,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -268,21 +269,59 @@ public class TournamentDeckSchedulerTest {
     }
 
     @Test
-    public void shouldAutoVerifyDecksUnmodifiedForAMonth() {
-        when(deckRepository.selectStaleUnverifiedTournamentIds()).thenReturn(List.of("tournament-1", "tournament-2"));
+    public void shouldAutoVerifyDeckUnmodifiedForAMonth() {
+        DeckEntity deck = existingDeck(false);
+        deck.setModificationDate(LocalDateTime.now().minusMonths(2));
+        when(deckRepository.findAll()).thenReturn(List.of(deck));
+        DeckCardEntity card = deckCard(CRYPT_ID, 12);
+        card.setModificationDate(LocalDateTime.now().minusMonths(2));
+        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(card));
 
         scheduler.autoVerifyStaleDecks();
 
-        verify(deckRepository).markAsVerified(List.of("tournament-1", "tournament-2"));
+        ArgumentCaptor<DeckEntity> deckCaptor = ArgumentCaptor.forClass(DeckEntity.class);
+        verify(deckRepository).saveAndFlush(deckCaptor.capture());
+        assertEquals(true, deckCaptor.getValue().getVerified());
     }
 
     @Test
-    public void shouldNotAutoVerifyWhenThereAreNoStaleDecks() {
-        when(deckRepository.selectStaleUnverifiedTournamentIds()).thenReturn(Collections.emptyList());
+    public void shouldNotAutoVerifyRecentlyModifiedDeck() {
+        DeckEntity deck = existingDeck(false);
+        deck.setModificationDate(LocalDateTime.now().minusDays(5));
+        when(deckRepository.findAll()).thenReturn(List.of(deck));
 
         scheduler.autoVerifyStaleDecks();
 
-        verify(deckRepository, never()).markAsVerified(any());
+        verify(deckRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    public void shouldNotAutoVerifyDeckWithRecentlyModifiedCards() {
+        DeckEntity deck = existingDeck(false);
+        deck.setModificationDate(LocalDateTime.now().minusMonths(2));
+        when(deckRepository.findAll()).thenReturn(List.of(deck));
+        DeckCardEntity card = deckCard(CRYPT_ID, 12);
+        card.setModificationDate(LocalDateTime.now().minusDays(5));
+        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(card));
+
+        scheduler.autoVerifyStaleDecks();
+
+        verify(deckRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    public void shouldNotAutoVerifyAlreadyVerifiedOrCommunityDecks() {
+        DeckEntity verifiedDeck = existingDeck(true);
+        verifiedDeck.setModificationDate(LocalDateTime.now().minusMonths(2));
+        DeckEntity communityDeck = existingDeck(false);
+        communityDeck.setId("community-deck");
+        communityDeck.setType(DeckType.COMMUNITY);
+        communityDeck.setModificationDate(LocalDateTime.now().minusMonths(2));
+        when(deckRepository.findAll()).thenReturn(List.of(verifiedDeck, communityDeck));
+
+        scheduler.autoVerifyStaleDecks();
+
+        verify(deckRepository, never()).saveAndFlush(any());
     }
 
     @Test

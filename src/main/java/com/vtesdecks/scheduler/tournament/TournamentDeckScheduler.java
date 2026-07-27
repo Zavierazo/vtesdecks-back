@@ -29,6 +29,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -106,13 +107,29 @@ public class TournamentDeckScheduler {
      */
     void autoVerifyStaleDecks() {
         try {
-            List<String> deckIds = deckRepository.selectStaleUnverifiedTournamentIds();
-            if (deckIds.isEmpty()) {
-                return;
+            LocalDateTime threshold = LocalDateTime.now().minusMonths(1);
+            int verifiedCount = 0;
+            for (DeckEntity deck : deckRepository.findAll()) {
+                if (deck.getType() != DeckType.TOURNAMENT
+                        || Boolean.TRUE.equals(deck.getVerified())
+                        || Boolean.TRUE.equals(deck.getDeleted())
+                        || deck.getModificationDate() == null
+                        || !deck.getModificationDate().isBefore(threshold)) {
+                    continue;
+                }
+                boolean cardsStale = deckCardRepository.findByIdDeckId(deck.getId()).stream()
+                        .allMatch(card -> card.getModificationDate() != null && card.getModificationDate().isBefore(threshold));
+                if (!cardsStale) {
+                    continue;
+                }
+                deck.setVerified(true);
+                deckRepository.saveAndFlush(deck);
+                log.debug("Auto-verified deck {}", deck.getId());
+                verifiedCount++;
             }
-            log.info("Auto-verifying {} tournament decks unmodified for a month", deckIds.size());
-            log.debug("Auto-verified tournament decks: {}", deckIds);
-            deckRepository.markAsVerified(deckIds);
+            if (verifiedCount > 0) {
+                log.info("Auto-verified {} tournament decks unmodified for a month", verifiedCount);
+            }
         } catch (Exception e) {
             log.error("Unable to auto-verify tournament decks", e);
         }
