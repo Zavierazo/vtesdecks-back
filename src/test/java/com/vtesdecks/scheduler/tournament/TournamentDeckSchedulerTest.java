@@ -268,6 +268,24 @@ public class TournamentDeckSchedulerTest {
     }
 
     @Test
+    public void shouldAutoVerifyDecksUnmodifiedForAMonth() {
+        when(deckRepository.selectStaleUnverifiedTournamentIds()).thenReturn(List.of("tournament-1", "tournament-2"));
+
+        scheduler.autoVerifyStaleDecks();
+
+        verify(deckRepository).markAsVerified(List.of("tournament-1", "tournament-2"));
+    }
+
+    @Test
+    public void shouldNotAutoVerifyWhenThereAreNoStaleDecks() {
+        when(deckRepository.selectStaleUnverifiedTournamentIds()).thenReturn(Collections.emptyList());
+
+        scheduler.autoVerifyStaleDecks();
+
+        verify(deckRepository, never()).markAsVerified(any());
+    }
+
+    @Test
     public void shouldParseRealTwdaSample() throws Exception {
         //Same mapper configuration as the scheduler, against real archive entries
         ObjectMapper mapper = new ObjectMapper()

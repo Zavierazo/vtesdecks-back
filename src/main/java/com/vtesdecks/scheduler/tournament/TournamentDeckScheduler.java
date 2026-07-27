@@ -44,6 +44,9 @@ import java.util.regex.Pattern;
  * <p>
  * Manually verified decks are still scanned, but never modified: any difference against the
  * archive is only logged as a warning.
+ * <p>
+ * After each import, decks whose deck and deck_card rows have not been modified for a month are
+ * automatically promoted to verified.
  */
 @Slf4j
 @Component
@@ -92,7 +95,27 @@ public class TournamentDeckScheduler {
         } catch (Exception e) {
             log.error("Unable to import TWDA decks", e);
         }
+        autoVerifyStaleDecks();
         log.info("Finished tournament decks import from TWDA");
+    }
+
+    /**
+     * Tournament decks left untouched by the archive import for a month are considered stable and
+     * promoted to verified, which locks them against future automatic modifications. Runs after
+     * the import so decks changed by the current run are excluded by their fresh timestamps.
+     */
+    void autoVerifyStaleDecks() {
+        try {
+            List<String> deckIds = deckRepository.selectStaleUnverifiedTournamentIds();
+            if (deckIds.isEmpty()) {
+                return;
+            }
+            log.info("Auto-verifying {} tournament decks unmodified for a month", deckIds.size());
+            log.debug("Auto-verified tournament decks: {}", deckIds);
+            deckRepository.markAsVerified(deckIds);
+        } catch (Exception e) {
+            log.error("Unable to auto-verify tournament decks", e);
+        }
     }
 
     void parseDeck(TwdaDeck source) {
