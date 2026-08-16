@@ -1,0 +1,1 @@
+ALTER TABLE `deck` MODIFY COLUMN `description` TEXT DEFAULT NULL;
