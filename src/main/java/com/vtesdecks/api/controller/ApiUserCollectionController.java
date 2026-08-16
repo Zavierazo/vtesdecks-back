@@ -5,6 +5,7 @@ import com.vtesdecks.api.service.ApiCollectionService;
 import com.vtesdecks.api.service.ApiCollectionStatsService;
 import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.api.util.ApiUtils;
+import com.vtesdecks.api.util.CardSearchUtils;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
@@ -13,6 +14,7 @@ import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.CollectionType;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
+import com.vtesdecks.model.api.ApiCardSearchRequest;
 import com.vtesdecks.model.api.ApiCollection;
 import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCard;
@@ -101,10 +103,22 @@ public class ApiUserCollectionController {
 
     @GetMapping(value = "/cards", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiCollectionPage<ApiCollectionCard> getCards(HttpServletRequest request, @RequestParam Integer page, @RequestParam Integer size, @RequestParam(required = false) String groupBy, @RequestParam(required = false) String sortBy, @RequestParam(required = false) String sortDirection, @RequestParam Map<String, String> params) throws Exception {
+        return collectionService.getCards(page, size, groupBy, sortBy, sortDirection, buildCardFilters(params), Utils.getCurrencyCode(request));
+    }
+
+    @PostMapping(value = "/cards/search", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiCollectionPage<ApiCollectionCard> searchCards(HttpServletRequest request, @RequestBody ApiCardSearchRequest search) throws Exception {
+        Map<String, String> params = CardSearchUtils.toParams(search.getFilters());
+        String groupBy = params.remove("groupBy");
+        return collectionService.searchCards(search.getPage(), search.getSize(), groupBy, search.getSortBy(), search.getSortDirection(), buildCardFilters(params), search.getCardIds(), Utils.getCurrencyCode(request));
+    }
+
+    private Map<String, String> buildCardFilters(Map<String, String> params) {
         Map<String, String> filters = params != null ? params.entrySet().stream()
                 .filter(entry -> ALLOWED_FILTERS.contains(entry.getKey()))
                 .filter(entry -> !isEmpty(entry.getValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)) : new HashMap<>();
+        //DEPRECATED: cardTypes, cardClans, cardDisciplines are deprecated and will be removed in future versions. Use cardId filter instead.
         if (params != null && (params.containsKey("cardTypes") || params.containsKey("cardClans") || params.containsKey("cardDisciplines"))) {
             Set<Integer> filteredIds = getCardIdFilter(params.get("cardTypes"), params.get("cardClans"), params.get("cardDisciplines"));
             if (filters.containsKey("cardId")) {
@@ -117,7 +131,7 @@ public class ApiUserCollectionController {
                         .collect(Collectors.joining(",")));
             }
         }
-        return collectionService.getCards(page, size, groupBy, sortBy, sortDirection, filters, Utils.getCurrencyCode(request));
+        return filters;
     }
 
     private Set<Integer> getCardIdFilter(String cardTypes, String cardClans, String cardDisciplines) {

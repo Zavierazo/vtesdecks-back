@@ -1,6 +1,8 @@
 package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.ApiWishlistService;
+import com.vtesdecks.api.util.CardSearchUtils;
+import com.vtesdecks.model.api.ApiCardSearchRequest;
 import com.vtesdecks.model.api.ApiWishlistCard;
 import com.vtesdecks.model.api.ApiWishlistPage;
 import com.vtesdecks.util.Utils;
@@ -32,6 +34,11 @@ public class ApiUserWishlistController {
     @GetMapping(value = "/cards", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiWishlistPage<ApiWishlistCard> getCards(HttpServletRequest request, @RequestParam Integer page, @RequestParam Integer size, @RequestParam(required = false) String sortBy, @RequestParam(required = false) String sortDirection, @RequestParam Map<String, String> params) throws Exception {
         return wishlistService.getWishlist(page, size, sortBy, sortDirection, params, Utils.getCurrencyCode(request));
+    }
+
+    @PostMapping(value = "/cards/search", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiWishlistPage<ApiWishlistCard> searchCards(HttpServletRequest request, @RequestBody ApiCardSearchRequest search) throws Exception {
+        return wishlistService.searchWishlist(search.getPage(), search.getSize(), search.getSortBy(), search.getSortDirection(), CardSearchUtils.toParams(search.getFilters()), search.getCardIds(), Utils.getCurrencyCode(request));
     }
 
     @PostMapping(value = "/cards", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)

@@ -3,6 +3,7 @@ package com.vtesdecks.api.service;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.ApiCollectionMapper;
 import com.vtesdecks.api.util.ApiUtils;
+import com.vtesdecks.api.util.CardSearchUtils;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.jpa.entity.CollectionBinderEntity;
@@ -285,6 +286,29 @@ public class ApiCollectionService {
         } catch (Exception e) {
             throw new Exception("An unexpected error occurred while retrieving the cards", e);
         }
+    }
+
+    public ApiCollectionPage<ApiCollectionCard> searchPublicCards(String publicHash, Integer page, Integer size, String groupBy, String sortBy, String sortDirection, Map<String, String> filters, List<Integer> cardIds, String currencyCode) throws Exception {
+        if (!CardSearchUtils.applyCardIds(filters, cardIds)) {
+            collectionBinderRepository.findByPublicHash(publicHash).orElseThrow(() -> new IllegalArgumentException("Binder does not exist"));
+            return emptyPage();
+        }
+        return getPublicCards(publicHash, page, size, groupBy, sortBy, sortDirection, filters, currencyCode);
+    }
+
+    public ApiCollectionPage<ApiCollectionCard> searchCards(Integer page, Integer size, String groupBy, String sortBy, String sortDirection, Map<String, String> filters, List<Integer> cardIds, String currencyCode) throws Exception {
+        if (!CardSearchUtils.applyCardIds(filters, cardIds)) {
+            return emptyPage();
+        }
+        return getCards(page, size, groupBy, sortBy, sortDirection, filters, currencyCode);
+    }
+
+    private static ApiCollectionPage<ApiCollectionCard> emptyPage() {
+        ApiCollectionPage<ApiCollectionCard> emptyPage = new ApiCollectionPage<>();
+        emptyPage.setTotalPages(0);
+        emptyPage.setTotalElements(0L);
+        emptyPage.setContent(List.of());
+        return emptyPage;
     }
 
     public ApiCollectionPage<ApiCollectionCard> getCards(Integer page, Integer size, String groupBy, String sortBy, String sortDirection, Map<String, String> filters, String currencyCode) throws Exception {

@@ -5,6 +5,7 @@ import com.vtesdecks.api.mapper.ApiCollectionMapper;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.card.Card;
+import com.vtesdecks.jpa.entity.CollectionBinderEntity;
 import com.vtesdecks.jpa.entity.CollectionCardEntity;
 import com.vtesdecks.jpa.entity.CollectionEntity;
 import com.vtesdecks.jpa.repositories.CollectionBinderRepository;
@@ -14,7 +15,9 @@ import com.vtesdecks.jpa.repositories.CollectionCardRepositoryCustom;
 import com.vtesdecks.jpa.repositories.CollectionRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.DeckQuery;
+import com.vtesdecks.model.api.ApiCollectionCard;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
+import com.vtesdecks.model.api.ApiCollectionPage;
 import com.vtesdecks.service.DeckService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,22 +27,30 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,6 +61,8 @@ public class ApiCollectionServiceTest {
     private static final int CRYPT_ID = 200001;
     private static final int LIBRARY_ID = 100001;
     private static final int OTHER_LIBRARY_ID = 100002;
+    private static final int BINDER_ID = 3;
+    private static final String CURRENCY = "EUR";
 
     @Mock
     private UserRepository userRepository;
@@ -152,6 +165,121 @@ public class ApiCollectionServiceTest {
         List<Integer> cardIds = IntStream.rangeClosed(1, 501).boxed().toList();
 
         assertThrows(IllegalArgumentException.class, () -> service.getCardStatsBulk(cardIds));
+    }
+
+    @Test
+    public void shouldRestrictSearchByCardIds() throws Exception {
+        mockCardPage();
+
+        service.searchCards(0, 20, null, null, null, new HashMap<>(), List.of(CRYPT_ID, LIBRARY_ID), CURRENCY);
+
+        ArgumentCaptor<Map<String, String>> filtersCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(collectionCardRepositoryCustom).findByDynamicFilters(eq(COLLECTION_ID), filtersCaptor.capture(), any(Pageable.class));
+        assertEquals(CRYPT_ID + "," + LIBRARY_ID, filtersCaptor.getValue().get("cardId"));
+    }
+
+    @Test
+    public void shouldBehaveLikeGetWhenSearchCardIdsAreNull() throws Exception {
+        mockCardPage();
+        Map<String, String> filters = new HashMap<>(Map.of("set", "V5"));
+
+        service.searchCards(0, 20, null, null, null, filters, null, CURRENCY);
+
+        ArgumentCaptor<Map<String, String>> filtersCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(collectionCardRepositoryCustom).findByDynamicFilters(eq(COLLECTION_ID), filtersCaptor.capture(), any(Pageable.class));
+        assertEquals("V5", filtersCaptor.getValue().get("set"));
+        assertFalse(filtersCaptor.getValue().containsKey("cardId"));
+    }
+
+    @Test
+    public void shouldReturnEmptyPageWhenSearchCardIdsAreEmpty() throws Exception {
+        ApiCollectionPage<ApiCollectionCard> result = service.searchCards(0, 20, null, null, null, new HashMap<>(), List.of(), CURRENCY);
+
+        assertEquals(0, result.getTotalPages());
+        assertEquals(0L, result.getTotalElements());
+        assertTrue(result.getContent().isEmpty());
+        verify(collectionCardRepositoryCustom, never()).findByDynamicFilters(any(), any(), any());
+        verify(collectionCardRepositoryCustom, never()).findByDynamicFiltersGroupBy(any(), any(), any(), any());
+    }
+
+    @Test
+    public void shouldCombineSearchCardIdsWithOtherFilters() throws Exception {
+        mockCardPage();
+        Map<String, String> filters = new HashMap<>(Map.of("binderId", "3", "cardType", "crypt"));
+
+        service.searchCards(0, 20, null, null, null, filters, List.of(CRYPT_ID), CURRENCY);
+
+        ArgumentCaptor<Map<String, String>> filtersCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(collectionCardRepositoryCustom).findByDynamicFilters(eq(COLLECTION_ID), filtersCaptor.capture(), any(Pageable.class));
+        assertEquals("3", filtersCaptor.getValue().get("binderId"));
+        assertEquals("crypt", filtersCaptor.getValue().get("cardType"));
+        assertEquals(String.valueOf(CRYPT_ID), filtersCaptor.getValue().get("cardId"));
+    }
+
+    @Test
+    public void shouldRespectCardIdsInGroupedSearch() throws Exception {
+        when(collectionCardRepositoryCustom.findByDynamicFiltersGroupBy(eq(COLLECTION_ID), any(), eq("cardId"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(apiCollectionMapper.mapCards(any(Page.class), eq(CURRENCY))).thenReturn(new ApiCollectionPage<>());
+
+        service.searchCards(0, 20, "cardId", null, null, new HashMap<>(), List.of(CRYPT_ID), CURRENCY);
+
+        ArgumentCaptor<Map<String, String>> filtersCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(collectionCardRepositoryCustom).findByDynamicFiltersGroupBy(eq(COLLECTION_ID), filtersCaptor.capture(), eq("cardId"), any(Pageable.class));
+        assertEquals(String.valueOf(CRYPT_ID), filtersCaptor.getValue().get("cardId"));
+    }
+
+    @Test
+    public void shouldRejectOversizedSearchCardIdList() {
+        List<Integer> cardIds = IntStream.rangeClosed(1, 6001).boxed().toList();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.searchCards(0, 20, null, null, null, new HashMap<>(), cardIds, CURRENCY));
+    }
+
+    @Test
+    public void shouldRejectPublicSearchWhenBinderDoesNotExist() {
+        when(collectionBinderRepository.findByPublicHash("unknown")).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.searchPublicCards("unknown", 0, 20, null, null, null, new HashMap<>(), List.of(), CURRENCY));
+    }
+
+    @Test
+    public void shouldReturnEmptyPageForPublicSearchWhenCardIdsAreEmpty() throws Exception {
+        when(collectionBinderRepository.findByPublicHash("hash")).thenReturn(Optional.of(binder()));
+
+        ApiCollectionPage<ApiCollectionCard> result = service.searchPublicCards("hash", 0, 20, null, null, null, new HashMap<>(), List.of(), CURRENCY);
+
+        assertEquals(0L, result.getTotalElements());
+        assertTrue(result.getContent().isEmpty());
+        verify(collectionCardRepositoryCustom, never()).findByDynamicFilters(any(), any(), any());
+    }
+
+    @Test
+    public void shouldForceBinderFilterInPublicSearch() throws Exception {
+        when(collectionBinderRepository.findByPublicHash("hash")).thenReturn(Optional.of(binder()));
+        mockCardPage();
+
+        service.searchPublicCards("hash", 0, 20, null, null, null, new HashMap<>(), List.of(CRYPT_ID), CURRENCY);
+
+        ArgumentCaptor<Map<String, String>> filtersCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(collectionCardRepositoryCustom).findByDynamicFilters(eq(COLLECTION_ID), filtersCaptor.capture(), any(Pageable.class));
+        assertEquals(String.valueOf(BINDER_ID), filtersCaptor.getValue().get("binderId"));
+        assertEquals(String.valueOf(CRYPT_ID), filtersCaptor.getValue().get("cardId"));
+    }
+
+    private CollectionBinderEntity binder() {
+        CollectionBinderEntity binder = new CollectionBinderEntity();
+        binder.setId(BINDER_ID);
+        binder.setCollectionId(COLLECTION_ID);
+        return binder;
+    }
+
+    private void mockCardPage() {
+        when(collectionCardRepositoryCustom.findByDynamicFilters(eq(COLLECTION_ID), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(apiCollectionMapper.mapCards(any(Page.class), eq(CURRENCY))).thenReturn(new ApiCollectionPage<>());
     }
 
     private void mockDecks(Deck... decks) {

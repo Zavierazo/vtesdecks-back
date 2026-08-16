@@ -3,6 +3,7 @@ package com.vtesdecks.api.service;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.ApiWishlistMapper;
 import com.vtesdecks.api.util.ApiUtils;
+import com.vtesdecks.api.util.CardSearchUtils;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
@@ -44,9 +45,13 @@ public class ApiWishlistService {
     private final LibraryCache libraryCache;
 
     public ApiWishlistPage<ApiWishlistCard> getWishlist(Integer page, Integer size, String sortBy, String sortDirection, Map<String, String> params, String currencyCode) throws Exception {
+        return searchWishlist(page, size, sortBy, sortDirection, params, null, currencyCode);
+    }
+
+    public ApiWishlistPage<ApiWishlistCard> searchWishlist(Integer page, Integer size, String sortBy, String sortDirection, Map<String, String> params, List<Integer> cardIds, String currencyCode) throws Exception {
         try {
             Integer userId = ApiUtils.extractUserId();
-            ApiWishlistPage<ApiWishlistCard> result = queryWishlist(userId, page, size, sortBy, sortDirection, params, currencyCode);
+            ApiWishlistPage<ApiWishlistCard> result = queryWishlist(userId, page, size, sortBy, sortDirection, params, cardIds, currencyCode);
             result.setPublicVisibility(isWishlistPublic(userId));
             return result;
         } catch (IllegalArgumentException e) {
@@ -149,12 +154,16 @@ public class ApiWishlistService {
     }
 
     public ApiWishlistPage<ApiWishlistCard> getUserPublicWishlist(String username, Integer page, Integer size, String sortBy, String sortDirection, Map<String, String> params, String currencyCode) throws Exception {
+        return searchUserPublicWishlist(username, page, size, sortBy, sortDirection, params, null, currencyCode);
+    }
+
+    public ApiWishlistPage<ApiWishlistCard> searchUserPublicWishlist(String username, Integer page, Integer size, String sortBy, String sortDirection, Map<String, String> params, List<Integer> cardIds, String currencyCode) throws Exception {
         try {
             UserEntity user = userRepository.findByUsername(username);
             if (user == null || !Boolean.TRUE.equals(user.getWishlistPublicVisibility())) {
                 return null;
             }
-            ApiWishlistPage<ApiWishlistCard> result = queryWishlist(user.getId(), page, size, sortBy, sortDirection, params, currencyCode);
+            ApiWishlistPage<ApiWishlistCard> result = queryWishlist(user.getId(), page, size, sortBy, sortDirection, params, cardIds, currencyCode);
             result.setPublicVisibility(true);
             return result;
         } catch (IllegalArgumentException e) {
@@ -164,11 +173,18 @@ public class ApiWishlistService {
         }
     }
 
-    private ApiWishlistPage<ApiWishlistCard> queryWishlist(Integer userId, Integer page, Integer size, String sortBy, String sortDirection, Map<String, String> params, String currencyCode) {
+    private ApiWishlistPage<ApiWishlistCard> queryWishlist(Integer userId, Integer page, Integer size, String sortBy, String sortDirection, Map<String, String> params, List<Integer> cardIds, String currencyCode) {
+        Map<String, String> filters = buildFilters(params);
+        if (!CardSearchUtils.applyCardIds(filters, cardIds)) {
+            ApiWishlistPage<ApiWishlistCard> emptyPage = new ApiWishlistPage<>();
+            emptyPage.setTotalPages(0);
+            emptyPage.setTotalElements(0L);
+            emptyPage.setContent(List.of());
+            return emptyPage;
+        }
         Sort.Direction sortDirectionEnum = StringUtils.equalsIgnoreCase(sortDirection, "desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
         String sortByEntity = StringUtils.isNotBlank(sortBy) ? sortBy : "cardName";
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirectionEnum, sortByEntity));
-        Map<String, String> filters = buildFilters(params);
         return apiWishlistMapper.mapWishlistPage(wishlistCardRepositoryCustom.findByDynamicFilters(userId, filters, pageable), currencyCode);
     }
 
