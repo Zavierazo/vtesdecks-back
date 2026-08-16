@@ -44,6 +44,9 @@ public class DeckArchetypeEntity {
     @Column(name = "deck_id")
     private String deckId;
 
+    @Column(name = "secondary_deck_id")
+    private String secondaryDeckId;
+
     @Column(name = "enabled", nullable = false)
     @Builder.Default
     private Boolean enabled = false;

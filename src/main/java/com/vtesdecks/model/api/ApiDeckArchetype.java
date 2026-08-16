@@ -23,6 +23,7 @@ public class ApiDeckArchetype {
     private String type;
     private String description;
     private String deckId;
+    private String secondaryDeckId;
     private Boolean enabled;
     private Long deckCount;
     private Long metaCount;

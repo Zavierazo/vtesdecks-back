@@ -85,7 +85,8 @@ public class DeckArchetypeService {
         DeckArchetypeEntity saved = repository.save(entity);
         deckArchetypeScheduler.updateDeckArchetype(saved.getId());
         deckArchetypeIndex.refreshIndex(saved.getId());
-        messageProducer.publishDeckSync(saved.getDeckId());
+        publishDeckSync(saved.getDeckId());
+        publishDeckSync(saved.getSecondaryDeckId());
         return getById(saved.getId(), currencyCode);
     }
 
@@ -93,17 +94,22 @@ public class DeckArchetypeService {
         Optional<DeckArchetypeEntity> maybe = repository.findById(id);
         if (maybe.isEmpty()) return Optional.empty();
         DeckArchetypeEntity entity = maybe.get();
+        String previousDeckId = entity.getDeckId();
+        String previousSecondaryDeckId = entity.getSecondaryDeckId();
         entity.setName(api.getName());
         entity.setIcon(api.getIcon());
         entity.setType(api.getType());
         entity.setDescription(api.getDescription());
         entity.setDeckId(api.getDeckId());
+        entity.setSecondaryDeckId(api.getSecondaryDeckId());
         entity.setEnabled(api.getEnabled());
         DeckArchetypeEntity saved = repository.save(entity);
-        if (!Objects.equals(api.getDeckId(), saved.getDeckId())) {
+        if (!Objects.equals(previousDeckId, saved.getDeckId()) || !Objects.equals(previousSecondaryDeckId, saved.getSecondaryDeckId())) {
             deckArchetypeScheduler.updateDeckArchetype(saved.getId());
-            messageProducer.publishDeckSync(api.getDeckId());
-            messageProducer.publishDeckSync(saved.getDeckId());
+            publishDeckSync(previousDeckId);
+            publishDeckSync(previousSecondaryDeckId);
+            publishDeckSync(saved.getDeckId());
+            publishDeckSync(saved.getSecondaryDeckId());
         }
         deckArchetypeIndex.refreshIndex(saved.getId());
         return getById(saved.getId(), currencyCode);
@@ -113,9 +119,16 @@ public class DeckArchetypeService {
         Optional<DeckArchetypeEntity> deleteEntity = repository.findById(id);
         if (deleteEntity.isEmpty()) return false;
         repository.deleteById(id);
-        messageProducer.publishDeckSync(deleteEntity.get().getDeckId());
+        publishDeckSync(deleteEntity.get().getDeckId());
+        publishDeckSync(deleteEntity.get().getSecondaryDeckId());
         deckArchetypeIndex.refreshIndex(id);
         return true;
+    }
+
+    private void publishDeckSync(String deckId) {
+        if (deckId != null) {
+            messageProducer.publishDeckSync(deckId);
+        }
     }
 
     private long getMetaTotal(MetaType metaType) {
