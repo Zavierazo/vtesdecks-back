@@ -12,8 +12,8 @@ import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Order;
-import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Path;
+import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.domain.Page;
@@ -249,7 +249,7 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
                     List<String> values = Splitter.on(',').trimResults().splitToList(value);
                     predicates.add(root.get(field).in(values));
                 } else {
-                    if (value.isEmpty() || value.equalsIgnoreCase("null") || value.equals("0")) {
+                    if (isNullFilter(value)) {
                         predicates.add(cb.isNull(root.get(field)));
                     } else {
                         predicates.add(cb.equal(root.get(field), value));
@@ -258,5 +258,12 @@ public class CollectionCardRepositoryImpl implements CollectionCardRepositoryCus
             }
         });
         return predicates;
+    }
+
+    static boolean isNullFilter(String value) {
+        return value.isEmpty()
+                || value.equalsIgnoreCase("null")
+                || value.equals("0")
+                || value.equalsIgnoreCase("none");
     }
 }
