@@ -5955,3 +5955,27 @@ Zombie inflicts 1 damage on the opposing minion each round of combat during norm
 Put this card in play. During your master phase, you may choose a location controlled by another Methuselah. Until the end of your minion phase, any minion can move that location to its owner's library as a (D) action (the owner shuffles afterward). If that action is successful, that controller gains X pool, where X is the pool cost of the location. Any vampire can call a referendum to burn this card as a +1 stealth political action. You may lock this card to gain 1 vote in that referendum.","","CE:R2, KoT:R","","Steve Ellis",""
 "102212","Zoo Hunting Ground","","Master","Gangrel","","","2","","","","Unique location. Hunting ground.
 During your unlock phase, a ready vampire you control can gain 1 blood. A vampire can gain blood from only one hunting ground each turn.","","Jyhad:U, VTES:U, Anarchs:PG, KoT:U, V5A:PG1","","Susan Van Camp; Christopher Shy",""
+"150001","Academia de Campeões, São Paulo","","Master","Brujah","","","","","","","Unique location.
+During your discard phase, you can lock this location to move up to two combat cards requiring Potence [pot] from your ash heap to the bottom of your library in any order.","","Spoiler:NB","","Carlos Díaz",""
+"150002","Bar Último Trago, Campina Grande","","Master","","","","","","","","Unique location.
+You can lock this location if a minion you control successfully blocks; during the resulting combat, neither combatant can use equipment and during the first round of that combat, both combatants take 1R environmental damage during normal strike resolution.","","Spoiler:NB","","Paolo Puggioni",""
+"150003","Convento da Penha, Vila Velha","","Master","","","","1","","","","Unique location.
+During a political action, any Methuselah can lock this location to give an acting vampire they control +1 stealth; other Methuselahs must give you 1 pool to use this effect.","","Spoiler:NB","","Felipe Headley",""
+"150004","Destilaria Estrela da Paraíba","","Master","Nosferatu","","","1","","","","Unique location.
+During an action directed at you (or a card you control), you can lock this location to give a Nosferatu you control +1 intercept; if that Nosferatu blocks, you get +1 hand size during the resulting combat.","","Spoiler:NB","","Ludovic Salvador",""
+"150005","Iara","","Ally","Malkavian","","","2","","","","Unique changeling with 3 life. 1 strength, 1 bleed.
+During an action performed by a minion you control, you can lock Iara to give a blocking minion -1 intercept; if that action is blocked, instead of resolving the block, Iara enters combat with and locks the blocking minion.","","Spoiler:NB","","Krzysztof Bieniawski",""
+"150006","Meia Lua","","Combat","","","Celerity & Potence","","","","","[cel][pot] Strike: dodge or strike: hand strike at +1 damage.
+[CEL][POT] Strike: dodge, with 1 additional strike; hand strike at +2 damage (limited).","","Spoiler:NB","","Krzysztof Bieniawski",""
+"150007","Mulher de Branco","","Ally","Hecata","","","","","","","Unique wraith with 1 life. 0 strength, 0 bleed.
+Burn this ally unless you remove three cards in your ash heap from the game. After a minion successfully bleeds you (for 1 or more), you can shuffle this ally into your library to inflict 2 damage on the acting minion.","","Spoiler:NB","","Anastasiia Horbunova",""
+"150008","Information Exchange","","Political Action","Nosferatu","","","","","","","Allocate 3 points among one or more Methuselahs and choose one of those Methuselahs. Successful referendum means you look at the chosen Methuselah's hand and discard up to one card of your choice from it, and for each point allocated, each Methuselah burns 1 pool.","","Spoiler:SNY","","Sami Rytkönen",""
+"150009","Backroom Deal","","Action Modifier","","","","","","","","Requires a ready primogen.
+Only one Backroom Deal can be played each action.
++1 stealth.
+Only usable by a ready primogen other than the acting Camarilla vampire. The acting Camarilla vampire gets +1 stealth.","","Spoiler:SNY","","Camille Défarge",""
+"150010","St. Patrick's Cathedral, New York","","Master","Lasombra","","","1","","","","Unique location.
+During your unlock phase, you can lock this location to look at and reorder the top 3 cards of your library. You can then move them to the bottom of your library (in the same order).","","Spoiler:SNY","","Krasen Maximov",""
+"150011","Aaron Fletcher, Silent Investor","","Ally","","","","2","","","","Unique mortal with 1 life.
+1 strength, 1 bleed.
+Put up to three equipment cards from your hand and/or ash heap on Aaron, face down and out of play (you can look at the cards at any time). Minions you control can equip with one of those cards (face up) as a +1 stealth equip action.","","Spoiler:SNY","","Krzysztof Bieniawski",""
