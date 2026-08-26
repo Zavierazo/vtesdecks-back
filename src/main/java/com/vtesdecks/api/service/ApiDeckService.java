@@ -7,8 +7,11 @@ import com.vtesdecks.cache.factory.DeckFactory;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.card.Card;
+import com.vtesdecks.cache.redis.entity.DeckTags;
+import com.vtesdecks.cache.redis.repositories.DeckTagsRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.model.DeckQuery;
+import com.vtesdecks.model.DeckTag;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDecks;
 import com.vtesdecks.service.DeckService;
@@ -17,9 +20,15 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 @Service
@@ -34,6 +43,8 @@ public class ApiDeckService {
     private DeckFactory deckFactory;
     @Autowired
     private ApiCollectionService apiCollectionService;
+    @Autowired
+    private DeckTagsRepository deckTagsRepository;
 
     public ApiDeck getDeck(String deckId, boolean detailed, boolean collectionTracker, String currencyCode) {
         Deck deck = deckService.getDeck(deckId);
@@ -45,6 +56,31 @@ public class ApiDeckService {
         } else {
             return mapper.mapSummary(deck, ApiUtils.extractUserId(), null, currencyCode);
         }
+    }
+
+    public List<String> getDeckTags() {
+        return deckTagsRepository.findById(DeckTags.CACHE_ID)
+                .map(DeckTags::getTags)
+                .orElseGet(this::findAndCacheDeckTags);
+    }
+
+    private List<String> findAndCacheDeckTags() {
+        Set<String> existingTags = new HashSet<>();
+        try (ResultSet<Deck> decks = deckService.getDecks(DeckQuery.builder().build())) {
+            decks.stream()
+                    .map(Deck::getTags)
+                    .filter(Objects::nonNull)
+                    .forEach(existingTags::addAll);
+        }
+        List<String> tags = existingTags.isEmpty()
+                ? Collections.emptyList()
+                : Arrays.stream(DeckTag.values())
+                .filter(deckTag -> deckTag.getFromDate() == null || !deckTag.getFromDate().isAfter(LocalDate.now()))
+                .map(DeckTag::getTag)
+                .filter(existingTags::contains)
+                .toList();
+        deckTagsRepository.save(DeckTags.builder().id(DeckTags.CACHE_ID).tags(tags).build());
+        return tags;
     }
 
     public ApiDecks getDecks(DeckQuery deckQuery, Integer collectionPercentage, String bySimilarity, String currencyCode, int offset, int limit) {

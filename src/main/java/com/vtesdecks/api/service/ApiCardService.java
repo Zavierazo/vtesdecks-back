@@ -93,6 +93,14 @@ public class ApiCardService {
     }
 
     public ApiShopResult getCardShops(Integer cardId, String locale, boolean showAll) {
+        Card card = cryptCache.get(cardId);
+        if (card == null) {
+            card = libraryCache.get(cardId);
+        }
+        if (card != null && card.isUnreleased()) {
+            return ApiShopResult.builder().shops(Collections.emptyList()).hasMore(false).build();
+        }
+
         List<CardShopEntity> results = cardShopRepository.findByCardId(cardId);
         boolean hasInStock = results.stream()
                 .filter(cardShop -> cardShop.getPlatform().isEnabled())

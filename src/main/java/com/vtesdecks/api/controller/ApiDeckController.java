@@ -8,7 +8,6 @@ import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.DeckExportType;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
-import com.vtesdecks.model.DeckTag;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDeckHome;
 import com.vtesdecks.model.api.ApiDeckView;
@@ -32,8 +31,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.List;
 
 @Controller
@@ -212,11 +209,6 @@ public class ApiDeckController {
     })
     @ResponseBody
     public ResponseEntity<List<String>> deckTags() {
-        return new ResponseEntity<>(
-                Arrays.stream(DeckTag.values())
-                        .filter(deckTag -> deckTag.getFromDate() == null || !deckTag.getFromDate().isAfter(LocalDate.now()))
-                        .map(DeckTag::getTag).toList(),
-                HttpStatus.OK
-        );
+        return new ResponseEntity<>(deckService.getDeckTags(), HttpStatus.OK);
     }
 }

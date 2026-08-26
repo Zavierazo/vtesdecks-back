@@ -64,20 +64,22 @@ public abstract class CryptFactory {
                     }
                 }
             }
-            // Find min and max price in EUR
-            List<BigDecimal> priceList = cardShopList.stream()
-                    .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
-                    .filter(CardShopEntity::isInStock)
-                    .map(CardShopEntity::getPriceDefaultCurrency)
-                    .toList();
-            if (priceList.isEmpty()) {
-                priceList = cardShopList.stream()
+            // Spoiler cards are not on the market yet, even if shop data exists for them.
+            if (!crypt.isUnreleased()) {
+                List<BigDecimal> priceList = cardShopList.stream()
                         .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
+                        .filter(CardShopEntity::isInStock)
                         .map(CardShopEntity::getPriceDefaultCurrency)
                         .toList();
+                if (priceList.isEmpty()) {
+                    priceList = cardShopList.stream()
+                            .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
+                            .map(CardShopEntity::getPriceDefaultCurrency)
+                            .toList();
+                }
+                crypt.setMinPrice(priceList.stream().min(BigDecimal::compareTo).orElse(null));
+                crypt.setMaxPrice(priceList.stream().max(BigDecimal::compareTo).orElse(null));
             }
-            crypt.setMinPrice(priceList.stream().min(BigDecimal::compareTo).orElse(null));
-            crypt.setMaxPrice(priceList.stream().max(BigDecimal::compareTo).orElse(null));
             // Force lastUpdate when new shop find
             LocalDateTime cardShopCreationDate = cardShopList.stream()
                     .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)

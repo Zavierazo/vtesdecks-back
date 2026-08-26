@@ -73,20 +73,22 @@ public abstract class LibraryFactory {
                     }
                 }
             }
-            // Find min and max price in EUR
-            List<BigDecimal> priceList = cardShopList.stream()
-                    .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
-                    .filter(CardShopEntity::isInStock)
-                    .map(CardShopEntity::getPriceDefaultCurrency)
-                    .toList();
-            if (priceList.isEmpty()) {
-                priceList = cardShopList.stream()
+            // Spoiler cards are not on the market yet, even if shop data exists for them.
+            if (!library.isUnreleased()) {
+                List<BigDecimal> priceList = cardShopList.stream()
                         .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
+                        .filter(CardShopEntity::isInStock)
                         .map(CardShopEntity::getPriceDefaultCurrency)
                         .toList();
+                if (priceList.isEmpty()) {
+                    priceList = cardShopList.stream()
+                            .filter(cardShop -> cardShop.getPlatform().isEnabled() && cardShop.getPrice() != null)
+                            .map(CardShopEntity::getPriceDefaultCurrency)
+                            .toList();
+                }
+                library.setMinPrice(priceList.stream().min(BigDecimal::compareTo).orElse(null));
+                library.setMaxPrice(priceList.stream().max(BigDecimal::compareTo).orElse(null));
             }
-            library.setMinPrice(priceList.stream().min(BigDecimal::compareTo).orElse(null));
-            library.setMaxPrice(priceList.stream().max(BigDecimal::compareTo).orElse(null));
             //Force lastUpdate when new shop find
             if (!CollectionUtils.isEmpty(cardShopList)) {
                 LocalDateTime cardShopCreationDate = cardShopList.stream()
