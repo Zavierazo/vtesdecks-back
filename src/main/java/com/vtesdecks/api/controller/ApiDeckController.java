@@ -55,6 +55,7 @@ public class ApiDeckController {
         String currencyCode = Utils.getCurrencyCode(request);
         ApiDeckHome apiDeckHome = new ApiDeckHome();
         apiDeckHome.setPreConstructedTotal(decks(0, ApiDeckType.PRECONSTRUCTED, DeckSort.NEWEST, null, currencyCode).getTotal());
+        apiDeckHome.setSpoilerDecks(deckService.getSpoilerDecks(currencyCode));
         if (ApiUtils.extractUserId() != null) {
             apiDeckHome.setUserTotal(decks(0, ApiDeckType.USER, DeckSort.NEWEST, null, currencyCode).getTotal());
             apiDeckHome.setFavoriteTotal(decks(0, ApiDeckType.ALL, DeckSort.NEWEST, Boolean.TRUE, currencyCode).getTotal());

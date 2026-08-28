@@ -17,4 +17,5 @@ public class ApiDeckHome {
     private List<ApiDeck> tournamentNewest;
     private List<ApiDeck> communityPopular;
     private List<ApiDeck> communityNewest;
+    private List<ApiDeck> spoilerDecks;
 }

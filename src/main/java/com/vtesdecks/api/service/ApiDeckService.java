@@ -10,7 +10,9 @@ import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.cache.redis.entity.DeckTags;
 import com.vtesdecks.cache.redis.repositories.DeckTagsRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
+import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.DeckQuery;
+import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckTag;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDecks;
@@ -62,6 +64,17 @@ public class ApiDeckService {
         return deckTagsRepository.findById(DeckTags.CACHE_ID)
                 .map(DeckTags::getTags)
                 .orElseGet(this::findAndCacheDeckTags);
+    }
+
+    public List<ApiDeck> getSpoilerDecks(String currencyCode) {
+        DeckQuery deckQuery = DeckQuery.builder()
+                .apiType(ApiDeckType.PRECONSTRUCTED)
+                .order(DeckSort.MODIFIED)
+                .tags(List.of(DeckTag.SPOILER.getTag()))
+                .build();
+        List<ApiDeck> spoilerDecks = getDecks(deckQuery, null, null, currencyCode, 0, Integer.MAX_VALUE)
+                .getDecks();
+        return spoilerDecks.isEmpty() ? null : spoilerDecks;
     }
 
     private List<String> findAndCacheDeckTags() {
