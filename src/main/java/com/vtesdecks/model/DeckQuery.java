@@ -29,7 +29,12 @@ public class DeckQuery {
     private Boolean exactAuthor;
     private String cardText;
     private List<String> clans;
+    private List<String> notClans;
+    private String clanMode;
     private List<String> disciplines;
+    private List<String> notDisciplines;
+    private String disciplineMode;
+    private String tournament;
     private Map<Integer, Integer> cards;
     private Integer cryptSizeMin;
     private Integer cryptSizeMax;
@@ -75,6 +80,14 @@ public class DeckQuery {
 
     public boolean isSingleDiscipline() {
         return singleDiscipline != null && singleDiscipline;
+    }
+
+    public boolean isClanAny() {
+        return "or".equalsIgnoreCase(clanMode);
+    }
+
+    public boolean isDisciplineAny() {
+        return "or".equalsIgnoreCase(disciplineMode);
     }
 
     public boolean isFavorite() {

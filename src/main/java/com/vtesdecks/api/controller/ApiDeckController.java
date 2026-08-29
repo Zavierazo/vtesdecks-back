@@ -110,7 +110,12 @@ public class ApiDeckController {
                                           @RequestParam(name = "exactAuthor", required = false) Boolean exactAuthor,
                                           @RequestParam(name = "cardText", required = false) String cardText,
                                           @RequestParam(name = "clans", required = false) List<String> clans,
+                                          @RequestParam(name = "notClans", required = false) List<String> notClans,
+                                          @RequestParam(name = "clanMode", required = false) String clanMode,
                                           @RequestParam(name = "disciplines", required = false) List<String> disciplines,
+                                          @RequestParam(name = "notDisciplines", required = false) List<String> notDisciplines,
+                                          @RequestParam(name = "disciplineMode", required = false) String disciplineMode,
+                                          @RequestParam(name = "tournament", required = false) String tournament,
                                           @RequestParam(name = "cards", required = false) List<String> cards,
                                           @RequestParam(name = "cryptSize", required = false) List<Integer> cryptSize,
                                           @RequestParam(name = "librarySize", required = false) List<Integer> librarySize,
@@ -151,7 +156,12 @@ public class ApiDeckController {
                 .exactAuthor(exactAuthor)
                 .cardText(cardText)
                 .clans(clans)
+                .notClans(notClans)
+                .clanMode(clanMode)
                 .disciplines(disciplines)
+                .notDisciplines(notDisciplines)
+                .disciplineMode(disciplineMode)
+                .tournament(tournament)
                 .starVampire(starVampire)
                 .singleClan(singleClan)
                 .singleDiscipline(singleDiscipline)

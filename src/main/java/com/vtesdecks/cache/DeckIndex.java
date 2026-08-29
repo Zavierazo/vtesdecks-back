@@ -98,6 +98,7 @@ public class DeckIndex {
         decks.addIndex(HashIndex.onAttribute(Deck.NAME_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.USER_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.AUTHOR_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(Deck.TOURNAMENT_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.RATE_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.VOTES_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.VIEWS_ATTRIBUTE));
@@ -338,16 +339,42 @@ public class DeckIndex {
                     QueryFactory.and(equal(DeckCard.IS_CRYPT_ATTRIBUTE, true), greaterThanOrEqualTo(DeckCard.NUMBER_ATTRIBUTE, CRYPT_MAIN_MIN_NUMBER))));
         }
         if (CollectionUtils.isNotEmpty(deckQuery.getClans())) {
-            for (String clan : deckQuery.getClans()) {
-                query = and(query, in(Deck.CLAN_MULTI_ATTRIBUTE, clan));
+            if (deckQuery.isClanAny()) {
+                Query<Deck> clanQuery = null;
+                for (String clan : deckQuery.getClans()) {
+                    clanQuery = or(clanQuery, in(Deck.CLAN_MULTI_ATTRIBUTE, clan));
+                }
+                query = and(query, clanQuery);
+            } else {
+                for (String clan : deckQuery.getClans()) {
+                    query = and(query, in(Deck.CLAN_MULTI_ATTRIBUTE, clan));
+                }
+            }
+        }
+        if (CollectionUtils.isNotEmpty(deckQuery.getNotClans())) {
+            for (String clan : deckQuery.getNotClans()) {
+                query = and(query, not(in(Deck.CLAN_MULTI_ATTRIBUTE, clan)));
             }
         }
         if (deckQuery.isSingleClan()) {
             query = and(query, equal(Deck.CLAN_NUMBER_ATTRIBUTE, 1));
         }
         if (CollectionUtils.isNotEmpty(deckQuery.getDisciplines())) {
-            for (String discipline : deckQuery.getDisciplines()) {
-                query = and(query, in(Deck.DISCIPLINE_MULTI_ATTRIBUTE, discipline));
+            if (deckQuery.isDisciplineAny()) {
+                Query<Deck> disciplineQuery = null;
+                for (String discipline : deckQuery.getDisciplines()) {
+                    disciplineQuery = or(disciplineQuery, in(Deck.DISCIPLINE_MULTI_ATTRIBUTE, discipline));
+                }
+                query = and(query, disciplineQuery);
+            } else {
+                for (String discipline : deckQuery.getDisciplines()) {
+                    query = and(query, in(Deck.DISCIPLINE_MULTI_ATTRIBUTE, discipline));
+                }
+            }
+        }
+        if (CollectionUtils.isNotEmpty(deckQuery.getNotDisciplines())) {
+            for (String discipline : deckQuery.getNotDisciplines()) {
+                query = and(query, not(in(Deck.DISCIPLINE_MULTI_ATTRIBUTE, discipline)));
             }
         }
         if (deckQuery.isSingleDiscipline()) {
@@ -383,6 +410,9 @@ public class DeckIndex {
             } else {
                 query = and(query, contains(Deck.AUTHOR_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getAuthor())));
             }
+        }
+        if (StringUtils.isNotBlank(deckQuery.getTournament())) {
+            query = and(query, contains(Deck.TOURNAMENT_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getTournament())));
         }
         if (deckQuery.getGroup() != null) {
             Query<Deck> groupQuery = null;
