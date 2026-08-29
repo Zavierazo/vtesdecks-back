@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,6 +32,7 @@ import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 @RequiredArgsConstructor
 public class ApiUserNotificationService {
     private static final int NOTIFICATION_MAX_LENGTH = 1000;
+    private static final Duration DECK_PUSH_MIN_INTERVAL = Duration.ofHours(1);
     public static final String NEW_LINE = "<br/>";
     private final UserNotificationRepository userNotificationRepository;
     private final ApiUserNotificationMapper apiUserNotificationMapper;
@@ -169,6 +171,7 @@ public class ApiUserNotificationService {
                         .filter(un -> un.getUser().equals(follower.getId().getUserId()))
                         .findFirst()
                         .orElse(null);
+                boolean push = true;
                 if (userNotification == null) {
                     userNotification = new UserNotificationEntity();
                     userNotification.setUser(follower.getId().getUserId());
@@ -176,13 +179,23 @@ public class ApiUserNotificationService {
                     userNotification.setType(UserNotificationType.DECK);
                     userNotification.setLink("/deck/" + deck.getId());
                     userNotification.setNotification(fixLimit("<strong>New deck added by " + getAuthor(deck.getUser()) + ":</strong>" + NEW_LINE + deck.getName()));
-                } else if (Boolean.TRUE.equals(userNotification.getRead())) {
-                    userNotification.setNotification(fixLimit("<strong>Deck updated by " + getAuthor(deck.getUser()) + ":</strong>" + NEW_LINE + deck.getName()));
+                } else {
+                    if (Boolean.TRUE.equals(userNotification.getRead())) {
+                        userNotification.setNotification(fixLimit("<strong>Deck updated by " + getAuthor(deck.getUser()) + ":</strong>" + NEW_LINE + deck.getName()));
+                    }
+                    // Avoid spamming the same deck notification when it is updated several times in a row
+                    push = isPushAllowed(userNotification);
                 }
                 userNotification.setRead(false);
-                userNotification.setCreationDate(LocalDateTime.now());
-                saveAndPush(userNotification);
-                log.info("New notification for follower {} about new deck {}", userNotification.getUser(), deck.getId());
+                if (push) {
+                    userNotification.setCreationDate(LocalDateTime.now());
+                    saveAndPush(userNotification);
+                    log.info("New notification for follower {} about new deck {}", userNotification.getUser(), deck.getId());
+                } else {
+                    log.info("Notification for follower {} about deck {} updated without push, last one was at {}",
+                            userNotification.getUser(), deck.getId(), userNotification.getCreationDate());
+                    userNotificationRepository.save(userNotification);
+                }
             }
         } catch (Exception e) {
             log.error("Unexpected error editing deck notification {}", deck, e);
@@ -203,6 +216,11 @@ public class ApiUserNotificationService {
 
     private String getAuthor(Integer user) {
         return userRepository.findById(user).map(UserEntity::getDisplayName).orElse("unknown");
+    }
+
+    private boolean isPushAllowed(UserNotificationEntity userNotification) {
+        LocalDateTime lastNotificationDate = userNotification.getCreationDate();
+        return lastNotificationDate == null || lastNotificationDate.isBefore(LocalDateTime.now().minus(DECK_PUSH_MIN_INTERVAL));
     }
 
     private void saveAndPush(UserNotificationEntity userNotification) {
