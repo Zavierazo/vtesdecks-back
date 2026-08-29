@@ -85,6 +85,9 @@ public class TournamentDeckSchedulerTest {
         assertEquals("http://www.vekn.fr/decks/twd.htm#2023event", deck.getSource());
         assertEquals("My Event 2023", deck.getTournament());
         assertEquals(20, deck.getPlayers());
+        assertEquals(3, deck.getRounds());
+        assertEquals("Somewhere, Spain", deck.getPlace());
+        assertEquals("Spain", deck.getCountry());
         assertEquals(2023, deck.getYear());
         assertEquals("John Doe", deck.getAuthor());
         assertEquals("https://example.org/event", deck.getUrl());
@@ -343,6 +346,9 @@ public class TournamentDeckSchedulerTest {
         assertEquals("https://www.vekn.net/event-calendar/event/10043", modern.getEvent().getUrl());
         assertEquals(LocalDate.of(2022, 2, 6), modern.getEvent().getDate());
         assertEquals(12, modern.getEvent().getPlayersCount());
+        assertEquals(2, modern.getEvent().getRounds());
+        assertEquals("Newark (OH), USA", modern.getEvent().getPlace());
+        assertEquals("United States", modern.getEvent().getCountry().getName());
         assertEquals("Alex Romano", modern.getPlayer());
         assertEquals("Daylily", modern.getName());
         assertEquals(12, modern.getCards().stream()
@@ -355,6 +361,9 @@ public class TournamentDeckSchedulerTest {
         verify(deckRepository).saveAndFlush(deckCaptor.capture());
         assertEquals("tournament-10043", deckCaptor.getValue().getId());
         assertEquals(2022, deckCaptor.getValue().getYear());
+        assertEquals(2, deckCaptor.getValue().getRounds());
+        assertEquals("Newark (OH), USA", deckCaptor.getValue().getPlace());
+        assertEquals("United States", deckCaptor.getValue().getCountry());
     }
 
     private TwdaDeck twdaDeck() {
@@ -365,6 +374,11 @@ public class TournamentDeckSchedulerTest {
         event.setPlace("Somewhere, Spain");
         event.setDate(DATE);
         event.setPlayersCount(20);
+        event.setRounds(3);
+        TwdaEvent.TwdaCountry country = new TwdaEvent.TwdaCountry();
+        country.setName("Spain");
+        country.setCode("ES");
+        event.setCountry(country);
         event.setUrl("https://example.org/event");
         deck.setEvent(event);
         deck.setPlayer("John Doe");
@@ -414,6 +428,9 @@ public class TournamentDeckSchedulerTest {
                 .source("http://www.vekn.fr/decks/twd.htm#2023event")
                 .tournament("My Event 2023")
                 .players(20)
+                .rounds(3)
+                .place("Somewhere, Spain")
+                .country("Spain")
                 .year(2023)
                 .author("John Doe")
                 .url("https://example.org/event")

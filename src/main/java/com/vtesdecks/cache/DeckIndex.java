@@ -103,6 +103,9 @@ public class DeckIndex {
         decks.addIndex(HashIndex.onAttribute(Deck.VOTES_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.VIEWS_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.PLAYERS_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(Deck.ROUNDS_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(Deck.PLACE_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(Deck.COUNTRY_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.YEAR_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.VIEWS_LAST_MONTH_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.COMMENTS_ATTRIBUTE));
@@ -413,6 +416,13 @@ public class DeckIndex {
         }
         if (StringUtils.isNotBlank(deckQuery.getTournament())) {
             query = and(query, contains(Deck.TOURNAMENT_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getTournament())));
+        }
+        if (StringUtils.isNotBlank(deckQuery.getPlace())) {
+            String place = StringUtils.lowerCase(deckQuery.getPlace());
+            query = and(query, or(contains(Deck.PLACE_ATTRIBUTE, place), contains(Deck.COUNTRY_ATTRIBUTE, place)));
+        }
+        if (CollectionUtils.isNotEmpty(deckQuery.getRounds())) {
+            query = and(query, in(Deck.ROUNDS_ATTRIBUTE, deckQuery.getRounds()));
         }
         if (deckQuery.getGroup() != null) {
             Query<Deck> groupQuery = null;

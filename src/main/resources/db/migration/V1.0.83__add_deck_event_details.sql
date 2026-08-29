@@ -1,0 +1,4 @@
+ALTER TABLE `deck`
+    ADD COLUMN `rounds` INT DEFAULT NULL AFTER `players`,
+    ADD COLUMN `place` VARCHAR(250) DEFAULT NULL AFTER `rounds`,
+    ADD COLUMN `country` VARCHAR(100) DEFAULT NULL AFTER `place`;

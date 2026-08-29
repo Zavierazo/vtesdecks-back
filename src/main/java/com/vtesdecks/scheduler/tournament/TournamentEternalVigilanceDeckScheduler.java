@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -61,6 +62,10 @@ public class TournamentEternalVigilanceDeckScheduler {
      */
     private static final Pattern DECK_PATH = Pattern.compile("^\\d{4}/\\d{2}/(?<eventId>\\d+)\\.yaml$");
     private static final Pattern ADVANCED = Pattern.compile("\\s*\\(ADV\\)\\s*$", Pattern.CASE_INSENSITIVE);
+    /**
+     * Number of preliminary rounds of the event, reported as {@code 2R+F} or {@code 3R+F}.
+     */
+    private static final Pattern ROUNDS_FORMAT = Pattern.compile("^\\s*(?<rounds>\\d+)\\s*R", Pattern.CASE_INSENSITIVE);
     private static final int MAX_RETRIES = 4;
     private static final Map<String, String> TYPO_FIXES = ImmutableMap.<String, String>builder()
             .put("Pentex™ Subversion", "Pentex(TM) Subversion")
@@ -160,6 +165,8 @@ public class TournamentEternalVigilanceDeckScheduler {
         deck.setUrl(source.getEventUrl());
         deck.setTournament(source.getName());
         deck.setPlayers(source.getPlayersCount());
+        deck.setRounds(getRounds(source.getRoundsFormat()));
+        deck.setPlace(StringUtils.trimToNull(source.getLocation()));
         deck.setAuthor(source.getWinner());
         deck.setViews(actual != null ? actual.getViews() : 0);
         deck.setVerified(actual != null ? actual.getVerified() : false);
@@ -199,6 +206,23 @@ public class TournamentEternalVigilanceDeckScheduler {
         }
         //Each deck is persisted in its own transaction so a failure only rolls back that deck
         transactionTemplate.executeWithoutResult(status -> persist(actual, deck, deckCards));
+    }
+
+    /**
+     * Extracts the number of preliminary rounds out of the event round format ({@code 2R+F},
+     * {@code 3R+F}), ignoring the final. Returns {@code null} when the format is unknown.
+     */
+    static Integer getRounds(String roundsFormat) {
+        if (StringUtils.isBlank(roundsFormat)) {
+            return null;
+        }
+        Matcher matcher = ROUNDS_FORMAT.matcher(roundsFormat);
+        if (!matcher.find()) {
+            log.warn("Unable to parse rounds format '{}'", roundsFormat);
+            return null;
+        }
+        int rounds = Integer.parseInt(matcher.group("rounds"));
+        return rounds > 0 ? rounds : null;
     }
 
     /**

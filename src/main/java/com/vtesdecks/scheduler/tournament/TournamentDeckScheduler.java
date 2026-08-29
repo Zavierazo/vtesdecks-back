@@ -115,6 +115,9 @@ public class TournamentDeckScheduler {
         deck.setTournament(event.getName());
         //The archive reports 0 players when the attendance is unknown
         deck.setPlayers(event.getPlayersCount() != null && event.getPlayersCount() > 0 ? event.getPlayersCount() : null);
+        deck.setRounds(event.getRounds() != null && event.getRounds() > 0 ? event.getRounds() : null);
+        deck.setPlace(StringUtils.trimToNull(event.getPlace()));
+        deck.setCountry(event.getCountry() != null ? StringUtils.trimToNull(event.getCountry().getName()) : null);
         deck.setYear(event.getDate().getYear());
         deck.setAuthor(source.getPlayer());
         deck.setUrl(StringUtils.isNotBlank(event.getUrl()) ? event.getUrl() : null);
@@ -254,6 +257,9 @@ public class TournamentDeckScheduler {
         String id = deck.getId();
         diffField(id, "tournament", actual.getTournament(), deck.getTournament());
         diffField(id, "players", actual.getPlayers(), deck.getPlayers());
+        diffField(id, "rounds", actual.getRounds(), deck.getRounds());
+        diffField(id, "place", actual.getPlace(), deck.getPlace());
+        diffField(id, "country", actual.getCountry(), deck.getCountry());
         diffField(id, "year", actual.getYear(), deck.getYear());
         diffField(id, "author", actual.getAuthor(), deck.getAuthor());
         diffField(id, "url", actual.getUrl(), deck.getUrl());

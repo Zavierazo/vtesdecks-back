@@ -180,6 +180,54 @@ public class ApiUserControllerTest {
         assertEquals("Grand Prix", query.getTournament());
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    public void shouldFilterDecksByPlaceCountryAndRounds() {
+        DeckIndex index = new DeckIndex();
+        IndexedCollection<Deck> decks = (IndexedCollection<Deck>) ReflectionTestUtils.getField(index, "decks");
+        decks.add(event("madrid", "Madrid, Spain", "Spain", 3));
+        decks.add(event("newark", "Newark (OH), USA", "United States", 2));
+        decks.add(event("online", "Online", null, null));
+
+        //The place already contains the country name
+        assertEquals(List.of("madrid"), ids(index, DeckQuery.builder().place("sPaIn").build()));
+        //Only the country matches
+        assertEquals(List.of("newark"), ids(index, DeckQuery.builder().place("united").build()));
+        assertEquals(List.of("newark"), ids(index, DeckQuery.builder().place("newark").build()));
+        assertEquals(List.of("online"), ids(index, DeckQuery.builder().place("onl").build()));
+        assertEquals(List.of(), ids(index, DeckQuery.builder().place("france").build()));
+        assertEquals(List.of("madrid"), ids(index, DeckQuery.builder().rounds(List.of(3)).build()));
+        assertEquals(Set.of("madrid", "newark"), Set.copyOf(ids(index, DeckQuery.builder().rounds(List.of(2, 3)).build())));
+    }
+
+    @Test
+    public void shouldMapPlaceAndRoundsParameters() throws Exception {
+        ApiDeckController deckController = new ApiDeckController();
+        ReflectionTestUtils.setField(deckController, "deckService", deckService);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(deckController).build();
+        when(deckService.getDecks(any(DeckQuery.class), isNull(), isNull(), any(), anyInt(), anyInt()))
+                .thenReturn(new ApiDecks());
+
+        mockMvc.perform(get("/api/1.0/decks")
+                        .param("place", "Spain")
+                        .param("rounds", "2,3"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<DeckQuery> captor = ArgumentCaptor.forClass(DeckQuery.class);
+        verify(deckService).getDecks(captor.capture(), isNull(), isNull(), any(), anyInt(), anyInt());
+        DeckQuery query = captor.getValue();
+        assertEquals("Spain", query.getPlace());
+        assertEquals(List.of(2, 3), query.getRounds());
+    }
+
+    private Deck event(String id, String place, String country, Integer rounds) {
+        Deck deck = deck(id, Set.of("Brujah"), Set.of("Celerity"), "Event " + id);
+        deck.setPlace(place);
+        deck.setCountry(country);
+        deck.setRounds(rounds);
+        return deck;
+    }
+
     private List<String> ids(DeckIndex index, DeckQuery query) {
         try (ResultSet<Deck> result = index.selectAll(query)) {
             return result.stream().map(Deck::getId).toList();

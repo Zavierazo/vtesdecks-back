@@ -35,6 +35,8 @@ public class DeckQuery {
     private List<String> notDisciplines;
     private String disciplineMode;
     private String tournament;
+    private String place;
+    private List<Integer> rounds;
     private Map<Integer, Integer> cards;
     private Integer cryptSizeMin;
     private Integer cryptSizeMax;
@@ -66,7 +68,9 @@ public class DeckQuery {
     private Boolean detailed;
     private Integer archetype;
     private LocalDate creationDate;
-    /** When true, skips both the published filter and the deck-type restriction, returning all non-deleted decks. */
+    /**
+     * When true, skips both the published filter and the deck-type restriction, returning all non-deleted decks.
+     */
     @Builder.Default
     private boolean allDecks = false;
 

@@ -44,6 +44,15 @@ public class DeckEntity {
     @Column(name = "players")
     private Integer players;
 
+    @Column(name = "rounds")
+    private Integer rounds;
+
+    @Column(name = "place")
+    private String place;
+
+    @Column(name = "country")
+    private String country;
+
     @Column(name = "year")
     private Integer year;
 

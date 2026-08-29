@@ -46,6 +46,9 @@ public class Deck {
     public static final Attribute<Deck, Integer> DISCIPLINE_NUMBER_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, Integer.class, "disciplineNumber", (Deck deck) -> deck.getDisciplines().size());
     public static final Attribute<Deck, String> AUTHOR_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, String.class, "author", (Deck deck) -> deck.getAuthor() != null ? deck.getAuthor().toLowerCase() : null);
     public static final Attribute<Deck, String> TOURNAMENT_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, String.class, "tournament", (Deck deck) -> StringUtils.lowerCase(deck.getTournament()));
+    public static final Attribute<Deck, Integer> ROUNDS_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, Integer.class, "rounds", Deck::getRounds);
+    public static final Attribute<Deck, String> PLACE_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, String.class, "place", (Deck deck) -> StringUtils.lowerCase(deck.getPlace()));
+    public static final Attribute<Deck, String> COUNTRY_ATTRIBUTE = QueryFactory.nullableAttribute(Deck.class, String.class, "country", (Deck deck) -> StringUtils.lowerCase(deck.getCountry()));
     public static final Attribute<Deck, String> CLAN_MULTI_ATTRIBUTE = new MultiValueNullableAttribute<Deck, String>(true) {
         public Iterable<String> getNullableValues(Deck deck, QueryOptions queryOptions) {
             return deck.getClans();
@@ -109,6 +112,9 @@ public class Deck {
     private ReactionType reaction;
     private String tournament;
     private Integer players;
+    private Integer rounds;
+    private String place;
+    private String country;
     private Integer year;
     private UserEntity user;
     private List<String> userRoles;

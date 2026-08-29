@@ -119,6 +119,9 @@ public class DeckFactory {
         value.setReaction(computeFeaturedReaction(deck.getId()));
         value.setTournament(deck.getTournament());
         value.setPlayers(deck.getPlayers());
+        value.setRounds(deck.getRounds());
+        value.setPlace(deck.getPlace());
+        value.setCountry(deck.getCountry());
         value.setYear(deck.getYear() != null ? deck.getYear() : deck.getCreationDate().getYear());
         value.setAuthor(deck.getAuthor());
         value.setUrl(deck.getUrl());

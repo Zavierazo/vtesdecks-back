@@ -22,6 +22,9 @@ public class ApiDeck {
     private Long comments;
     private String tournament;
     private Integer players;
+    private Integer rounds;
+    private String place;
+    private String country;
     private Integer year;
     private String author;
     private ApiPublicUser user;
