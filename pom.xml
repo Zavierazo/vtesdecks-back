@@ -120,6 +120,17 @@
             <version>1.21.1</version>
         </dependency>
         <dependency>
+            <groupId>nl.martijndwars</groupId>
+            <artifactId>web-push</artifactId>
+            <version>5.1.2</version>
+        </dependency>
+        <!-- web-push 5.1.2 declares jose4j as runtime although it appears in its public API. -->
+        <dependency>
+            <groupId>org.bitbucket.b_c</groupId>
+            <artifactId>jose4j</artifactId>
+            <version>0.9.6</version>
+        </dependency>
+        <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-jdbc</artifactId>
         </dependency>

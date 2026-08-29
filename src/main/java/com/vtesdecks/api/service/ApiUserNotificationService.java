@@ -14,6 +14,7 @@ import com.vtesdecks.jpa.repositories.UserNotificationRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiUserNotification;
 import com.vtesdecks.service.DeckService;
+import com.vtesdecks.service.push.WebPushDeliveryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ public class ApiUserNotificationService {
     private final DeckService deckService;
     private final UserFollowerRepository userFollowerRepository;
     private final UserRepository userRepository;
+    private final WebPushDeliveryService webPushDeliveryService;
 
     public Integer notificationUnreadCount(Integer userId) {
         if (userId == null) {
@@ -105,7 +107,7 @@ public class ApiUserNotificationService {
         userNotification.setType(UserNotificationType.COMMENT);
         userNotification.setNotification(fixLimit("<strong>New comment on \"" + deck.getName() + "\":</strong>" + NEW_LINE + comment.getContent()));
         userNotification.setLink("/deck/" + deck.getId());
-        userNotificationRepository.save(userNotification);
+        saveAndPush(userNotification);
     }
 
 
@@ -152,7 +154,7 @@ public class ApiUserNotificationService {
         userNotification.setType(UserNotificationType.LINK);
         userNotification.setNotification("<strong>Support VTESDecks on Patreon\uD83E\uDD87</strong><br/>Help us cover server costs and keep improving the site.");
         userNotification.setLink("https://www.patreon.com/bePatron?u=41542528");
-        userNotificationRepository.save(userNotification);
+        saveAndPush(userNotification);
 
     }
 
@@ -179,7 +181,7 @@ public class ApiUserNotificationService {
                 }
                 userNotification.setRead(false);
                 userNotification.setCreationDate(LocalDateTime.now());
-                userNotificationRepository.save(userNotification);
+                saveAndPush(userNotification);
                 log.info("New notification for follower {} about new deck {}", userNotification.getUser(), deck.getId());
             }
         } catch (Exception e) {
@@ -201,6 +203,11 @@ public class ApiUserNotificationService {
 
     private String getAuthor(Integer user) {
         return userRepository.findById(user).map(UserEntity::getDisplayName).orElse("unknown");
+    }
+
+    private void saveAndPush(UserNotificationEntity userNotification) {
+        UserNotificationEntity saved = userNotificationRepository.save(userNotification);
+        webPushDeliveryService.deliver(saved);
     }
 
 
