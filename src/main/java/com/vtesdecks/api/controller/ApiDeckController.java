@@ -124,7 +124,6 @@ public class ApiDeckController {
                                           @RequestParam(name = "place", required = false) String place,
                                           @RequestParam(name = "rounds", required = false) List<Integer> rounds,
                                           @RequestParam(name = "cards", required = false) List<String> cards,
-                                          @RequestParam(name = "cardMode", required = false) String cardMode,
                                           @RequestParam(name = "excludedCards", required = false) List<Integer> excludedCards,
                                           @RequestParam(name = "minPrice", required = false) BigDecimal minPrice,
                                           @RequestParam(name = "maxPrice", required = false) BigDecimal maxPrice,
@@ -192,7 +191,6 @@ public class ApiDeckController {
                 .favorite(favorite)
                 .detailed(detailed)
                 .cards(cards)
-                .cardMode(cardMode)
                 .excludedCards(excludedCards)
                 .minPrice(indexedMinPrice)
                 .maxPrice(indexedMaxPrice)

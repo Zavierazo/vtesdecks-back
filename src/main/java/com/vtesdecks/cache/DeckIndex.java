@@ -305,23 +305,15 @@ public class DeckIndex {
             }
         }
         if (deckQuery.getCards() != null && !deckQuery.getCards().isEmpty()) {
-            List<Query<Deck>> cardQueries = deckQuery.getCards().entrySet().stream()
-                    .map(card -> existsIn(
+            for (Map.Entry<Integer, Integer> card : deckQuery.getCards().entrySet()) {
+                Integer cardId = card.getKey();
+                Integer cardNumber = card.getValue();
+                query = and(query, existsIn(
                         deckCardIndex.getRepository(),
                         Deck.ID_ATTRIBUTE,
                         DeckCard.DECK_ID_ATTRIBUTE,
-                        QueryFactory.and(in(DeckCard.CARD_ID_ATTRIBUTE, card.getKey()),
-                                greaterThanOrEqualTo(DeckCard.NUMBER_ATTRIBUTE, card.getValue()))))
-                    .toList();
-            if (deckQuery.isCardAny()) {
-                Query<Deck> anyCardQuery = cardQueries.stream()
-                        .reduce(QueryFactory::or)
-                        .orElseThrow();
-                query = and(query, anyCardQuery);
-            } else {
-                for (Query<Deck> cardQuery : cardQueries) {
-                    query = and(query, cardQuery);
-                }
+                        QueryFactory.and(in(DeckCard.CARD_ID_ATTRIBUTE, cardId),
+                                greaterThanOrEqualTo(DeckCard.NUMBER_ATTRIBUTE, cardNumber))));
             }
         }
         if (CollectionUtils.isNotEmpty(deckQuery.getExcludedCards())) {

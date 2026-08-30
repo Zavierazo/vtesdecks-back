@@ -39,7 +39,6 @@ public class DeckQuery {
     private String place;
     private List<Integer> rounds;
     private Map<Integer, Integer> cards;
-    private String cardMode;
     private List<Integer> excludedCards;
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
@@ -105,10 +104,6 @@ public class DeckQuery {
 
     public boolean isDetailed() {
         return detailed != null && detailed;
-    }
-
-    public boolean isCardAny() {
-        return "any".equalsIgnoreCase(cardMode);
     }
 
     @Data
