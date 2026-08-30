@@ -201,6 +201,12 @@ public class ApiDeckBuilderService {
                 log.error("Unable to delete card {}", card, e);
             }
         }
+        // Card changes only update deck_card rows, so Hibernate's @UpdateTimestamp on
+        // DeckEntity would not run unless we explicitly mark the deck as modified.
+        if (isUpdated) {
+            deck.setModificationDate(LocalDateTime.now());
+            deckRepository.save(deck);
+        }
         //Tag the last trigger-fired history row of this save as a named checkpoint
         if (apiDeckBuilder.getTagLabel() != null) {
             deckCardHistoryService.tagLastEntry(deck.getId(), apiDeckBuilder.getTagLabel());
