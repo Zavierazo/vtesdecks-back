@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,6 +39,10 @@ public class DeckQuery {
     private String place;
     private List<Integer> rounds;
     private Map<Integer, Integer> cards;
+    private String cardMode;
+    private List<Integer> excludedCards;
+    private BigDecimal minPrice;
+    private BigDecimal maxPrice;
     private Integer cryptSizeMin;
     private Integer cryptSizeMax;
     private Integer librarySizeMin;
@@ -100,6 +105,10 @@ public class DeckQuery {
 
     public boolean isDetailed() {
         return detailed != null && detailed;
+    }
+
+    public boolean isCardAny() {
+        return "any".equalsIgnoreCase(cardMode);
     }
 
     @Data

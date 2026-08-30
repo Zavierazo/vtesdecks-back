@@ -10,6 +10,7 @@ import java.util.List;
 public class ApiDecks {
     private Integer offset;
     private Integer total;
+    private String currency;
     private List<ApiDeck> decks;
     private List<ApiDeck> restorableDecks;
 }

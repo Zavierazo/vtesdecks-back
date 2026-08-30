@@ -12,7 +12,9 @@ import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDeckHome;
 import com.vtesdecks.model.api.ApiDeckView;
 import com.vtesdecks.model.api.ApiDecks;
+import com.vtesdecks.service.CurrencyExchangeService;
 import com.vtesdecks.service.DeckExportService;
+import com.vtesdecks.util.Constants;
 import com.vtesdecks.util.Utils;
 import com.vtesdecks.worker.DeckFeedbackWorker;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Controller
@@ -46,6 +49,8 @@ public class ApiDeckController {
     ;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private CurrencyExchangeService currencyExchangeService;
 
     @RequestMapping(method = RequestMethod.GET, value = "/home", produces = {
             MediaType.APPLICATION_JSON_VALUE
@@ -119,6 +124,10 @@ public class ApiDeckController {
                                           @RequestParam(name = "place", required = false) String place,
                                           @RequestParam(name = "rounds", required = false) List<Integer> rounds,
                                           @RequestParam(name = "cards", required = false) List<String> cards,
+                                          @RequestParam(name = "cardMode", required = false) String cardMode,
+                                          @RequestParam(name = "excludedCards", required = false) List<Integer> excludedCards,
+                                          @RequestParam(name = "minPrice", required = false) BigDecimal minPrice,
+                                          @RequestParam(name = "maxPrice", required = false) BigDecimal maxPrice,
                                           @RequestParam(name = "cryptSize", required = false) List<Integer> cryptSize,
                                           @RequestParam(name = "librarySize", required = false) List<Integer> librarySize,
                                           @RequestParam(name = "group", required = false) List<Integer> group,
@@ -148,6 +157,16 @@ public class ApiDeckController {
                                           @RequestParam(name = "collectionPercentage", required = false) Integer collectionPercentage,
                                           @RequestParam(name = "offset", required = false) Integer offset,
                                           @RequestParam(name = "limit", required = false) Integer limit) {
+        if ((minPrice != null && minPrice.signum() < 0)
+                || (maxPrice != null && maxPrice.signum() < 0)
+                || (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0)) {
+            return ResponseEntity.badRequest().build();
+        }
+        String currencyCode = Utils.getCurrencyCode(request);
+        BigDecimal indexedMinPrice = minPrice == null ? null
+                : currencyExchangeService.convert(minPrice, currencyCode, Constants.DEFAULT_CURRENCY);
+        BigDecimal indexedMaxPrice = maxPrice == null ? null
+                : currencyExchangeService.convert(maxPrice, currencyCode, Constants.DEFAULT_CURRENCY);
         DeckQuery deckQuery = DeckQuery.builder()
                 .apiType(type)
                 .order(order)
@@ -173,6 +192,10 @@ public class ApiDeckController {
                 .favorite(favorite)
                 .detailed(detailed)
                 .cards(cards)
+                .cardMode(cardMode)
+                .excludedCards(excludedCards)
+                .minPrice(indexedMinPrice)
+                .maxPrice(indexedMaxPrice)
                 .limitedFormat(limitedFormat)
                 .paths(paths)
                 .archetype(archetype)
@@ -193,7 +216,7 @@ public class ApiDeckController {
                 .reaction(DeckQuery.CardProportion.fromValue(reaction))
                 .event(DeckQuery.CardProportion.fromValue(event))
                 .build();
-        ApiDecks decks = deckService.getDecks(deckQuery, collectionPercentage, bySimilarity, Utils.getCurrencyCode(request), offset != null ? offset : 0, limit != null ? limit : 20);
+        ApiDecks decks = deckService.getDecks(deckQuery, collectionPercentage, bySimilarity, currencyCode, offset != null ? offset : 0, limit != null ? limit : 20);
         return new ResponseEntity<>(decks, HttpStatus.OK);
     }
 

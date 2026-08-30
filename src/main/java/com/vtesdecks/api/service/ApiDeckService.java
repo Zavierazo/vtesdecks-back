@@ -101,6 +101,7 @@ public class ApiDeckService {
         ApiDecks apiDecks = new ApiDecks();
         apiDecks.setTotal(decks.size());
         apiDecks.setOffset(offset);
+        apiDecks.setCurrency(currencyCode);
 
         Stream<Deck> deckStream = decks.stream();
         // Filter by collection percentage
