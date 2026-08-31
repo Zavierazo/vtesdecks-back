@@ -99,15 +99,16 @@ public class ApiDeckService {
     public ApiDecks getDecks(DeckQuery deckQuery, Integer collectionPercentage, String bySimilarity, String currencyCode, int offset, int limit) {
         ResultSet<Deck> decks = deckService.getDecks(deckQuery);
         ApiDecks apiDecks = new ApiDecks();
-        apiDecks.setTotal(decks.size());
         apiDecks.setOffset(offset);
         apiDecks.setCurrency(currencyCode);
 
         Stream<Deck> deckStream = decks.stream();
+        boolean filteredInMemory = false;
         // Filter by collection percentage
         if (collectionPercentage != null && collectionPercentage > 0) {
             Map<Integer, Integer> collectionMap = apiCollectionService.getCollectionCardsMap();
             deckStream = deckStream.filter(deck -> matchCollectionPercentage(deck, collectionMap, collectionPercentage));
+            filteredInMemory = true;
         }
         // Sort by similarity if requested
         if (bySimilarity != null) {
@@ -120,7 +121,15 @@ public class ApiDeckService {
                         .filter(pair -> pair.getValue() >= 0.5)
                         .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                         .map(Pair::getKey);
+                filteredInMemory = true;
             }
+        }
+        if (filteredInMemory) {
+            List<Deck> filteredDecks = deckStream.toList();
+            apiDecks.setTotal(filteredDecks.size());
+            deckStream = filteredDecks.stream();
+        } else {
+            apiDecks.setTotal(decks.size());
         }
         apiDecks.setDecks(deckStream
                 .skip(offset)
