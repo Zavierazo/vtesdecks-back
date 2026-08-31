@@ -99,6 +99,7 @@ public class WebPushDeliveryService {
                     delivered++;
                 } else if (status == 404 || status == 410) {
                     subscriptionRepository.deleteById(subscription.getId());
+                    subscriptionRepository.flush();
                     removed++;
                     log.info("Removed expired Web Push subscription id {} after HTTP {} for notification {}",
                             subscription.getId(), status, userNotification.getId());
