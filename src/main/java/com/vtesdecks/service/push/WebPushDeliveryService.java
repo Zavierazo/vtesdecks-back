@@ -18,10 +18,11 @@ import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.security.Security;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.Security;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,7 @@ public class WebPushDeliveryService {
     }
 
     @Async
+    @Transactional
     public void deliver(UserNotificationEntity userNotification) {
         if (pushService == null || userNotification == null || userNotification.getUser() == null) {
             return;
