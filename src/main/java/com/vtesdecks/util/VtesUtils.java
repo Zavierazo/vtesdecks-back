@@ -324,10 +324,7 @@ public class VtesUtils {
     }
 
     public static boolean isUnreleased(List<String> sets) {
-        if (sets != null && sets.size() == 1) {
-            return sets.getFirst().startsWith("Spoiler:");
-        }
-        return false;
+        return sets != null && sets.stream().anyMatch(set -> set.startsWith("Spoiler:"));
     }
 
     public static Set<Integer> getLimitedFormats(Card card, List<LimitedFormatEntity> limitedFormats) {
