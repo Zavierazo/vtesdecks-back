@@ -10,6 +10,7 @@ import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.integration.ScannerClient;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
+import com.vtesdecks.model.ShopPlatform;
 import com.vtesdecks.model.api.ApiBaseCard;
 import com.vtesdecks.model.api.ApiCrypt;
 import com.vtesdecks.model.api.ApiLibrary;
@@ -85,6 +86,10 @@ public class ApiCardService {
                     .map(card -> apiCardMapper.mapLibrary(card, locale, null, null))
                     .toList();
         }
+    }
+
+    public List<Integer> getInStockCardIds(ShopPlatform platform) {
+        return cardShopRepository.findDistinctInStockCardIdsByPlatform(platform);
     }
 
     public ApiLibrary getLibraryLastUpdate() {

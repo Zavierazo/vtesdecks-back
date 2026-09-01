@@ -2,6 +2,7 @@ package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.ApiCardInfoService;
 import com.vtesdecks.api.service.ApiCardService;
+import com.vtesdecks.model.ShopPlatform;
 import com.vtesdecks.model.api.ApiBaseCard;
 import com.vtesdecks.model.api.ApiCardInfo;
 import com.vtesdecks.model.api.ApiCrypt;
@@ -16,6 +17,7 @@ import com.vtesdecks.util.VtesUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -99,6 +101,19 @@ public class ApiCardController {
     @ResponseBody
     public ResponseEntity<List<ApiLibrary>> getAllLibrary(@RequestParam(required = false) String locale) {
         return new ResponseEntity<>(apiCardService.getAllLibrary(locale), HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/shops/{platform}/in-stock-card-ids", produces = {
+            MediaType.APPLICATION_JSON_VALUE
+    })
+    @ResponseBody
+    public ResponseEntity<List<Integer>> getInStockCardIds(@PathVariable ShopPlatform platform) {
+        if (!platform.isEnabled()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(apiCardService.getInStockCardIds(platform));
     }
 
     @GetMapping(value = "/library/lastUpdate", produces = {
