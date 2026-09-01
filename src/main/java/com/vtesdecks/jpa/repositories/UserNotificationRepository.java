@@ -1,6 +1,7 @@
 package com.vtesdecks.jpa.repositories;
 
 import com.vtesdecks.jpa.entity.UserNotificationEntity;
+import com.vtesdecks.enums.UserNotificationType;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -27,9 +28,6 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
     @Transactional
     void deleteByReferenceId(String referenceId);
 
-    @Modifying
-    @Transactional
-    @Query(value = "UPDATE user_notification SET creation_date = :now, `read` = false " +
-            "WHERE type = 'LINK' AND link LIKE '%patreon%' AND creation_date < :threshold", nativeQuery = true)
-    int refreshOldPatreonNotifications(LocalDateTime now, LocalDateTime threshold);
+    List<UserNotificationEntity> findByTypeAndLinkContainingAndCreationDateBefore(
+            UserNotificationType type, String link, LocalDateTime threshold);
 }
