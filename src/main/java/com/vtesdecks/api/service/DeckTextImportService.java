@@ -5,13 +5,17 @@ import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Library;
+import com.vtesdecks.model.api.ApiBaseCard;
 import com.vtesdecks.model.api.ApiCard;
+import com.vtesdecks.model.api.ApiCrypt;
+import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiDeckBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -71,8 +75,14 @@ public class DeckTextImportService {
      */
     private static final String ADV_SUFFIX = "(ADV)";
 
+    /** Avoid accepting weak fuzzy matches while still tolerating small typos. */
+    private static final double FUZZY_MIN_SCORE = 0.5;
+    private static final int FUZZY_RESULT_LIMIT = 10;
+    private static final Set<String> FUZZY_RESULT_FIELDS = Set.of("id", "name", "adv", "group");
+
     private final CryptCache cryptCache;
     private final LibraryCache libraryCache;
+    private final ApiCardService apiCardService;
 
     // -------------------------------------------------------------------------
     // Public API
@@ -145,14 +155,42 @@ public class DeckTextImportService {
             builder.setDescription(description.toString());
         }
 
-        // Classify each parsed entry as crypt or library by probing the caches
-        List<CardEntry> cryptEntries = new ArrayList<>();
+        // Prefer safe exact matches; use the general card search only as fallback.
+        List<ResolvedCryptEntry> cryptEntries = new ArrayList<>();
         for (CardEntry entry : parsedEntries) {
-            if (hasCryptCandidates(entry)) {
-                cryptEntries.add(entry);
-            } else {
-                addLibraryCard(builder, entry.name(), entry.count());
+            List<Crypt> cryptCandidates = getExactCryptCandidates(entry);
+            if (!cryptCandidates.isEmpty()) {
+                cryptEntries.add(new ResolvedCryptEntry(entry, cryptCandidates));
+                continue;
             }
+
+            Library library = getExactLibraryCandidate(entry.name());
+            if (library != null) {
+                addLibraryCard(builder, library, entry.count());
+                continue;
+            }
+
+            List<ApiBaseCard> fuzzyCandidates = getBestFuzzyCandidates(entry);
+            if (!fuzzyCandidates.isEmpty() && fuzzyCandidates.getFirst() instanceof ApiCrypt) {
+                List<Crypt> fuzzyCryptCandidates = fuzzyCandidates.stream()
+                        .filter(ApiCrypt.class::isInstance)
+                        .map(ApiBaseCard::getId)
+                        .map(cryptCache::get)
+                        .filter(java.util.Objects::nonNull)
+                        .toList();
+                if (!fuzzyCryptCandidates.isEmpty()) {
+                    cryptEntries.add(new ResolvedCryptEntry(entry, fuzzyCryptCandidates));
+                    continue;
+                }
+            } else if (!fuzzyCandidates.isEmpty() && fuzzyCandidates.getFirst() instanceof ApiLibrary) {
+                Library fuzzyLibrary = libraryCache.get(fuzzyCandidates.getFirst().getId());
+                if (fuzzyLibrary != null) {
+                    addLibraryCard(builder, fuzzyLibrary, entry.count());
+                    continue;
+                }
+            }
+
+            log.warn("Card not found during text import: '{}'", entry.name());
         }
 
         // Resolve crypt cards with group disambiguation and add to builder
@@ -165,50 +203,105 @@ public class DeckTextImportService {
     // Private helpers
     // -------------------------------------------------------------------------
 
-    /**
-     * Returns {@code true} if the entry's name resolves to at least one crypt
-     * card (respecting the {@code (ADV)} suffix).
-     * Falls back to i18n name matching when the English exact search returns nothing.
-     */
-    private boolean hasCryptCandidates(CardEntry entry) {
+    private List<Crypt> getExactCryptCandidates(CardEntry entry) {
         boolean isAdv = entry.name().endsWith(ADV_SUFFIX);
         String searchName = isAdv
                 ? entry.name().substring(0, entry.name().lastIndexOf(ADV_SUFFIX)).trim()
                 : entry.name();
-        try (ResultSet<Crypt> rs = cryptCache.selectByExactName(searchName)) {
-            for (Crypt c : rs) {
-                if (c.isAdv() == isAdv) {
-                    return true;
+
+        for (String variant : getNameVariants(searchName)) {
+            List<Crypt> candidates = new ArrayList<>();
+            try (ResultSet<Crypt> rs = cryptCache.selectByExactName(variant)) {
+                for (Crypt crypt : rs) {
+                    if (crypt.isAdv() == isAdv) {
+                        candidates.add(crypt);
+                    }
                 }
             }
-        }
-        // Fallback: search by i18n name
-        try (ResultSet<Crypt> rs = cryptCache.selectByExactI18nName(searchName)) {
-            for (Crypt c : rs) {
-                if (c.isAdv() == isAdv) {
-                    return true;
-                }
+            if (!candidates.isEmpty()) {
+                return candidates;
             }
         }
-        return false;
+
+        for (String variant : getNameVariants(searchName)) {
+            List<Crypt> candidates = new ArrayList<>();
+            try (ResultSet<Crypt> rs = cryptCache.selectByExactI18nName(variant)) {
+                for (Crypt crypt : rs) {
+                    if (crypt.isAdv() == isAdv) {
+                        candidates.add(crypt);
+                    }
+                }
+            }
+            if (!candidates.isEmpty()) {
+                return candidates;
+            }
+        }
+        return Collections.emptyList();
     }
 
-    private void addLibraryCard(ApiDeckBuilder builder, String name, int count) {
-        // First try English exact name
-        try (ResultSet<Library> results = libraryCache.selectByExactName(name)) {
-            if (results.isNotEmpty()) {
-                results.stream().findFirst().ifPresent(
-                        library -> builder.getCards().add(buildApiCard(library.getId(), count)));
-                return;
+    private Library getExactLibraryCandidate(String name) {
+        for (String variant : getNameVariants(name)) {
+            try (ResultSet<Library> results = libraryCache.selectByExactName(variant)) {
+                if (results.isNotEmpty()) {
+                    return results.stream().findFirst().orElse(null);
+                }
             }
         }
-        // Fallback: search by i18n name
-        try (ResultSet<Library> results = libraryCache.selectByExactI18nName(name)) {
-            results.stream().findFirst().ifPresentOrElse(
-                    library -> builder.getCards().add(buildApiCard(library.getId(), count)),
-                    () -> log.warn("Card not found during text import: '{}'", name)
-            );
+        for (String variant : getNameVariants(name)) {
+            try (ResultSet<Library> results = libraryCache.selectByExactI18nName(variant)) {
+                if (results.isNotEmpty()) {
+                    return results.stream().findFirst().orElse(null);
+                }
+            }
         }
+        return null;
+    }
+
+    private List<ApiBaseCard> getBestFuzzyCandidates(CardEntry entry) {
+        boolean isAdv = entry.name().endsWith(ADV_SUFFIX);
+        String searchName = isAdv
+                ? entry.name().substring(0, entry.name().lastIndexOf(ADV_SUFFIX)).trim()
+                : entry.name();
+        List<ApiBaseCard> results = apiCardService.searchCards(
+                searchName, FUZZY_MIN_SCORE, FUZZY_RESULT_LIMIT, FUZZY_RESULT_FIELDS);
+        if (isAdv) {
+            results = results.stream()
+                    .filter(ApiCrypt.class::isInstance)
+                    .filter(card -> Boolean.TRUE.equals(((ApiCrypt) card).getAdv()))
+                    .toList();
+        } else {
+            results = results.stream()
+                    .filter(card -> !(card instanceof ApiCrypt crypt) || !Boolean.TRUE.equals(crypt.getAdv()))
+                    .toList();
+        }
+        if (results.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        double bestScore = getScore(results.getFirst());
+        return results.stream()
+                .filter(card -> Double.compare(getScore(card), bestScore) == 0)
+                .toList();
+    }
+
+    private double getScore(ApiBaseCard card) {
+        return card instanceof ApiCrypt crypt ? crypt.getScore() : ((ApiLibrary) card).getScore();
+    }
+
+    private List<String> getNameVariants(String name) {
+        String trimmedName = name.trim();
+        if (trimmedName.regionMatches(true, 0, "The ", 0, 4)) {
+            return List.of(trimmedName, trimmedName.substring(4) + ", The");
+        }
+        if (trimmedName.length() >= 5
+                && trimmedName.regionMatches(true, trimmedName.length() - 5, ", The", 0, 5)) {
+            return List.of(trimmedName, "The " + trimmedName.substring(0, trimmedName.length() - 5));
+        }
+        return List.of(trimmedName);
+    }
+
+    private void addLibraryCard(ApiDeckBuilder builder, Library library, int count) {
+        builder.getCards().add(buildApiCard(library.getId(), count));
     }
 
     /**
@@ -223,13 +316,13 @@ public class DeckTextImportService {
      * The {@code ANY} group (value {@literal < 0}) is excluded from group
      * filtering but included as a candidate if no normal-group match exists.
      */
-    private void resolveAndAddCryptCards(ApiDeckBuilder builder, List<CardEntry> cryptEntries) {
+    private void resolveAndAddCryptCards(ApiDeckBuilder builder, List<ResolvedCryptEntry> cryptEntries) {
         Map<Integer, List<Crypt>> candidatesMap = new LinkedHashMap<>();
         Set<Integer> resolvedGroups = new HashSet<>();
 
         // First pass: build candidate lists and extract unambiguous groups
         for (int i = 0; i < cryptEntries.size(); i++) {
-            List<Crypt> candidates = getCryptCandidates(cryptEntries.get(i));
+            List<Crypt> candidates = cryptEntries.get(i).candidates();
             candidatesMap.put(i, candidates);
             if (candidates.size() == 1) {
                 Crypt c = candidates.getFirst();
@@ -241,7 +334,7 @@ public class DeckTextImportService {
 
         // Second pass: resolve ambiguous entries using the collected groups
         for (int i = 0; i < cryptEntries.size(); i++) {
-            CardEntry entry = cryptEntries.get(i);
+            CardEntry entry = cryptEntries.get(i).entry();
             List<Crypt> candidates = candidatesMap.get(i);
 
             if (candidates.isEmpty()) {
@@ -281,32 +374,6 @@ public class DeckTextImportService {
         }
     }
 
-    private List<Crypt> getCryptCandidates(CardEntry entry) {
-        boolean isAdv = entry.name().endsWith(ADV_SUFFIX);
-        String searchName = isAdv
-                ? entry.name().substring(0, entry.name().lastIndexOf(ADV_SUFFIX)).trim()
-                : entry.name();
-        List<Crypt> candidates = new ArrayList<>();
-        try (ResultSet<Crypt> rs = cryptCache.selectByExactName(searchName)) {
-            for (Crypt c : rs) {
-                if (c.isAdv() == isAdv) {
-                    candidates.add(c);
-                }
-            }
-        }
-        // Fallback: search by i18n name when English name search yields nothing
-        if (candidates.isEmpty()) {
-            try (ResultSet<Crypt> rs = cryptCache.selectByExactI18nName(searchName)) {
-                for (Crypt c : rs) {
-                    if (c.isAdv() == isAdv) {
-                        candidates.add(c);
-                    }
-                }
-            }
-        }
-        return candidates;
-    }
-
     private ApiCard buildApiCard(Integer id, int count) {
         ApiCard card = new ApiCard();
         card.setId(id);
@@ -317,6 +384,9 @@ public class DeckTextImportService {
     }
 
     private record CardEntry(int count, String name) {
+    }
+
+    private record ResolvedCryptEntry(CardEntry entry, List<Crypt> candidates) {
     }
 }
 
