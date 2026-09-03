@@ -33,3 +33,4 @@ replay_pid*
 .run/
 /src/main/resources/application-live.properties
 /secrets/
+.codegraph

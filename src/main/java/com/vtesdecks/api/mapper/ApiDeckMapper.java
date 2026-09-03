@@ -9,8 +9,6 @@ import com.vtesdecks.cache.indexable.deck.CollectionTracker;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.cache.redis.repositories.DeckArchetypeRedisRepository;
 import com.vtesdecks.enums.ReactionTargetType;
-import com.vtesdecks.jpa.entity.DeckUserEntity;
-import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDeckArchetype;
@@ -30,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 import static com.vtesdecks.util.VtesUtils.isCrypt;
@@ -38,8 +35,6 @@ import static com.vtesdecks.util.VtesUtils.isCrypt;
 @Mapper(componentModel = "spring", uses = {ApiPublicUserMapper.class, ApiCardErrataMapper.class})
 public abstract class ApiDeckMapper {
 
-    @Autowired
-    private DeckUserRepository deckUserRepository;
     @Autowired
     private LibraryCache libraryCache;
     @Autowired
@@ -54,6 +49,7 @@ public abstract class ApiDeckMapper {
 
     @BeanMapping(qualifiedByName = "map")
     @Mapping(target = "archetype", ignore = true)
+    @Mapping(target = "visitStatus", ignore = true)
     @Mapping(target = "user", source = "deck", qualifiedByName = "mapDeckUser")
     public abstract ApiDeck map(Deck deck, @Context Integer userId, @Context boolean collectionTracker, @Context String currencyCode);
 
@@ -69,6 +65,7 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "warnings", ignore = true)
     @Mapping(target = "extra", ignore = true)
     @Mapping(target = "archetype", ignore = true)
+    @Mapping(target = "visitStatus", ignore = true)
     @Mapping(target = "user", source = "deck", qualifiedByName = "mapDeckUser")
     @Mapping(target = "reaction", source = "reaction")
     public abstract ApiDeck mapSummary(Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode);
@@ -85,8 +82,6 @@ public abstract class ApiDeckMapper {
         }
         if (userId != null) {
             afterMappingUser(api, userId, deck);
-            Optional<DeckUserEntity> deckUser = deckUserRepository.findById(new DeckUserEntity.DeckUserId(userId, deck.getId()));
-            deckUser.ifPresent(deckUserEntity -> api.setRated(deckUserEntity.getRate() != null));
         }
         api.setReactions(apiReactionService.getReactions(ReactionTargetType.DECK, deck.getId(), userId));
         if (collectionTracker || (Boolean.TRUE.equals(api.getOwner()) && Boolean.TRUE.equals(api.getCollection()))) {

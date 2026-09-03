@@ -100,7 +100,7 @@ public class DeckFactory {
         List<DeckViewEntity> views = deckViewRepository.findByIdDeckId(deck.getId());
         value.setViewsLastMonth(getViewsLastMonth(deck.getId(), views));
         value.setViews(deck.getViews() + (views != null ? views.size() : 0));
-        List<DeckUserEntity> deckUsers = deckUserRepository.findByIdDeckId(deck.getId());
+        List<DeckUserEntity> deckUsers = deckUserRepository.findEngagedByDeckId(deck.getId());
         if (!CollectionUtils.isEmpty(deckUsers) && deckUsers.stream().anyMatch(deckUser -> isDeckRatingExcludingAuthor(deck, deckUser))) {
             value.setRate(Math.round(deckUsers.stream()
                     .filter(deckUser -> isDeckRatingExcludingAuthor(deck, deckUser))

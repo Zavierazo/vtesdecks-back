@@ -52,6 +52,7 @@ public class ApiDeck {
     private List<String> tags;
     private List<ApiReactionSummary> reactions;
     private ReactionType reaction;
+    private ApiDeckVisitStatus visitStatus;
     private LocalDateTime creationDate;
     private LocalDateTime modifyDate;
     private ApiDeckArchetype archetype;

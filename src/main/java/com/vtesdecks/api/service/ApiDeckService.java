@@ -9,12 +9,15 @@ import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.cache.redis.entity.DeckTags;
 import com.vtesdecks.cache.redis.repositories.DeckTagsRepository;
+import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.repositories.DeckRepository;
+import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.DeckTag;
 import com.vtesdecks.model.api.ApiDeck;
+import com.vtesdecks.model.api.ApiDeckVisitStatus;
 import com.vtesdecks.model.api.ApiDecks;
 import com.vtesdecks.service.DeckService;
 import com.vtesdecks.util.CosineSimilarityUtils;
@@ -26,6 +29,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +46,8 @@ public class ApiDeckService {
     @Autowired
     private DeckRepository deckRepository;
     @Autowired
+    private DeckUserRepository deckUserRepository;
+    @Autowired
     private DeckFactory deckFactory;
     @Autowired
     private ApiCollectionService apiCollectionService;
@@ -53,11 +59,15 @@ public class ApiDeckService {
         if (deck == null) {
             return null;
         }
+        Integer userId = ApiUtils.extractUserId();
+        ApiDeck apiDeck;
         if (detailed) {
-            return mapper.map(deck, ApiUtils.extractUserId(), collectionTracker, currencyCode);
+            apiDeck = mapper.map(deck, userId, collectionTracker, currencyCode);
         } else {
-            return mapper.mapSummary(deck, ApiUtils.extractUserId(), null, currencyCode);
+            apiDeck = mapper.mapSummary(deck, userId, null, currencyCode);
         }
+        applyVisitStatus(List.of(apiDeck), userId);
+        return apiDeck;
     }
 
     public List<String> getDeckTags() {
@@ -131,18 +141,42 @@ public class ApiDeckService {
         } else {
             apiDecks.setTotal(decks.size());
         }
+        Integer userId = ApiUtils.extractUserId();
         apiDecks.setDecks(deckStream
                 .skip(offset)
                 .limit(limit)
-                .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), deckQuery.getCards(), currencyCode))
+                .map(deck -> mapper.mapSummary(deck, userId, deckQuery.getCards(), currencyCode))
                 .toList());
         if (offset == 0 && deckQuery.getUserId() != null && deckQuery.getType() == DeckType.USER) {
             apiDecks.setRestorableDecks(deckRepository.selectUserDeleted(deckQuery.getUserId()).stream()
                     .map(dbDeck -> deckFactory.getDeck(dbDeck, new ArrayList<>(), new ArrayList<>()))
-                    .map(deck -> mapper.mapSummary(deck, ApiUtils.extractUserId(), deckQuery.getCards(), currencyCode))
+                    .map(deck -> mapper.mapSummary(deck, userId, deckQuery.getCards(), currencyCode))
                     .toList());
         }
+        applyVisitStatus(apiDecks.getDecks(), userId);
         return apiDecks;
+    }
+
+    private void applyVisitStatus(List<ApiDeck> decks, Integer userId) {
+        if (userId == null || decks.isEmpty()) {
+            return;
+        }
+        Map<String, DeckUserEntity> interactionsByDeck = new HashMap<>();
+        deckUserRepository.findByIdUserAndIdDeckIdIn(userId, decks.stream().map(ApiDeck::getId).toList())
+                .forEach(interaction -> interactionsByDeck.put(interaction.getId().getDeckId(), interaction));
+
+        for (ApiDeck deck : decks) {
+            DeckUserEntity interaction = interactionsByDeck.get(deck.getId());
+            if (interaction == null) {
+                continue;
+            }
+            deck.setRated(interaction.getRate() != null);
+            boolean updated = deck.getType() == DeckType.COMMUNITY
+                    && deck.getModifyDate() != null
+                    && interaction.getModificationDate() != null
+                    && deck.getModifyDate().isAfter(interaction.getModificationDate());
+            deck.setVisitStatus(updated ? ApiDeckVisitStatus.UPDATED : ApiDeckVisitStatus.VIEWED);
+        }
     }
 
     private boolean matchCollectionPercentage(Deck deck, Map<Integer, Integer> collectionMap, Integer collectionPercentage) {

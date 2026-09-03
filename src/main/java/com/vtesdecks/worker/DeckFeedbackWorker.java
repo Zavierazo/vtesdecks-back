@@ -2,7 +2,7 @@ package com.vtesdecks.worker;
 
 import com.google.common.hash.Hashing;
 import com.vtesdecks.jpa.entity.DeckViewEntity;
-import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.jpa.repositories.DeckViewRepository;
 import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.util.Utils;
@@ -25,13 +25,14 @@ public class DeckFeedbackWorker implements Runnable {
     private final BlockingQueue<DeckFeedback> operationLogQueue = new LinkedBlockingQueue<>();
     private final MessageProducer messageProducer;
     private final DeckViewRepository deckViewRepository;
+    private final DeckUserRepository deckUserRepository;
     private boolean keepRunning = true;
 
     @Data
     @Builder
     public static class DeckFeedback {
         private String ip;
-        private String user;
+        private Integer userId;
         private String userAgent;
         private String deck;
         private FeedbackType type;
@@ -55,18 +56,7 @@ public class DeckFeedbackWorker implements Runnable {
         while (keepRunning) {
             try {
                 DeckFeedback deckFeedback = operationLogQueue.take();
-                if (deckFeedback.getType() == DeckFeedback.FeedbackType.VIEW) {
-                    String voteId = deckFeedback.getIp() + (deckFeedback.getUserAgent() != null ? deckFeedback.getUserAgent() : "");
-                    DeckViewEntity deckView = new DeckViewEntity();
-                    deckView.setId(new DeckViewEntity.DeckViewId());
-                    deckView.getId().setId(Hashing.sha256()
-                            .hashString(voteId, StandardCharsets.UTF_8)
-                            .toString());
-                    deckView.getId().setDeckId(deckFeedback.getDeck());
-                    deckView.setSource(deckFeedback.getSource());
-                    deckViewRepository.saveAndFlush(deckView);
-                }
-                messageProducer.publishDeckSync(deckFeedback.getDeck());
+                process(deckFeedback);
             } catch (final InterruptedException e) {
                 log.error("Blocking queue was interrupted {}", e);
                 // Restore interrupted state...
@@ -77,11 +67,29 @@ public class DeckFeedbackWorker implements Runnable {
         }
     }
 
-    public void enqueueView(String deck, UserEntity user, String source, HttpServletRequest httpServletRequest) {
+    void process(DeckFeedback deckFeedback) {
+        if (deckFeedback.getType() == DeckFeedback.FeedbackType.VIEW) {
+            String voteId = deckFeedback.getIp() + (deckFeedback.getUserAgent() != null ? deckFeedback.getUserAgent() : "");
+            DeckViewEntity deckView = new DeckViewEntity();
+            deckView.setId(new DeckViewEntity.DeckViewId());
+            deckView.getId().setId(Hashing.sha256()
+                    .hashString(voteId, StandardCharsets.UTF_8)
+                    .toString());
+            deckView.getId().setDeckId(deckFeedback.getDeck());
+            deckView.setSource(deckFeedback.getSource());
+            deckViewRepository.saveAndFlush(deckView);
+            if (deckFeedback.getUserId() != null) {
+                deckUserRepository.recordVisit(deckFeedback.getUserId(), deckFeedback.getDeck());
+            }
+        }
+        messageProducer.publishDeckSync(deckFeedback.getDeck());
+    }
+
+    public void enqueueView(String deck, Integer userId, String source, HttpServletRequest httpServletRequest) {
         operationLogQueue
                 .add(DeckFeedback.builder()
                         .deck(deck)
-                        .user(user != null ? user.getUsername() : null)
+                        .userId(userId)
                         .ip(Utils.getIp(httpServletRequest))
                         .userAgent(httpServletRequest.getHeader("User-Agent"))
                         .type(DeckFeedback.FeedbackType.VIEW)

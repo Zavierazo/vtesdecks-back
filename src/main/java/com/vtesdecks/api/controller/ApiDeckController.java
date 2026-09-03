@@ -2,8 +2,6 @@ package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.api.util.ApiUtils;
-import com.vtesdecks.jpa.entity.UserEntity;
-import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.DeckExportType;
 import com.vtesdecks.model.DeckQuery;
@@ -47,8 +45,6 @@ public class ApiDeckController {
     @Autowired
     private DeckFeedbackWorker deckFeedbackWorker;
     ;
-    @Autowired
-    private UserRepository userRepository;
     @Autowired
     private CurrencyExchangeService currencyExchangeService;
 
@@ -231,12 +227,8 @@ public class ApiDeckController {
     })
     @ResponseBody
     public ResponseEntity<Boolean> view(@PathVariable String id, @RequestBody ApiDeckView deckView, HttpServletRequest httpServletRequest) {
-        UserEntity user = null;
         Integer userId = ApiUtils.extractUserId();
-        if (userId != null) {
-            user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
-        }
-        deckFeedbackWorker.enqueueView(id, user, deckView.getSource(), httpServletRequest);
+        deckFeedbackWorker.enqueueView(id, userId, deckView.getSource(), httpServletRequest);
         return new ResponseEntity<>(true, HttpStatus.OK);
     }
 
