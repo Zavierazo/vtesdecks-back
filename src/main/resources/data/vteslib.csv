@@ -5997,3 +5997,6 @@ During an action, you can lock a ready Caitiff [caitiff] you control to give ano
 "150019","Chave de Braço","","Combat","","","Potence","","","","","Grapple.
 [pot] Strike: hand strike at +2 damage.
 [POT] As above, and at the end of the round, if the range is close and this vampire has successfully inflicted more damage than the opposing minion, put this card on the opposing minion. The attached minion gets -2 strength. They can burn 2 blood or 1 life to burn this card.","","Spoiler:NB","","Carlos Díaz",""
+"150020","Hálito Negro","","Combat","","","Oblivion/Thanatosis","","1","","","Requires a Laibon.
+[obl] or [thn] Strike: 2R damage on the opposing minion and 1R damage on all retainers on the opposing minion.
+[OBL] or [THN] Strike: 3R damage on the opposing minion and 2R damage on all retainers on the opposing minion.","","Spoiler:NB","","Anastasiia Horbunova",""
