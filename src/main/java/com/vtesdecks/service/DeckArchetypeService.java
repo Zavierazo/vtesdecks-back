@@ -15,6 +15,7 @@ import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.ArchetypeMetaMetrics;
 import com.vtesdecks.model.MetaType;
 import com.vtesdecks.model.api.ApiDeckArchetype;
+import com.vtesdecks.model.api.ApiSearchArchetype;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import com.vtesdecks.util.CosineSimilarityUtils;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -62,6 +65,41 @@ public class DeckArchetypeService {
                     return b.getDeckCount().compareTo(a.getDeckCount());
                 })
                 .toList();
+    }
+
+    public List<ApiSearchArchetype> searchByName(String query, int limit) {
+        if (query == null || query.isBlank() || limit <= 0) {
+            return List.of();
+        }
+
+        String normalizedQuery = query.trim().toLowerCase(Locale.ROOT);
+        Comparator<DeckArchetype> relevance = Comparator
+                .comparingInt((DeckArchetype archetype) -> matchRank(archetype.getName(), normalizedQuery))
+                .thenComparing(archetype -> archetype.getName().toLowerCase(Locale.ROOT))
+                .thenComparing(DeckArchetype::getName);
+
+        return StreamSupport.stream(redisRepository.findAll().spliterator(), false)
+                .filter(archetype -> archetype.getId() != null && archetype.getId() > 0)
+                .filter(archetype -> Boolean.TRUE.equals(archetype.getEnabled()))
+                .filter(archetype -> archetype.getName() != null && !archetype.getName().isBlank())
+                .filter(archetype -> archetype.getName().toLowerCase(Locale.ROOT).contains(normalizedQuery))
+                .sorted(relevance)
+                .limit(limit)
+                .map(archetype -> ApiSearchArchetype.builder()
+                        .id(archetype.getId())
+                        .name(archetype.getName())
+                        .icon(archetype.getIcon())
+                        .type(archetype.getType())
+                        .build())
+                .toList();
+    }
+
+    private int matchRank(String name, String normalizedQuery) {
+        String normalizedName = name.toLowerCase(Locale.ROOT);
+        if (normalizedName.equals(normalizedQuery)) {
+            return 0;
+        }
+        return normalizedName.startsWith(normalizedQuery) ? 1 : 2;
     }
 
     public Optional<ApiDeckArchetype> getById(Integer id, MetaType metaType, String currencyCode) {

@@ -9,6 +9,7 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiSearchResponse {
     private List<ApiBaseCard> cards;
+    private List<ApiSearchArchetype> archetypes;
     private List<ApiDeck> decks;
     private List<ApiPublicUser> users;
 }

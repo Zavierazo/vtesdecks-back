@@ -11,6 +11,7 @@ import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.model.api.ApiDecks;
 import com.vtesdecks.model.api.ApiPublicUser;
 import com.vtesdecks.model.api.ApiSearchResponse;
+import com.vtesdecks.service.DeckArchetypeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,10 +29,12 @@ public class ApiSearchService {
     private final ApiPublicUserMapper apiPublicUserMapper;
     private final ApiCardService apiCardService;
     private final ApiDeckService deckService;
+    private final DeckArchetypeService deckArchetypeService;
 
     public ApiSearchResponse search(String query, String currencyCode) {
         ApiSearchResponse response = new ApiSearchResponse();
         response.setCards(getSearchCards(query));
+        response.setArchetypes(deckArchetypeService.searchByName(query, LIMIT));
         response.setDecks(getSearchDecks(query, currencyCode));
         response.setUsers(getSearchUsers(query));
         return response;
