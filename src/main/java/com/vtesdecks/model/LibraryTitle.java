@@ -59,17 +59,14 @@ public enum LibraryTitle {
         List<LibraryTitle> titles = new ArrayList<>();
         for (String startsWith : LIBRARY_STARTS_WITH) {
             for (LibraryTitle title : LibraryTitle.values()) {
-                int indexOf = textLower.indexOf(startsWith + title.name.toLowerCase());
-                if (indexOf != -1) {
+                if (containsRequirement(textLower, startsWith + title.name.toLowerCase())) {
                     titles.add(title);
                 }
                 for (LibraryTitle secondTitle : LibraryTitle.values()) {
-                    indexOf = textLower.indexOf(startsWith + secondTitle.name.toLowerCase() + " or " + title.name.toLowerCase());
-                    if (indexOf != -1) {
+                    if (containsRequirement(textLower, startsWith + secondTitle.name.toLowerCase() + " or " + title.name.toLowerCase())) {
                         titles.add(title);
                     }
-                    indexOf = textLower.indexOf(startsWith + secondTitle.name.toLowerCase() + ", " + title.name.toLowerCase());
-                    if (indexOf != -1) {
+                    if (containsRequirement(textLower, startsWith + secondTitle.name.toLowerCase() + ", " + title.name.toLowerCase())) {
                         titles.add(title);
                     }
                 }
@@ -84,6 +81,26 @@ public enum LibraryTitle {
             }
         }
         return titles;
+    }
+
+    private static boolean containsRequirement(String text, String requirement) {
+        int fromIndex = 0;
+        int indexOf;
+        while ((indexOf = text.indexOf(requirement, fromIndex)) != -1) {
+            if (indexOf == 0 || text.charAt(indexOf - 1) == '\n' || text.charAt(indexOf - 1) == '\r') {
+                return true;
+            }
+
+            int previousIndex = indexOf - 1;
+            while (previousIndex >= 0 && Character.isWhitespace(text.charAt(previousIndex))) {
+                previousIndex--;
+            }
+            if (previousIndex >= 0 && ".!?".indexOf(text.charAt(previousIndex)) != -1) {
+                return true;
+            }
+            fromIndex = indexOf + 1;
+        }
+        return false;
     }
 
 
