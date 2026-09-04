@@ -154,6 +154,19 @@ public class Utils {
         return AnyAscii.transliterate(StringUtils.trim(name)).replaceAll("[/\\\\]", "");
     }
 
+    /**
+     * Normalizes text for user-facing card-name searches. This mirrors the
+     * browser search by ignoring case, diacritics, whitespace, and punctuation.
+     */
+    public static String normalizeSearchText(String text) {
+        if (text == null) {
+            return null;
+        }
+        return AnyAscii.transliterate(text)
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9_]", "");
+    }
+
     private static final int MAX_URL_LENGTH = 250;
     private static final int MAX_IMAGE_SIZE_BYTES = 512 * 1024; // 512 KB
     private static final int MAX_IMAGE_DIMENSION = 1024;

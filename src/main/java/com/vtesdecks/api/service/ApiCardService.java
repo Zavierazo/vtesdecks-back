@@ -32,7 +32,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.vtesdecks.util.Utils.normalizeName;
+import static com.vtesdecks.util.Utils.normalizeSearchText;
 
 @Service
 @RequiredArgsConstructor
@@ -162,8 +162,8 @@ public class ApiCardService {
                         BigDecimal trigramsScore = BigDecimal.ZERO;
                         if (Strings.CI.equals(query, card.getName())
                                 || Strings.CI.equals(query, card.getAka())
-                                || Strings.CI.equals(normalizeName(query), normalizeName(card.getName()))
-                                || Strings.CI.equals(normalizeName(query), normalizeName(card.getAka()))) {
+                                || Strings.CI.equals(normalizeSearchText(query), normalizeSearchText(card.getName()))
+                                || Strings.CI.equals(normalizeSearchText(query), normalizeSearchText(card.getAka()))) {
                             trigramsScore = BigDecimal.ONE;
                         }
                         if (trigramsScore.compareTo(targetScore) < 0) {
