@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -28,12 +29,18 @@ public class ApiDeckArchetype {
     private Long deckCount;
     private Long metaCount;
     private Long metaTotal;
+    private Long previousMetaCount;
+    private Long previousMetaTotal;
+    /** Difference between current and preceding-period metagame share, in percentage points. */
+    private Double metaShareChange;
     private BigDecimal price;
     private String currency;
     private LocalDateTime creationDate;
     private LocalDateTime modificationDate;
     private List<ApiArchetypeCard> keyCrypt;
     private List<ApiArchetypeCard> keyLibrary;
+    private Set<String> clans;
+    private Set<String> disciplines;
     /** Trend of this archetype in the tournament meta, based on 90-day vs 91-365 day activity rate. */
     private ArchetypeTrend trend;
 }

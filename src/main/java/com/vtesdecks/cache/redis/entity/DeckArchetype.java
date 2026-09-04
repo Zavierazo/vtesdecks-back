@@ -11,6 +11,7 @@ import org.springframework.data.redis.core.index.Indexed;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @Builder(toBuilder = true)
@@ -39,4 +40,6 @@ public class DeckArchetype {
     private LocalDateTime creationDate;
     private LocalDateTime modificationDate;
     private List<ArchetypeKeyCard> keyCards;
+    private Set<String> clans;
+    private Set<String> disciplines;
 }

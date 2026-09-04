@@ -12,6 +12,7 @@ import com.vtesdecks.jpa.repositories.DeckArchetypeRepository;
 import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
+import com.vtesdecks.model.ArchetypeMetaMetrics;
 import com.vtesdecks.model.MetaType;
 import com.vtesdecks.model.api.ApiDeckArchetype;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
@@ -21,6 +22,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +46,7 @@ public class DeckArchetypeService {
 
     public List<ApiDeckArchetype> getAll(boolean showDisabled, MetaType metaType, String currencyCode) {
         List<DeckArchetype> deckArchetypeList = StreamSupport.stream(redisRepository.findAll().spliterator(), false).toList();
-        List<ApiDeckArchetype> apiDeckArchetypeList = mapper.map(deckArchetypeList, getMetaTotal(metaType), metaType, currencyCode);
+        List<ApiDeckArchetype> apiDeckArchetypeList = mapper.map(deckArchetypeList, getMetaMetrics(metaType), metaType, currencyCode);
         return apiDeckArchetypeList.stream()
                 .filter(deck -> showDisabled || Boolean.TRUE.equals(deck.getEnabled()))
                 .filter(deck -> deck.getMetaCount() != null && deck.getMetaCount() > 0)
@@ -61,9 +64,9 @@ public class DeckArchetypeService {
                 .toList();
     }
 
-    public Optional<ApiDeckArchetype> getById(Integer id, String currencyCode) {
+    public Optional<ApiDeckArchetype> getById(Integer id, MetaType metaType, String currencyCode) {
         return redisRepository.findById(id).map(archetype -> {
-            ApiDeckArchetype api = mapper.map(archetype, getMetaTotal(MetaType.TOURNAMENT), MetaType.TOURNAMENT, currencyCode);
+            ApiDeckArchetype api = mapper.map(archetype, getMetaMetrics(metaType), metaType, currencyCode);
             api.setKeyCrypt(mapper.mapKeyCrypt(archetype.getKeyCards()));
             api.setKeyLibrary(mapper.mapKeyLibrary(archetype.getKeyCards()));
             return api;
@@ -73,7 +76,7 @@ public class DeckArchetypeService {
     public Optional<ApiDeckArchetype> getByDeckId(String deckId, String currencyCode) {
         Optional<DeckArchetype> entity = redisRepository.findByDeckId(deckId);
         return entity.map(archetype -> {
-            ApiDeckArchetype api = mapper.map(archetype, getMetaTotal(MetaType.TOURNAMENT), MetaType.TOURNAMENT, currencyCode);
+            ApiDeckArchetype api = mapper.map(archetype, getMetaMetrics(MetaType.TOURNAMENT), MetaType.TOURNAMENT, currencyCode);
             api.setKeyCrypt(mapper.mapKeyCrypt(archetype.getKeyCards()));
             api.setKeyLibrary(mapper.mapKeyLibrary(archetype.getKeyCards()));
             return api;
@@ -87,7 +90,7 @@ public class DeckArchetypeService {
         deckArchetypeIndex.refreshIndex(saved.getId());
         publishDeckSync(saved.getDeckId());
         publishDeckSync(saved.getSecondaryDeckId());
-        return getById(saved.getId(), currencyCode);
+        return getById(saved.getId(), MetaType.TOURNAMENT, currencyCode);
     }
 
     public Optional<ApiDeckArchetype> update(Integer id, ApiDeckArchetype api, String currencyCode) {
@@ -112,7 +115,7 @@ public class DeckArchetypeService {
             publishDeckSync(saved.getSecondaryDeckId());
         }
         deckArchetypeIndex.refreshIndex(saved.getId());
-        return getById(saved.getId(), currencyCode);
+        return getById(saved.getId(), MetaType.TOURNAMENT, currencyCode);
     }
 
     public boolean delete(Integer id) {
@@ -143,6 +146,46 @@ public class DeckArchetypeService {
                     deckCount(DeckQuery.builder().type(DeckType.TOURNAMENT).creationDate(LocalDate.now().minusDays(730)).build());
             default -> deckCount(DeckQuery.builder().type(DeckType.TOURNAMENT).build());
         };
+    }
+
+    private Map<Integer, ArchetypeMetaMetrics> getMetaMetrics(MetaType metaType) {
+        Map<Integer, Long> currentCounts = new HashMap<>();
+        Map<Integer, Long> previousCounts = new HashMap<>();
+        long currentTotal = 0;
+        long previousTotal = 0;
+        Integer days = switch (metaType) {
+            case TOURNAMENT_90 -> 90;
+            case TOURNAMENT_180 -> 180;
+            case TOURNAMENT_365 -> 365;
+            case TOURNAMENT_730 -> 730;
+            default -> null;
+        };
+        LocalDateTime currentStart = days == null ? null : LocalDate.now().minusDays(days).atStartOfDay();
+        LocalDateTime previousStart = days == null ? null : LocalDate.now().minusDays(days * 2L).atStartOfDay();
+
+        try (ResultSet<Deck> decks = deckService.getDecks(DeckQuery.builder().type(DeckType.TOURNAMENT).build())) {
+            for (Deck deck : decks) {
+                Integer archetypeId = deck.getDeckArchetypeId() == null ? 0 : deck.getDeckArchetypeId();
+                LocalDateTime created = deck.getCreationDate();
+                if (days == null || (created != null && !created.isBefore(currentStart))) {
+                    currentCounts.merge(archetypeId, 1L, Long::sum);
+                    currentTotal++;
+                } else if (created != null && !created.isBefore(previousStart)) {
+                    previousCounts.merge(archetypeId, 1L, Long::sum);
+                    previousTotal++;
+                }
+            }
+        }
+
+        Map<Integer, ArchetypeMetaMetrics> metrics = new HashMap<>();
+        for (DeckArchetype archetype : redisRepository.findAll()) {
+            metrics.put(archetype.getId(), new ArchetypeMetaMetrics(
+                    currentCounts.getOrDefault(archetype.getId(), 0L),
+                    currentTotal,
+                    days == null ? null : previousCounts.getOrDefault(archetype.getId(), 0L),
+                    days == null ? null : previousTotal));
+        }
+        return metrics;
     }
 
 

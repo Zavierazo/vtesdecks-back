@@ -48,8 +48,9 @@ public class ApiDeckArchetypeController {
     }
 
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiDeckArchetype> getById(HttpServletRequest request, @PathVariable Integer id) {
-        return service.getById(id, Utils.getCurrencyCode(request)).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<ApiDeckArchetype> getById(HttpServletRequest request, @PathVariable Integer id,
+                                                     @RequestParam(required = false, defaultValue = "TOURNAMENT") MetaType metaType) {
+        return service.getById(id, metaType, Utils.getCurrencyCode(request)).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @Secured({"ADMIN", "MANTAINER"})

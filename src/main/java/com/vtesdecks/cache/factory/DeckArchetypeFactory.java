@@ -1,6 +1,8 @@
 package com.vtesdecks.cache.factory;
 
 import com.googlecode.cqengine.resultset.ResultSet;
+import com.vtesdecks.cache.CryptCache;
+import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.redis.entity.ArchetypeKeyCard;
@@ -17,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 @Slf4j
 @Mapper(componentModel = "spring")
@@ -27,6 +31,12 @@ public abstract class DeckArchetypeFactory {
 
     @Autowired
     private DeckKeyCardsService deckKeyCardsService;
+
+    @Autowired
+    private CryptCache cryptCache;
+
+    @Autowired
+    private LibraryCache libraryCache;
 
     public abstract DeckArchetype getDeckArchetype(DeckArchetypeEntity deckArchetypeEntity);
 
@@ -59,6 +69,27 @@ public abstract class DeckArchetypeFactory {
         }
         List<ArchetypeKeyCard> keyCards = deckKeyCardsService.computeKeyCards(decks, DeckKeyCardsService.MIN_APPEARANCE_THRESHOLD);
         deckArchetype.setKeyCards(keyCards.isEmpty() ? null : keyCards);
+        Set<String> clans = new TreeSet<>();
+        keyCards.stream()
+                .filter(card -> card.getAppearanceRate() != null && card.getAppearanceRate() >= 0.5)
+                .map(ArchetypeKeyCard::getId)
+                .map(cryptCache::get)
+                .filter(java.util.Objects::nonNull)
+                .forEach(crypt -> {
+                    if (crypt.getClan() != null && !crypt.getClan().isBlank()) {
+                        clans.add(crypt.getClan());
+                    }
+                });
+        deckArchetype.setClans(clans);
+        Set<String> disciplines = new TreeSet<>();
+        keyCards.stream()
+                .filter(card -> card.getAppearanceRate() != null && card.getAppearanceRate() >= 0.5)
+                .map(ArchetypeKeyCard::getId)
+                .map(libraryCache::get)
+                .filter(java.util.Objects::nonNull)
+                .filter(library -> library.getDisciplines() != null)
+                .forEach(library -> disciplines.addAll(library.getDisciplines()));
+        deckArchetype.setDisciplines(disciplines);
     }
 
     private long deckCount(DeckQuery query) {
