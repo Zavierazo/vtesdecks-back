@@ -1,5 +1,6 @@
 package com.vtesdecks.api.service;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.vtesdecks.api.mapper.ApiUserNotificationMapper;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.indexable.Deck;
@@ -167,7 +168,10 @@ public class ApiUserNotificationService {
         notification.setRead(false);
         notification.setType(UserNotificationType.ACHIEVEMENT);
         notification.setNotification("<strong>Achievement unlocked</strong><br/>" + family + " · " + tier);
-        notification.setLink("/user/" + userRepository.findById(userId).map(UserEntity::getUsername).orElse("") + "#achievements");
+        notification.setLink("/user/" + userRepository.findById(userId).map(UserEntity::getUsername).orElse(""));
+        notification.setData(JsonNodeFactory.instance.objectNode()
+                .put("family", family)
+                .put("tier", tier));
         userNotificationRepository.save(notification);
     }
 
