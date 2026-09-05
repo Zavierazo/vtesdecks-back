@@ -35,7 +35,7 @@ public class DriveThruCardsScheduler {
     private static final ShopPlatform PLATFORM = ShopPlatform.DTC;
     private static final String SET = "POD:DTC";
     private static final String DOLLAR = "USD";
-    private static final String SPECIAL_CHARACTERS = "[_,:\"'”\\s]";
+    private static final String SPECIAL_CHARACTERS = "[_,:\"'’”\\s]";
     private static final Pattern PRODUCT_ID_REGEX = Pattern.compile(".*\\/product\\/(?<productId>\\d+)\\/.*");
     public static final int GROUP_ID = 26;
     public static final int SITE_ID = 73;
@@ -113,15 +113,16 @@ public class DriveThruCardsScheduler {
             return null;
         }
         String cardNameRaw = productCard.getDescription().getName();
-        int firstIndex = cardNameRaw.indexOf("-");
-        int lastIndex = cardNameRaw.lastIndexOf("-");
+        String normalizedCardName = cardNameRaw.replace('–', '-').replace('—', '-');
+        int firstIndex = normalizedCardName.indexOf("-");
+        int lastIndex = normalizedCardName.lastIndexOf("-");
         String cardNameHtml;
         if (firstIndex > 0 && lastIndex > 0 && firstIndex != lastIndex) {
-            cardNameHtml = cardNameRaw.substring(firstIndex + 1, lastIndex);
+            cardNameHtml = normalizedCardName.substring(firstIndex + 1, lastIndex);
         } else if (firstIndex > 0 && lastIndex < 0) {
-            cardNameHtml = cardNameRaw.substring(firstIndex + 1);
+            cardNameHtml = normalizedCardName.substring(firstIndex + 1);
         } else {
-            cardNameHtml = cardNameRaw;
+            cardNameHtml = normalizedCardName;
         }
         int groupIndex = cardNameHtml.indexOf("[");
         if (groupIndex > 0) {
