@@ -31,6 +31,7 @@ public class ApiCommentService {
     private final UserRepository userRepository;
     private final ApiUserNotificationService userNotificationService;
     private final ApiReactionService reactionService;
+    private final AchievementService achievementService;
 
 
     public List<ApiComment> getComments(String deckId) {
@@ -63,6 +64,7 @@ public class ApiCommentService {
             commentEntity.setContent(comment.getContent());
             commentEntity.setDeleted(false);
             commentRepository.save(commentEntity);
+            achievementService.activity(user.getId());
             sendNotifications(comment, commentEntity);
             ApiComment apiComment = getComment(user, commentRepository.findById(commentEntity.getId()));
             if (apiComment != null) {

@@ -1,5 +1,6 @@
 package com.vtesdecks.api.controller;
 
+import com.vtesdecks.api.service.AchievementService;
 import com.vtesdecks.api.service.ApiCommentService;
 import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.api.service.ApiReactionService;
@@ -7,6 +8,7 @@ import com.vtesdecks.api.service.ApiUserService;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
+import com.vtesdecks.model.api.ApiAchievementFamily;
 import com.vtesdecks.model.api.ApiComment;
 import com.vtesdecks.model.api.ApiCommentReaction;
 import com.vtesdecks.model.api.ApiDeckReaction;
@@ -54,6 +56,14 @@ public class ApiUserController {
     private ApiUserService userService;
     @Autowired
     private ApiReactionService apiReactionService;
+    @Autowired
+    private AchievementService achievementService;
+
+    @GetMapping(value = "/achievements", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public List<ApiAchievementFamily> achievements() {
+        return achievementService.getMine(ApiUtils.extractUserId());
+    }
 
     @RequestMapping(method = RequestMethod.GET, value = "/validate", produces = {
             MediaType.APPLICATION_JSON_VALUE
@@ -68,7 +78,9 @@ public class ApiUserController {
     })
     @ResponseBody
     public ApiUser refreshUser() {
-        UserEntity user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
+        Integer userId = ApiUtils.extractUserId();
+        achievementService.activity(userId);
+        UserEntity user = userRepository.findById(userId).orElse(null);
         List<String> roles = userRepository.selectRolesByUserId(user.getId());
         return userService.getAuthenticatedUser(user, roles);
     }

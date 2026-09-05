@@ -2,6 +2,7 @@ package com.vtesdecks.api.controller;
 
 import com.googlecode.cqengine.IndexedCollection;
 import com.googlecode.cqengine.resultset.ResultSet;
+import com.vtesdecks.api.service.AchievementService;
 import com.vtesdecks.api.service.ApiCommentService;
 import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.api.service.ApiUserService;
@@ -66,6 +67,8 @@ public class ApiUserControllerTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private ApiUserService userService;
+    @Mock
+    private AchievementService achievementService;
     @InjectMocks
     private ApiUserController controller;
 
@@ -87,6 +90,13 @@ public class ApiUserControllerTest {
     @AfterEach
     public void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void refreshUserEvaluatesAchievements() {
+        controller.refreshUser();
+
+        verify(achievementService).activity(USER_ID);
     }
 
     @Test

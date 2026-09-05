@@ -72,6 +72,7 @@ public class ApiDeckBuilderService {
     private final DeckService deckService;
     private final DeckKeyCardsService deckKeyCardsService;
     private final DeckArchetypeMapper deckArchetypeMapper;
+    private final AchievementService achievementService;
 
 
     public ApiDeckBuilder getDeck(String deckId) {
@@ -221,6 +222,7 @@ public class ApiDeckBuilderService {
         } else {
             apiUserNotificationService.deckDeleteNotifications(deck.getId());
         }
+        achievementService.activity(userId);
         return getDeck(deckId);
 
     }

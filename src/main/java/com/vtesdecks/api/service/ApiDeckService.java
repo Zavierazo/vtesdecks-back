@@ -10,8 +10,10 @@ import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.cache.redis.entity.DeckTags;
 import com.vtesdecks.cache.redis.repositories.DeckTagsRepository;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
+import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
@@ -53,6 +55,10 @@ public class ApiDeckService {
     private ApiCollectionService apiCollectionService;
     @Autowired
     private DeckTagsRepository deckTagsRepository;
+    @Autowired
+    private AchievementService achievementService;
+    @Autowired
+    private UserRepository userRepository;
 
     public ApiDeck getDeck(String deckId, boolean detailed, boolean collectionTracker, String currencyCode) {
         Deck deck = deckService.getDeck(deckId);
@@ -66,6 +72,7 @@ public class ApiDeckService {
         } else {
             apiDeck = mapper.mapSummary(deck, userId, null, currencyCode);
         }
+        applyAchievementBadges(apiDeck);
         applyVisitStatus(List.of(apiDeck), userId);
         return apiDeck;
     }
@@ -155,6 +162,16 @@ public class ApiDeckService {
         }
         applyVisitStatus(apiDecks.getDecks(), userId);
         return apiDecks;
+    }
+
+    private void applyAchievementBadges(ApiDeck deck) {
+        if (deck.getUser() == null) {
+            return;
+        }
+        UserEntity user = userRepository.findByUsername(deck.getUser().getUser());
+        if (user != null) {
+            deck.getUser().setAchievementBadges(achievementService.getBadges(user.getId()));
+        }
     }
 
     private void applyVisitStatus(List<ApiDeck> decks, Integer userId) {

@@ -1,6 +1,8 @@
 package com.vtesdecks.api.controller;
 
+import com.vtesdecks.api.service.AchievementService;
 import com.vtesdecks.api.service.ApiPublicUserService;
+import com.vtesdecks.model.api.ApiAchievementFamily;
 import com.vtesdecks.model.api.ApiPublicUser;
 import com.vtesdecks.model.api.ApiUserOfMonth;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ApiPublicUserController {
     private final ApiPublicUserService apiPublicUserService;
+    private final AchievementService achievementService;
 
     @GetMapping(value = "/{username}", produces = {
             MediaType.APPLICATION_JSON_VALUE
@@ -33,6 +36,12 @@ public class ApiPublicUserController {
         } else {
             return new ResponseEntity<>(publicUser, HttpStatus.OK);
         }
+    }
+
+    @GetMapping(value = "/{username}/achievements", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ApiAchievementFamily>> getAchievements(@PathVariable String username) {
+        List<ApiAchievementFamily> achievements = achievementService.getPublic(username);
+        return achievements == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(achievements);
     }
 
     @GetMapping(value = "/top-month", produces = {

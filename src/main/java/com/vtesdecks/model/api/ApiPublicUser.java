@@ -20,4 +20,5 @@ public class ApiPublicUser {
     private List<String> roles;
     private List<ApiPublicUser> followers;
     private List<ApiPublicUser> following;
+    private List<ApiAchievementBadge> achievementBadges;
 }

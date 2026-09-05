@@ -29,6 +29,7 @@ public class ApiReactionService {
     private final CommentRepository commentRepository;
     private final DeckService deckService;
     private final MessageProducer messageProducer;
+    private final AchievementService achievementService;
 
     public boolean reactDeck(Integer userId, String deckId, ReactionType reaction, Boolean active) {
         if (userId == null || deckId == null || reaction == null || active == null) {
@@ -46,6 +47,9 @@ public class ApiReactionService {
         if (toggle(userId, ReactionTargetType.DECK, deckId, reaction, active)) {
             // Refresh the cached deck so its featured reaction stays current on the deck list
             messageProducer.publishDeckSync(deckId);
+            if (deck.getUser() != null) {
+                achievementService.activity(deck.getUser().getId());
+            }
         }
         return true;
     }

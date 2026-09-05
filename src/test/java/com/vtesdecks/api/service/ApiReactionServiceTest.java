@@ -43,6 +43,8 @@ public class ApiReactionServiceTest {
     private DeckService deckService;
     @Mock
     private MessageProducer messageProducer;
+    @Mock
+    private AchievementService achievementService;
     @InjectMocks
     private ApiReactionService service;
 

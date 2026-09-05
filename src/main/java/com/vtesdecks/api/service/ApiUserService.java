@@ -32,6 +32,7 @@ public class ApiUserService {
     private final ApiUserNotificationService userNotificationService;
     private final ApiSecurityConfiguration securityConfiguration;
     private final UserFollowerRepository userFollowerRepository;
+    private final AchievementService achievementService;
 
     public ApiUser getAuthenticatedUser(UserEntity dbUser, List<String> roles) {
         ApiUser user = new ApiUser();
@@ -108,6 +109,7 @@ public class ApiUserService {
                     UserFollowerEntity userFollower = new UserFollowerEntity();
                     userFollower.setId(id);
                     userFollowerRepository.save(userFollower);
+                    achievementService.activity(followedUser.getId());
                     log.info("User {} is now following user {}", userId, user);
                 } catch (DataIntegrityViolationException e) {
                     // Race condition: another concurrent request already inserted the same entry

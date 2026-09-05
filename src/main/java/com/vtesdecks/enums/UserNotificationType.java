@@ -4,5 +4,6 @@ public enum UserNotificationType {
     GLOBAL,
     COMMENT,
     DECK,
-    LINK
+    LINK,
+    ACHIEVEMENT
 }

@@ -18,6 +18,7 @@ import com.vtesdecks.service.push.WebPushDeliveryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -40,6 +41,8 @@ public class ApiUserNotificationService {
     private final UserFollowerRepository userFollowerRepository;
     private final UserRepository userRepository;
     private final WebPushDeliveryService webPushDeliveryService;
+    @Value("${achievements.notifications.enabled:false}")
+    private boolean achievementNotificationsEnabled;
 
     public Integer notificationUnreadCount(Integer userId) {
         if (userId == null) {
@@ -158,6 +161,20 @@ public class ApiUserNotificationService {
         userNotification.setLink("https://www.patreon.com/bePatron?u=41542528");
         saveAndPush(userNotification);
 
+    }
+
+    public void addAchievementNotification(Integer userId, String family, Integer tier) {
+        if (!achievementNotificationsEnabled) {
+            return;
+        }
+        UserNotificationEntity notification = new UserNotificationEntity();
+        notification.setUser(userId);
+        notification.setReferenceId("achievement:" + family + ":" + tier);
+        notification.setRead(false);
+        notification.setType(UserNotificationType.ACHIEVEMENT);
+        notification.setNotification("<strong>Achievement unlocked</strong><br/>" + family + " · " + tier);
+        notification.setLink("/user/" + userRepository.findById(userId).map(UserEntity::getUsername).orElse("") + "#achievements");
+        userNotificationRepository.save(notification);
     }
 
     public void deckUpdateNotifications(DeckEntity deck) {

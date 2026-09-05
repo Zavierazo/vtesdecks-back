@@ -10,6 +10,7 @@ import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.service.DeckService;
 import com.vtesdecks.service.DeckUserService;
+import com.vtesdecks.api.service.AchievementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class DeckUserServiceImpl implements DeckUserService {
     private final DeckUserRepository deckUserRepository;
     private final DeckService deckService;
     private final MessageProducer messageProducer;
+    private final AchievementService achievementService;
 
     @Override
     public void rate(Integer userId, String deckId, Integer rate) {
@@ -69,6 +71,10 @@ public class DeckUserServiceImpl implements DeckUserService {
             }
             if (updated) {
                 messageProducer.publishDeckSync(deckId);
+                Deck deck = deckService.getDeck(deckId);
+                if (deck != null && deck.getUser() != null) {
+                    achievementService.activity(deck.getUser().getId());
+                }
             }
             return favorite;
         }
