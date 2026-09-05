@@ -2,7 +2,6 @@ package com.vtesdecks.api.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vtesdecks.configuration.PatreonWebhookConfiguration;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +34,6 @@ public class PatreonWebhookService {
             """;
 
     private final ObjectMapper objectMapper;
-    private final PatreonWebhookConfiguration configuration;
     private final UserRepository userRepository;
     private final JdbcTemplate jdbcTemplate;
 
@@ -48,12 +46,6 @@ public class PatreonWebhookService {
         }
 
         String memberId = text(data, "id");
-        String campaignId = text(data.path("relationships").path("campaign").path("data"), "id");
-        if (StringUtils.isBlank(configuration.getCampaignId()) ||
-                !configuration.getCampaignId().equals(campaignId)) {
-            throw new IllegalArgumentException("Unexpected Patreon campaign");
-        }
-
         JsonNode attributes = data.path("attributes");
         long lifetimeSupportCents = attributes.path("campaign_lifetime_support_cents").asLong(0);
         if (lifetimeSupportCents <= 0) {

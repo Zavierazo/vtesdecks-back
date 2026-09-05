@@ -1,7 +1,6 @@
 package com.vtesdecks.api.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vtesdecks.configuration.PatreonWebhookConfiguration;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,7 +12,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -23,10 +21,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class PatreonWebhookServiceTest {
 
-    private static final String CAMPAIGN_ID = "41542528";
-
-    @Mock
-    private PatreonWebhookConfiguration configuration;
     @Mock
     private UserRepository userRepository;
     @Mock
@@ -35,8 +29,7 @@ class PatreonWebhookServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PatreonWebhookService(new ObjectMapper(), configuration, userRepository, jdbcTemplate);
-        when(configuration.getCampaignId()).thenReturn(CAMPAIGN_ID);
+        service = new PatreonWebhookService(new ObjectMapper(), userRepository, jdbcTemplate);
     }
 
     @Test
@@ -101,15 +94,6 @@ class PatreonWebhookServiceTest {
     }
 
     @Test
-    void rejectsUnexpectedCampaign() {
-        String body = payload(500, "patron@example.com").replace(CAMPAIGN_ID, "another-campaign");
-
-        assertThrows(IllegalArgumentException.class,
-                () -> service.process(body.getBytes(StandardCharsets.UTF_8)));
-        verifyNoAssignment();
-    }
-
-    @Test
     void acceptsLegacyLifetimeSupportFieldName() throws Exception {
         UserEntity user = user(42, true);
         when(userRepository.findByEmailIgnoreCase("patron@example.com")).thenReturn(user);
@@ -145,9 +129,8 @@ class PatreonWebhookServiceTest {
         return """
                 {"data":{"type":"member","id":"member-1",
                 "attributes":{"campaign_lifetime_support_cents":%d%s},
-                "relationships":{"campaign":{"data":{"type":"campaign","id":"%s"}},
-                "user":{"data":{"type":"user","id":"patreon-user-1"}}}}}
-                """.formatted(lifetimeSupportCents, emailJson, CAMPAIGN_ID);
+                "relationships":{"user":{"data":{"type":"user","id":"patreon-user-1"}}}}}
+                """.formatted(lifetimeSupportCents, emailJson);
     }
 
     private String payloadWithIncludedEmail(long lifetimeSupportCents) {
