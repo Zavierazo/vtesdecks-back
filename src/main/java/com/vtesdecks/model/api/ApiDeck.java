@@ -19,6 +19,7 @@ public class ApiDeck {
     private Long views;
     private Double rate;
     private Integer votes;
+    private Integer bookmarks;
     private Long comments;
     private String tournament;
     private Integer players;

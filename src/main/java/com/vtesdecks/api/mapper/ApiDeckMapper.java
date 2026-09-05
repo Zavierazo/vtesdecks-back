@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 import static com.vtesdecks.util.VtesUtils.isCrypt;
@@ -51,6 +52,7 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "archetype", ignore = true)
     @Mapping(target = "visitStatus", ignore = true)
     @Mapping(target = "user", source = "deck", qualifiedByName = "mapDeckUser")
+    @Mapping(target = "bookmarks", source = "favoriteUsers", qualifiedByName = "mapBookmarks")
     public abstract ApiDeck map(Deck deck, @Context Integer userId, @Context boolean collectionTracker, @Context String currencyCode);
 
     @BeanMapping(qualifiedByName = "mapSummary")
@@ -66,6 +68,7 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "extra", ignore = true)
     @Mapping(target = "archetype", ignore = true)
     @Mapping(target = "visitStatus", ignore = true)
+    @Mapping(target = "bookmarks", ignore = true)
     @Mapping(target = "user", source = "deck", qualifiedByName = "mapDeckUser")
     @Mapping(target = "reaction", source = "reaction")
     public abstract ApiDeck mapSummary(Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode);
@@ -157,6 +160,11 @@ public abstract class ApiDeckMapper {
     private void afterMappingUser(ApiDeck api, Integer userId, Deck deck) {
         api.setOwner(Objects.equals(userId, deck.getUser() != null ? deck.getUser().getId() : null));
         api.setFavorite(deck.getFavoriteUsers() != null && deck.getFavoriteUsers().contains(userId));
+    }
+
+    @Named("mapBookmarks")
+    protected Integer mapBookmarks(Set<Integer> favoriteUsers) {
+        return favoriteUsers == null ? 0 : favoriteUsers.size();
     }
 
     protected abstract List<ApiCard> map(List<Card> card);

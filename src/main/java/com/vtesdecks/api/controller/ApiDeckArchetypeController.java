@@ -35,7 +35,7 @@ public class ApiDeckArchetypeController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean showDisabled = auth != null && auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(role -> role.equals("ADMIN") || role.equals("MANTAINER"));
+                .anyMatch(role -> role.equals("ADMIN"));
         List<ApiDeckArchetype> result = service.getAll(showDisabled, metaType, Utils.getCurrencyCode(request));
         return ResponseEntity.ok(result);
     }
@@ -49,11 +49,11 @@ public class ApiDeckArchetypeController {
 
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiDeckArchetype> getById(HttpServletRequest request, @PathVariable Integer id,
-                                                     @RequestParam(required = false, defaultValue = "TOURNAMENT") MetaType metaType) {
+                                                    @RequestParam(required = false, defaultValue = "TOURNAMENT") MetaType metaType) {
         return service.getById(id, metaType, Utils.getCurrencyCode(request)).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @Secured({"ADMIN", "MANTAINER"})
+    @Secured({"ADMIN"})
     @GetMapping(value = "/suggestions", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ApiDeckArchetype>> getSuggestions(HttpServletRequest request) {
         List<ApiDeckArchetype> result = service.getSuggestions();
@@ -61,7 +61,7 @@ public class ApiDeckArchetypeController {
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @Secured({"ADMIN", "MANTAINER"})
+    @Secured({"ADMIN"})
     public ResponseEntity<ApiDeckArchetype> create(HttpServletRequest request, @RequestBody ApiDeckArchetype api) {
         return service.create(api, Utils.getCurrencyCode(request))
                 .map(ResponseEntity::ok)
@@ -69,7 +69,7 @@ public class ApiDeckArchetypeController {
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @Secured({"ADMIN", "MANTAINER"})
+    @Secured({"ADMIN"})
     public ResponseEntity<ApiDeckArchetype> update(HttpServletRequest request, @PathVariable Integer id, @RequestBody ApiDeckArchetype api) {
         return service.update(id, api, Utils.getCurrencyCode(request))
                 .map(ResponseEntity::ok)
@@ -77,7 +77,7 @@ public class ApiDeckArchetypeController {
     }
 
     @DeleteMapping(value = "/{id}")
-    @Secured({"ADMIN", "MANTAINER"})
+    @Secured({"ADMIN"})
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         boolean deleted = service.delete(id);
         if (!deleted) return ResponseEntity.notFound().build();
