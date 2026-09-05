@@ -13,7 +13,6 @@ import com.vtesdecks.scheduler.shops.CardGameGeekScheduler;
 import com.vtesdecks.scheduler.shops.DriveThruCardsScheduler;
 import com.vtesdecks.scheduler.shops.GamePodScheduler;
 import com.vtesdecks.scheduler.shops.MarketScheduler;
-import com.vtesdecks.scheduler.tournament.TournamentDeckOldScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentDeckScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentEternalVigilanceDeckScheduler;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +29,6 @@ public class ApiAdminSchedulerService {
             new ApiAdminScheduler("deck-views-clean", "Clean deck views"),
             new ApiAdminScheduler("deck-clean", "Clean decks"),
             new ApiAdminScheduler("scrap-decks", "Import tournament decks"),
-            new ApiAdminScheduler("scrap-decks-old", "Import legacy tournament decks"),
             new ApiAdminScheduler("scrap-decks-eternal-vigilance", "Import Eternal Vigilance decks"),
             new ApiAdminScheduler("drive-thru-cards", "Synchronize DriveThruCards"),
             new ApiAdminScheduler("game-pod", "Synchronize Game Pod"),
@@ -47,7 +45,6 @@ public class ApiAdminSchedulerService {
 
     private final CleanUpScheduler cleanUpScheduler;
     private final TournamentDeckScheduler tournamentDeckScheduler;
-    private final TournamentDeckOldScheduler tournamentDeckOldScheduler;
     private final TournamentEternalVigilanceDeckScheduler tournamentEternalVigilanceDeckScheduler;
     private final DriveThruCardsScheduler driveThruCardsScheduler;
     private final GamePodScheduler gamePodScheduler;
@@ -71,7 +68,6 @@ public class ApiAdminSchedulerService {
             case "deck-views-clean" -> cleanUpScheduler.deckViewCleanScheduler();
             case "deck-clean" -> cleanUpScheduler.deckCleanScheduler();
             case "scrap-decks" -> tournamentDeckScheduler.scrappingDecks();
-            case "scrap-decks-old" -> tournamentDeckOldScheduler.scrappingDecks();
             case "scrap-decks-eternal-vigilance" -> tournamentEternalVigilanceDeckScheduler.scrappingDecks();
             case "drive-thru-cards" -> driveThruCardsScheduler.scrapCards();
             case "game-pod" -> gamePodScheduler.scrapCards();
