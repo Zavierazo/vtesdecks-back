@@ -36,7 +36,7 @@ public enum LibraryTaint {
     BANNED("Banned"),
     REFLEX("Reflex"),
     TWD("Used by TWD"),
-    ADD_BLOOD("Add Blood", "add .* blood (from the blood bank )?to .* in your uncontrolled region|move .* blood (from the blood bank )?to .* in your uncontrolled region|draw .* from your crypt .* add .* blood .* to it|move .* blood from .* to .* in your uncontrolled region"),
+    ADD_BLOOD("Add Blood", "add .* blood (from the blood bank )?to .* in your uncontrolled region|move .* blood (from the blood bank )?to .* in your uncontrolled region|draw .* from your crypt .* add .* blood .* to it|draw it and add .* blood to it|move .* blood from .* to .* in your uncontrolled region"),
     MULTI_TYPE("Multi-Type"),
     MULTI_DISCIPLINE("Multi-Discipline"),
     CANNOT_BLOCK("Cannot Block", "cannot (attempt to )?block"),
