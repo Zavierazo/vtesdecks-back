@@ -111,7 +111,7 @@ public class ApiCardService {
                 .filter(cardShop -> cardShop.getPlatform().isEnabled())
                 .anyMatch(CardShopEntity::isInStock);
         Comparator<CardShopEntity> sortByLocaleAndPrice = Comparator
-                .comparing((CardShopEntity shop) -> !locale.equals(shop.getLocale()))
+                .comparing((CardShopEntity shop) -> !locale.equals(Objects.requireNonNullElse(shop.getLocale(), "en")))
                 .thenComparing(CardShopEntity::getPrice);
         List<CardShopEntity> all = results
                 .stream()
