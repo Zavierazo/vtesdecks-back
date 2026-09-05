@@ -11,6 +11,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class VtesUtilsTest {
 
     @Test
+    public void cryptVotesAreDerivedFromTitle() {
+        assertEquals(0, VtesUtils.getCryptVotes(null));
+        assertEquals(0, VtesUtils.getCryptVotes(""));
+        assertEquals(0, VtesUtils.getCryptVotes("none"));
+        assertEquals(1, VtesUtils.getCryptVotes("1 vote"));
+        assertEquals(1, VtesUtils.getCryptVotes("bishop"));
+        assertEquals(1, VtesUtils.getCryptVotes("primogen"));
+        assertEquals(2, VtesUtils.getCryptVotes("2 votes"));
+        assertEquals(2, VtesUtils.getCryptVotes("archbishop"));
+        assertEquals(2, VtesUtils.getCryptVotes("baron"));
+        assertEquals(2, VtesUtils.getCryptVotes("kholo"));
+        assertEquals(2, VtesUtils.getCryptVotes("magaji"));
+        assertEquals(2, VtesUtils.getCryptVotes("  Prince "));
+        assertEquals(3, VtesUtils.getCryptVotes("cardinal"));
+        assertEquals(3, VtesUtils.getCryptVotes("JUSTICAR"));
+        assertEquals(3, VtesUtils.getCryptVotes("priscus"));
+        assertEquals(4, VtesUtils.getCryptVotes("inner circle"));
+        assertEquals(4, VtesUtils.getCryptVotes("regent"));
+    }
+
+    @Test
     public void containsSetMatchesAbbrevWithAndWithoutSubGroup() {
         assertTrue(VtesUtils.containsSet(List.of("Jyhad", "VTES", "Promo:20190601"), "Promo"));
         assertTrue(VtesUtils.containsSet(List.of("Promo"), "Promo"));

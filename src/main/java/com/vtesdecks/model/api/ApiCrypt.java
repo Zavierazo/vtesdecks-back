@@ -22,6 +22,7 @@ public class ApiCrypt extends ApiBaseCard {
     private String text;
     private List<String> sets;
     private String title;
+    private Integer votes;
     private String banned;
     private String artist;
     private String image;

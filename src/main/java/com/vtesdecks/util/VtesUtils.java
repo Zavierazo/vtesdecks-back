@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,6 +45,19 @@ public class VtesUtils {
 
     public static boolean isLibrary(Integer id) {
         return id > LIBRARY_ID_MIN && id < LIBRARY_ID_MAX;
+    }
+
+    public static int getCryptVotes(String title) {
+        if (StringUtils.isBlank(title)) {
+            return 0;
+        }
+        return switch (title.trim().toLowerCase(Locale.ROOT)) {
+            case "1 vote", "bishop", "primogen" -> 1;
+            case "2 votes", "archbishop", "baron", "kholo", "magaji", "prince" -> 2;
+            case "cardinal", "justicar", "priscus" -> 3;
+            case "inner circle", "regent" -> 4;
+            default -> 0;
+        };
     }
 
     public static String getClanIcon(String clan) {

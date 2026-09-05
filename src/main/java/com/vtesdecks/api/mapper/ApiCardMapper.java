@@ -10,6 +10,7 @@ import com.vtesdecks.model.api.ApiI18n;
 import com.vtesdecks.model.api.ApiLibrary;
 import com.vtesdecks.model.api.ApiShop;
 import com.vtesdecks.model.api.ApiShopInfo;
+import com.vtesdecks.util.VtesUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Context;
@@ -28,10 +29,12 @@ public abstract class ApiCardMapper {
 
     @Mapping(target = "i18n", ignore = true)
     @Mapping(target = "score", ignore = true)
+    @Mapping(target = "votes", ignore = true)
     public abstract ApiCrypt mapCrypt(Crypt entity, @Context String locale, @Context Set<String> fields, @Context Double score);
 
     @AfterMapping
     protected void afterMapping(@MappingTarget ApiCrypt apiCrypt, Crypt entity, @Context String locale, @Context Set<String> fields, @Context Double score) {
+        apiCrypt.setVotes(VtesUtils.getCryptVotes(entity.getTitle()));
         if (locale != null && entity.getI18n() != null && entity.getI18n().containsKey(locale)) {
             apiCrypt.setI18n(mapI18n(entity.getI18n().get(locale)));
         }
