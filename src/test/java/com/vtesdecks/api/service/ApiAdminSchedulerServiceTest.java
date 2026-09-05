@@ -12,7 +12,6 @@ import com.vtesdecks.scheduler.shops.CardGameGeekScheduler;
 import com.vtesdecks.scheduler.shops.DriveThruCardsScheduler;
 import com.vtesdecks.scheduler.shops.GamePodScheduler;
 import com.vtesdecks.scheduler.shops.MarketScheduler;
-import com.vtesdecks.scheduler.tournament.TournamentDeckOldScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentDeckScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentEternalVigilanceDeckScheduler;
 import org.junit.jupiter.api.Test;
@@ -29,22 +28,36 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class ApiAdminSchedulerServiceTest {
-    @Mock private CleanUpScheduler cleanUpScheduler;
-    @Mock private TournamentDeckScheduler tournamentDeckScheduler;
-    @Mock private TournamentDeckOldScheduler tournamentDeckOldScheduler;
-    @Mock private TournamentEternalVigilanceDeckScheduler tournamentEternalVigilanceDeckScheduler;
-    @Mock private DriveThruCardsScheduler driveThruCardsScheduler;
-    @Mock private GamePodScheduler gamePodScheduler;
-    @Mock private VtesdleTodayScheduler vtesdleTodayScheduler;
-    @Mock private CardGameGeekScheduler cardGameGeekScheduler;
-    @Mock private ProxyCardOptionScheduler proxyCardOptionScheduler;
-    @Mock private MarketScheduler marketScheduler;
-    @Mock private DeckArchetypeScheduler deckArchetypeScheduler;
-    @Mock private DeckArchetypeIndex deckArchetypeIndex;
-    @Mock private UserMonthScheduler userMonthScheduler;
-    @Mock private AchievementScheduler achievementScheduler;
-    @Mock private PatreonReminderScheduler patreonReminderScheduler;
-    @InjectMocks private ApiAdminSchedulerService service;
+    @Mock
+    private CleanUpScheduler cleanUpScheduler;
+    @Mock
+    private TournamentDeckScheduler tournamentDeckScheduler;
+    @Mock
+    private TournamentEternalVigilanceDeckScheduler tournamentEternalVigilanceDeckScheduler;
+    @Mock
+    private DriveThruCardsScheduler driveThruCardsScheduler;
+    @Mock
+    private GamePodScheduler gamePodScheduler;
+    @Mock
+    private VtesdleTodayScheduler vtesdleTodayScheduler;
+    @Mock
+    private CardGameGeekScheduler cardGameGeekScheduler;
+    @Mock
+    private ProxyCardOptionScheduler proxyCardOptionScheduler;
+    @Mock
+    private MarketScheduler marketScheduler;
+    @Mock
+    private DeckArchetypeScheduler deckArchetypeScheduler;
+    @Mock
+    private DeckArchetypeIndex deckArchetypeIndex;
+    @Mock
+    private UserMonthScheduler userMonthScheduler;
+    @Mock
+    private AchievementScheduler achievementScheduler;
+    @Mock
+    private PatreonReminderScheduler patreonReminderScheduler;
+    @InjectMocks
+    private ApiAdminSchedulerService service;
 
     @Test
     void exposesEveryMigratedManualScheduler() {
@@ -64,10 +77,9 @@ class ApiAdminSchedulerServiceTest {
     @Test
     void rejectsUnknownScheduler() {
         assertFalse(service.run("unknown", 42));
-        verifyNoInteractions(cleanUpScheduler, tournamentDeckScheduler, tournamentDeckOldScheduler,
-                tournamentEternalVigilanceDeckScheduler, driveThruCardsScheduler, gamePodScheduler,
-                vtesdleTodayScheduler, cardGameGeekScheduler, proxyCardOptionScheduler, marketScheduler,
-                deckArchetypeScheduler, deckArchetypeIndex, userMonthScheduler, achievementScheduler,
-                patreonReminderScheduler);
+        verifyNoInteractions(cleanUpScheduler, tournamentDeckScheduler, tournamentEternalVigilanceDeckScheduler,
+                driveThruCardsScheduler, gamePodScheduler, vtesdleTodayScheduler, cardGameGeekScheduler,
+                proxyCardOptionScheduler, marketScheduler, deckArchetypeScheduler, deckArchetypeIndex,
+                userMonthScheduler, achievementScheduler, patreonReminderScheduler);
     }
 }
