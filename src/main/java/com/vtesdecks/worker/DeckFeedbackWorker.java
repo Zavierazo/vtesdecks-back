@@ -22,6 +22,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 @Log4j2
 @RequiredArgsConstructor
 public class DeckFeedbackWorker implements Runnable {
+    private static final int SOURCE_MAX_LENGTH = 500;
+
     private final BlockingQueue<DeckFeedback> operationLogQueue = new LinkedBlockingQueue<>();
     private final MessageProducer messageProducer;
     private final DeckViewRepository deckViewRepository;
@@ -93,7 +95,9 @@ public class DeckFeedbackWorker implements Runnable {
                         .ip(Utils.getIp(httpServletRequest))
                         .userAgent(httpServletRequest.getHeader("User-Agent"))
                         .type(DeckFeedback.FeedbackType.VIEW)
-                        .source(source)
+                        .source(source != null && source.length() > SOURCE_MAX_LENGTH
+                                ? source.substring(0, SOURCE_MAX_LENGTH)
+                                : source)
                         .increment(1)
                         .build());
     }
