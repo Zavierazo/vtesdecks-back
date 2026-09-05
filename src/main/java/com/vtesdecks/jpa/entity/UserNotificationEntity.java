@@ -1,7 +1,10 @@
 package com.vtesdecks.jpa.entity;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.vtesdecks.enums.UserNotificationType;
+import com.vtesdecks.jpa.entity.converter.JsonNodeConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -33,7 +36,7 @@ public class UserNotificationEntity {
     @Column(name = "`read`")
     private Boolean read;
 
-    @Column(name = "type")
+    @Column(name = "type", nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private UserNotificationType type;
 
@@ -42,6 +45,10 @@ public class UserNotificationEntity {
 
     @Column(name = "link")
     private String link;
+
+    @Convert(converter = JsonNodeConverter.class)
+    @Column(name = "data", columnDefinition = "json")
+    private JsonNode data;
 
     @CreationTimestamp
     @Column(name = "creation_date", nullable = false, insertable = false)
