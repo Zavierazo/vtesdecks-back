@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 @RestController
@@ -31,8 +30,7 @@ public class ApiPatreonWebhookController {
             @RequestHeader(value = "X-Patreon-Event", required = false) String event,
             @RequestHeader(value = "X-Patreon-Signature", required = false) String signature,
             @RequestBody byte[] body) {
-        log.info("Received Patreon webhook event {} with body {}", event,
-                new String(body, StandardCharsets.UTF_8));
+        log.info("Received Patreon webhook event {}", event);
         if (!signatureVerifier.isValid(body, signature)) {
             log.warn("Rejected Patreon webhook with an invalid signature");
             return ResponseEntity.status(401).build();

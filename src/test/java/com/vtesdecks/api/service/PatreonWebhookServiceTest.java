@@ -85,12 +85,12 @@ class PatreonWebhookServiceTest {
     }
 
     @Test
-    void ignoresUnverifiedMatchingUser() throws Exception {
+    void assignsSupporterToMatchingUnverifiedUser() throws Exception {
         when(userRepository.findByEmailIgnoreCase("patron@example.com")).thenReturn(user(42, false));
 
         service.process(payload(500, "patron@example.com").getBytes(StandardCharsets.UTF_8));
 
-        verifyNoAssignment();
+        verifyAssignment();
     }
 
     @Test

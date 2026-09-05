@@ -53,7 +53,7 @@ public class PatreonWebhookService {
             lifetimeSupportCents = attributes.path("lifetime_support_cents").asLong(0);
         }
         if (lifetimeSupportCents <= 0) {
-            log.debug("Ignoring unpaid Patreon member {}", memberId);
+            log.info("Ignoring unpaid Patreon member {}", memberId);
             return;
         }
 
@@ -68,12 +68,7 @@ public class PatreonWebhookService {
 
         UserEntity user = userRepository.findByEmailIgnoreCase(email.trim());
         if (user == null) {
-            log.info("No VTESDecks user matches paid Patreon member {}", memberId);
-            return;
-        }
-        if (!Boolean.TRUE.equals(user.getValidated())) {
-            log.info("Ignoring paid Patreon member {} because matching VTESDecks user {} is not verified",
-                    memberId, user.getId());
+            log.info("No VTESDecks user matches paid Patreon member {} with email {}", memberId, email);
             return;
         }
 
