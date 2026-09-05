@@ -19,7 +19,6 @@ import com.vtesdecks.service.push.WebPushDeliveryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -42,8 +41,6 @@ public class ApiUserNotificationService {
     private final UserFollowerRepository userFollowerRepository;
     private final UserRepository userRepository;
     private final WebPushDeliveryService webPushDeliveryService;
-    @Value("${achievements.notifications.enabled:false}")
-    private boolean achievementNotificationsEnabled;
 
     public Integer notificationUnreadCount(Integer userId) {
         if (userId == null) {
@@ -165,9 +162,6 @@ public class ApiUserNotificationService {
     }
 
     public void addAchievementNotification(Integer userId, String family, Integer tier) {
-        if (!achievementNotificationsEnabled) {
-            return;
-        }
         UserNotificationEntity notification = new UserNotificationEntity();
         notification.setUser(userId);
         notification.setReferenceId("achievement:" + family + ":" + tier);
