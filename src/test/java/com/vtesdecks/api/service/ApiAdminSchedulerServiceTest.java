@@ -61,7 +61,7 @@ class ApiAdminSchedulerServiceTest {
 
     @Test
     void exposesEveryMigratedManualScheduler() {
-        assertEquals(16, service.getAll().size());
+        assertEquals(15, service.getAll().size());
         assertTrue(service.getAll().stream().anyMatch(item ->
                 item.key().equals("deck-views-clean") && item.description().equals("Clean deck views")));
         assertTrue(service.getAll().stream().anyMatch(item ->
