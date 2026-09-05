@@ -3,6 +3,7 @@ package com.vtesdecks.api.controller;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.vtesdecks.api.service.ApiUserNotificationService;
 import com.vtesdecks.api.service.ApiUserService;
+import com.vtesdecks.api.service.PasswordResetService;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiResponse;
@@ -53,6 +54,8 @@ public class ApiAuthController {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private MailService mailService;
+    @Autowired
+    private PasswordResetService passwordResetService;
     @Autowired
     private RecaptchaService recaptchaService;
     @Autowired
@@ -246,19 +249,11 @@ public class ApiAuthController {
                 log.warn("Invalid email forgot password {}", email);
             } else {
                 log.info("Forgot password request with email {}", email);
-                UserEntity user = userRepository.findByEmail(email);
-                if (user != null) {
-                    if (user.getForgotPasswordDate() == null || user.getForgotPasswordDate().isBefore(LocalDateTime.now().minusMinutes(30))) {
-                        List<String> roles = userRepository.selectRolesByUserId(user.getId());
-                        mailService.sendForgotPasswordMail(user.getEmail(), userService.getJWTToken(user, roles, true));
-                        user.setForgotPasswordDate(LocalDateTime.now());
-                        userRepository.save(user);
-                        log.info("Forgot password request for {} success", email);
-                    } else {
-                        log.info("Forgot password request for {} duplicated", email);
-                    }
-                } else {
+                PasswordResetService.Result result = passwordResetService.request(email);
+                if (result == PasswordResetService.Result.USER_NOT_FOUND) {
                     log.warn("Invalid forgot password email {}", email);
+                } else {
+                    log.info("Forgot password request for {} result {}", email, result);
                 }
                 response.setSuccessful(true);
                 response.setMessage("Your forgot password request has been received. Please check your email for further instructions on how to reset your password.");
