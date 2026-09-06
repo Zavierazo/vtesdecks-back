@@ -4,6 +4,8 @@ import com.vtesdecks.api.service.ApiAdminSchedulerService;
 import com.vtesdecks.api.service.ApiAdminUserService;
 import com.vtesdecks.api.service.PasswordResetService;
 import com.vtesdecks.model.api.ApiAdminUser;
+import com.vtesdecks.model.api.ApiAdminUserEmail;
+import com.vtesdecks.model.api.ApiUser;
 import com.vtesdecks.service.FeatureFlagService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,6 +76,24 @@ class ApiAdminControllerTest {
         when(userService.validate("target", 42)).thenReturn(Optional.of(user));
 
         assertEquals(user, controller.validateUser("target").getBody());
+    }
+
+    @Test
+    void emailUpdateReturnsTrustedManagementView() {
+        ApiAdminUser user = ApiAdminUser.builder().user("target").email("new@example.com").validated(true).build();
+        when(userService.updateEmail("target", "new@example.com", 42)).thenReturn(Optional.of(user));
+
+        assertEquals(user, controller.updateUserEmail("target", new ApiAdminUserEmail("new@example.com")).getBody());
+    }
+
+    @Test
+    void impersonationReturnsTargetAuthentication() {
+        ApiUser user = new ApiUser();
+        user.setUser("target");
+        user.setToken("target-token");
+        when(userService.impersonate("target", 42)).thenReturn(Optional.of(user));
+
+        assertEquals(user, controller.impersonateUser("target").getBody());
     }
 
     @Test

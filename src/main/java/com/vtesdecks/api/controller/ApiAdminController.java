@@ -7,8 +7,10 @@ import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.model.api.ApiAdminScheduler;
 import com.vtesdecks.model.api.ApiAdminUser;
 import com.vtesdecks.model.api.ApiAdminUserAccess;
+import com.vtesdecks.model.api.ApiAdminUserEmail;
 import com.vtesdecks.model.api.ApiFeatureFlag;
 import com.vtesdecks.model.api.ApiFeatureFlagValue;
+import com.vtesdecks.model.api.ApiUser;
 import com.vtesdecks.service.FeatureFlagService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -57,6 +59,28 @@ public class ApiAdminController {
     @PostMapping(value = "/users/{identifier}/validate", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiAdminUser> validateUser(@PathVariable String identifier) {
         return userService.validate(identifier, ApiUtils.extractUserId())
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping(value = "/users/{identifier}/email", consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiAdminUser> updateUserEmail(@PathVariable String identifier,
+                                                         @RequestBody ApiAdminUserEmail body) {
+        try {
+            return userService.updateEmail(identifier, body == null ? null : body.getEmail(), ApiUtils.extractUserId())
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+    }
+
+    @PostMapping(value = "/users/{identifier}/impersonate", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiUser> impersonateUser(@PathVariable String identifier) {
+        return userService.impersonate(identifier, ApiUtils.extractUserId())
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

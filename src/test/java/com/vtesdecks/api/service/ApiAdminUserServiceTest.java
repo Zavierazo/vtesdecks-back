@@ -4,6 +4,7 @@ import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiAdminUser;
 import com.vtesdecks.model.api.ApiAdminUserAccess;
+import com.vtesdecks.model.api.ApiUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,12 +34,14 @@ class ApiAdminUserServiceTest {
     private JdbcTemplate jdbcTemplate;
     @Mock
     private PasswordResetService passwordResetService;
+    @Mock
+    private ApiUserService apiUserService;
     private ApiAdminUserService service;
     private UserEntity user;
 
     @BeforeEach
     void setUp() {
-        service = new ApiAdminUserService(userRepository, jdbcTemplate, passwordResetService);
+        service = new ApiAdminUserService(userRepository, jdbcTemplate, passwordResetService, apiUserService);
         user = new UserEntity();
         user.setId(7);
         user.setUsername("target");
@@ -118,12 +121,56 @@ class ApiAdminUserServiceTest {
     }
 
     @Test
+    void adminEmailUpdateIsImmediatelyTrusted() {
+        when(userRepository.findByUsername("target")).thenReturn(user);
+        when(userRepository.findByEmailIgnoreCase("new@example.com")).thenReturn(null);
+        when(userRepository.selectRolesByUserId(7)).thenReturn(List.of());
+        when(jdbcTemplate.queryForList(anyString(), eq(String.class))).thenReturn(List.of());
+
+        ApiAdminUser result = service.updateEmail("target", " new@example.com ", 42).orElseThrow();
+
+        assertEquals("new@example.com", result.getEmail());
+        assertTrue(result.getValidated());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void rejectsEmailOwnedByAnotherUser() {
+        UserEntity otherUser = new UserEntity();
+        otherUser.setId(8);
+        when(userRepository.findByUsername("target")).thenReturn(user);
+        when(userRepository.findByEmailIgnoreCase("taken@example.com")).thenReturn(otherUser);
+
+        assertThrows(IllegalStateException.class,
+                () -> service.updateEmail("target", "taken@example.com", 42));
+
+        verify(userRepository, never()).save(user);
+    }
+
+    @Test
+    void impersonationReturnsNormalAuthenticatedUserPayload() {
+        ApiUser authenticatedUser = new ApiUser();
+        authenticatedUser.setUser("target");
+        authenticatedUser.setToken("target-token");
+        when(userRepository.findByUsername("target")).thenReturn(user);
+        when(userRepository.selectRolesByUserId(7)).thenReturn(List.of("supporter"));
+        when(apiUserService.getAuthenticatedUser(user, List.of("supporter"))).thenReturn(authenticatedUser);
+
+        ApiUser result = service.impersonate("target", 42).orElseThrow();
+
+        assertEquals("target-token", result.getToken());
+        verify(apiUserService).getAuthenticatedUser(user, List.of("supporter"));
+    }
+
+    @Test
     void reportsUnknownUserWithoutMutation() {
         when(userRepository.findByUsername("missing")).thenReturn(null);
 
         assertTrue(service.get("missing").isEmpty());
         assertTrue(service.updateAccess("missing", new ApiAdminUserAccess(true, List.of()), 1).isEmpty());
         assertTrue(service.validate("missing", 1).isEmpty());
+        assertTrue(service.updateEmail("missing", "new@example.com", 1).isEmpty());
+        assertTrue(service.impersonate("missing", 1).isEmpty());
         assertEquals(PasswordResetService.Result.USER_NOT_FOUND, service.sendPasswordReset("missing", 1));
     }
 }

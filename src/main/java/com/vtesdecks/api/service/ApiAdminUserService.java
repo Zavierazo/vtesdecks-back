@@ -5,6 +5,9 @@ import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiAdminUser;
 import com.vtesdecks.model.api.ApiAdminUserAccess;
+import com.vtesdecks.model.api.ApiUser;
+import jakarta.mail.internet.AddressException;
+import jakarta.mail.internet.InternetAddress;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -34,6 +37,7 @@ public class ApiAdminUserService {
     private final UserRepository userRepository;
     private final JdbcTemplate jdbcTemplate;
     private final PasswordResetService passwordResetService;
+    private final ApiUserService apiUserService;
 
     @Transactional(readOnly = true)
     public Optional<ApiAdminUser> get(String identifier) {
@@ -90,6 +94,39 @@ public class ApiAdminUserService {
     }
 
     @Transactional
+    public Optional<ApiAdminUser> updateEmail(String identifier, String email, Integer actorUserId) {
+        UserEntity user = findUser(identifier);
+        if (user == null) {
+            return Optional.empty();
+        }
+
+        String normalizedEmail = normalizeEmail(email);
+        UserEntity existingUser = userRepository.findByEmailIgnoreCase(normalizedEmail);
+        if (existingUser != null && !existingUser.getId().equals(user.getId())) {
+            throw new IllegalStateException("Email address is already in use");
+        }
+
+        user.setEmail(normalizedEmail);
+        user.setValidated(true);
+        userRepository.save(user);
+        log.info("Admin email updated actorUserId={} targetUsername={}", actorUserId, user.getUsername());
+        return Optional.of(map(user));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<ApiUser> impersonate(String identifier, Integer actorUserId) {
+        UserEntity user = findUser(identifier);
+        if (user == null) {
+            return Optional.empty();
+        }
+
+        List<String> roles = userRepository.selectRolesByUserId(user.getId());
+        log.info("Admin impersonation actorUserId={} targetUserId={} targetUsername={}",
+                actorUserId, user.getId(), user.getUsername());
+        return Optional.of(apiUserService.getAuthenticatedUser(user, roles));
+    }
+
+    @Transactional
     public PasswordResetService.Result sendPasswordReset(String identifier, Integer actorUserId) {
         UserEntity user = findUser(identifier);
         if (user == null) {
@@ -110,6 +147,20 @@ public class ApiAdminUserService {
     private UserEntity findUser(String identifier) {
         UserEntity user = userRepository.findByUsername(identifier);
         return user != null ? user : userRepository.findByEmailIgnoreCase(identifier);
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        String normalizedEmail = email.trim();
+        try {
+            InternetAddress address = new InternetAddress(normalizedEmail);
+            address.validate();
+        } catch (AddressException e) {
+            throw new IllegalArgumentException("Email is invalid", e);
+        }
+        return normalizedEmail;
     }
 
     private ApiAdminUser map(UserEntity user, List<String> roles, List<String> availableRoles) {
