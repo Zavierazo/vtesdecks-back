@@ -28,6 +28,7 @@ public class ApiAdminSchedulerService {
     private static final List<ApiAdminScheduler> SCHEDULERS = List.of(
             new ApiAdminScheduler("deck-views-clean", "Clean deck views"),
             new ApiAdminScheduler("deck-clean", "Clean decks"),
+            new ApiAdminScheduler("collection-clean", "Clean collections"),
             new ApiAdminScheduler("scrap-decks", "Import tournament decks"),
             new ApiAdminScheduler("scrap-decks-eternal-vigilance", "Import Eternal Vigilance decks"),
             new ApiAdminScheduler("drive-thru-cards", "Synchronize DriveThruCards"),
@@ -67,6 +68,7 @@ public class ApiAdminSchedulerService {
         switch (key) {
             case "deck-views-clean" -> cleanUpScheduler.deckViewCleanScheduler();
             case "deck-clean" -> cleanUpScheduler.deckCleanScheduler();
+            case "collection-clean" -> cleanUpScheduler.collectionCleanScheduler();
             case "scrap-decks" -> tournamentDeckScheduler.scrappingDecks();
             case "scrap-decks-eternal-vigilance" -> tournamentEternalVigilanceDeckScheduler.scrappingDecks();
             case "drive-thru-cards" -> driveThruCardsScheduler.scrapCards();

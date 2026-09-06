@@ -28,6 +28,8 @@ public interface CollectionCardRepository extends JpaRepository<CollectionCardEn
 
     void deleteByBinderId(Integer id);
 
+    void deleteByCollectionId(Integer collectionId);
+
     @Modifying
     @Query(value = "UPDATE collection_card c SET c.binder_id = NULL WHERE c.binder_id = :binderId", nativeQuery = true)
     void clearBinderId(@Param("binderId") Integer binderId);

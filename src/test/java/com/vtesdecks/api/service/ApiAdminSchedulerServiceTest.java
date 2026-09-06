@@ -61,7 +61,9 @@ class ApiAdminSchedulerServiceTest {
 
     @Test
     void exposesEveryMigratedManualScheduler() {
-        assertEquals(15, service.getAll().size());
+        assertEquals(16, service.getAll().size());
+        assertTrue(service.getAll().stream().anyMatch(item ->
+                item.key().equals("collection-clean") && item.description().equals("Clean collections")));
         assertTrue(service.getAll().stream().anyMatch(item ->
                 item.key().equals("deck-views-clean") && item.description().equals("Clean deck views")));
         assertTrue(service.getAll().stream().anyMatch(item ->
@@ -72,6 +74,12 @@ class ApiAdminSchedulerServiceTest {
     void runsKnownScheduler() {
         assertTrue(service.run("achievements", 42));
         verify(achievementScheduler).reconcile();
+    }
+
+    @Test
+    void runsCollectionCleanup() {
+        assertTrue(service.run("collection-clean", 42));
+        verify(cleanUpScheduler).collectionCleanScheduler();
     }
 
     @Test

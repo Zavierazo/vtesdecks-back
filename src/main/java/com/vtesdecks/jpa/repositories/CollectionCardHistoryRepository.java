@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface CollectionCardHistoryRepository extends JpaRepository<CollectionCardHistoryEntity, Long> {
 
+    void deleteByCollectionId(Integer collectionId);
+
     @Query("SELECT h FROM CollectionCardHistoryEntity h WHERE h.collectionId = :collectionId "
             + "AND (:cardId IS NULL OR h.cardId = :cardId) "
             + "AND (:binderId IS NULL OR h.binderId = :binderId) "

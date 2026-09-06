@@ -1,7 +1,12 @@
 package com.vtesdecks.scheduler;
 
+import com.vtesdecks.jpa.entity.CollectionEntity;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.DeckViewEntity;
+import com.vtesdecks.jpa.repositories.CollectionBinderRepository;
+import com.vtesdecks.jpa.repositories.CollectionCardHistoryRepository;
+import com.vtesdecks.jpa.repositories.CollectionCardRepository;
+import com.vtesdecks.jpa.repositories.CollectionRepository;
 import com.vtesdecks.jpa.repositories.DeckCardHistoryRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
@@ -28,6 +33,10 @@ public class CleanUpScheduler {
     private final DeckCardRepository deckCardRepository;
     private final DeckUserRepository deckUserRepository;
     private final DeckCardHistoryRepository deckCardHistoryRepository;
+    private final CollectionRepository collectionRepository;
+    private final CollectionCardRepository collectionCardRepository;
+    private final CollectionCardHistoryRepository collectionCardHistoryRepository;
+    private final CollectionBinderRepository collectionBinderRepository;
 
     @Scheduled(cron = "${jobs.deckViewCleanCron:0 0 2 * * *}")
     @Transactional
@@ -53,6 +62,24 @@ public class CleanUpScheduler {
             deckViewRepository.deleteAll(views);
             deckViewRepository.flush();
             log.info("Cleaned {} deck views!", views.size());
+        }
+    }
+
+    @Scheduled(cron = "${jobs.collectionCleanCron:0 30 1 * * *}")
+    @Transactional
+    public void collectionCleanScheduler() {
+        List<CollectionEntity> collectionsToDelete = collectionRepository.selectOldDeleted();
+        for (CollectionEntity collection : collectionsToDelete) {
+            log.warn("Deleting collection forever: {}", collection.getId());
+            collectionCardRepository.deleteByCollectionId(collection.getId());
+            // Card deletions trigger history inserts, so flush them before removing history.
+            collectionCardRepository.flush();
+            collectionCardHistoryRepository.deleteByCollectionId(collection.getId());
+            collectionCardHistoryRepository.flush();
+            collectionBinderRepository.deleteByCollectionId(collection.getId());
+            collectionBinderRepository.flush();
+            collectionRepository.deleteById(collection.getId());
+            collectionRepository.flush();
         }
     }
 
