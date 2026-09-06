@@ -19,6 +19,7 @@ import com.vtesdecks.service.push.WebPushDeliveryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -50,12 +51,22 @@ public class ApiUserNotificationService {
         }
     }
 
-    public List<ApiUserNotification> getUserNotifications() {
+    public List<ApiUserNotification> getUserNotifications(int page, int limit) {
+        if (page < 0) {
+            throw new IllegalArgumentException("Page must be zero or greater");
+        }
+        if (limit < 1 || limit > 100) {
+            throw new IllegalArgumentException("Limit must be between 1 and 100");
+        }
+        if ((long) page * limit > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Pagination offset is too large");
+        }
         Integer userId = ApiUtils.extractUserId();
         if (userId == null) {
             return Collections.emptyList();
         } else {
-            List<UserNotificationEntity> userNotifications = userNotificationRepository.findByUserOrderByCreationDateDesc(userId);
+            List<UserNotificationEntity> userNotifications = userNotificationRepository
+                    .findByUserOrderByCreationDateDescIdDesc(userId, PageRequest.of(page, limit));
             return apiUserNotificationMapper.map(userNotifications);
         }
     }

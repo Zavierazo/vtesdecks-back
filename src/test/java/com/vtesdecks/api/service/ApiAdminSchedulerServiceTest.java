@@ -61,13 +61,16 @@ class ApiAdminSchedulerServiceTest {
 
     @Test
     void exposesEveryMigratedManualScheduler() {
-        assertEquals(16, service.getAll().size());
+        assertEquals(19, service.getAll().size());
         assertTrue(service.getAll().stream().anyMatch(item ->
                 item.key().equals("collection-clean") && item.description().equals("Clean collections")));
         assertTrue(service.getAll().stream().anyMatch(item ->
                 item.key().equals("deck-views-clean") && item.description().equals("Clean deck views")));
         assertTrue(service.getAll().stream().anyMatch(item ->
                 item.key().equals("patreon-reminder") && item.description().equals("Send Patreon reminders")));
+        assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("comments-clean")));
+        assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("reactions-clean")));
+        assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("notifications-clean")));
     }
 
     @Test
@@ -80,6 +83,16 @@ class ApiAdminSchedulerServiceTest {
     void runsCollectionCleanup() {
         assertTrue(service.run("collection-clean", 42));
         verify(cleanUpScheduler).collectionCleanScheduler();
+    }
+
+    @Test
+    void runsNewCleanupSchedulers() {
+        assertTrue(service.run("comments-clean", 42));
+        assertTrue(service.run("reactions-clean", 42));
+        assertTrue(service.run("notifications-clean", 42));
+        verify(cleanUpScheduler).commentsCleanScheduler();
+        verify(cleanUpScheduler).reactionsCleanScheduler();
+        verify(cleanUpScheduler).notificationsCleanScheduler();
     }
 
     @Test

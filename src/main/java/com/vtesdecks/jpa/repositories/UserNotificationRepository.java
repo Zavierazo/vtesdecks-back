@@ -6,6 +6,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,7 +18,7 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
     @Query(value = "SELECT COUNT(1) FROM user_notification WHERE user = :user AND `read` IS FALSE", nativeQuery = true)
     int countUnreadByUser(Integer user);
 
-    List<UserNotificationEntity> findByUserOrderByCreationDateDesc(Integer user);
+    List<UserNotificationEntity> findByUserOrderByCreationDateDescIdDesc(Integer user, Pageable pageable);
 
     @Modifying
     @Transactional

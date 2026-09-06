@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.DeleteMapping;
 
@@ -42,8 +43,10 @@ public class ApiUserNotificationController {
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public ResponseEntity<List<ApiUserNotification>> notifications() {
-        return new ResponseEntity<>(userNotificationService.getUserNotifications(), HttpStatus.OK);
+    public ResponseEntity<List<ApiUserNotification>> notifications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int limit) {
+        return new ResponseEntity<>(userNotificationService.getUserNotifications(page, limit), HttpStatus.OK);
 
     }
 

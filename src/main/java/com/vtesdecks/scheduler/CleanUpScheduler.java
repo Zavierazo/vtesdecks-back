@@ -12,6 +12,7 @@ import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.jpa.repositories.DeckViewRepository;
+import com.vtesdecks.service.DatabaseCleanupService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,6 +24,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.function.IntSupplier;
 
 @Slf4j
 @Component
@@ -37,6 +41,48 @@ public class CleanUpScheduler {
     private final CollectionCardRepository collectionCardRepository;
     private final CollectionCardHistoryRepository collectionCardHistoryRepository;
     private final CollectionBinderRepository collectionBinderRepository;
+    private final DatabaseCleanupService databaseCleanupService;
+
+    @Scheduled(cron = "${jobs.commentsCleanCron:0 30 2 * * *}")
+    public void commentsCleanScheduler() {
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(60);
+        int deleted = runBatches("comments", () -> databaseCleanupService.deleteEligibleCommentsBatch(cutoff));
+        if (deleted >= 0) {
+            long blocked = databaseCleanupService.countBlockedEligibleComments(cutoff);
+            if (blocked > 0) {
+                log.warn("Skipped {} eligible comments because they still have child comments", blocked);
+            }
+        }
+    }
+
+    @Scheduled(cron = "${jobs.reactionsCleanCron:0 0 3 * * *}")
+    public void reactionsCleanScheduler() {
+        runBatches("orphan reactions", databaseCleanupService::deleteOrphanReactionsBatch);
+    }
+
+    @Scheduled(cron = "${jobs.notificationsCleanCron:0 30 3 * * *}")
+    public void notificationsCleanScheduler() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMonths(6);
+        runBatches("notifications", () -> databaseCleanupService.deleteOldReadNotificationsBatch(cutoff));
+    }
+
+    private int runBatches(String name, IntSupplier deleteBatch) {
+        long started = System.nanoTime();
+        int total = 0;
+        try {
+            int deleted;
+            do {
+                deleted = deleteBatch.getAsInt();
+                total += deleted;
+            } while (deleted == DatabaseCleanupService.BATCH_SIZE);
+            log.info("Cleaned {} {} in {} ms", total, name,
+                    Duration.ofNanos(System.nanoTime() - started).toMillis());
+            return total;
+        } catch (RuntimeException exception) {
+            log.error("Cleanup of {} failed after deleting {} records", name, total, exception);
+            return -1;
+        }
+    }
 
     @Scheduled(cron = "${jobs.deckViewCleanCron:0 0 2 * * *}")
     @Transactional

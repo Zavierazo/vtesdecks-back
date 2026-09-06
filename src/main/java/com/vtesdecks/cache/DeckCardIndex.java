@@ -39,7 +39,6 @@ public class DeckCardIndex {
         cache.addIndex(HashIndex.onAttribute(DeckCard.CARD_ID_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(DeckCard.NUMBER_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(DeckCard.IS_CRYPT_ATTRIBUTE));
-        cache.addIndex(HashIndex.onAttribute(DeckCard.IS_LIBRARY_ATTRIBUTE));
     }
 
     public IndexedCollection<DeckCard> getRepository() {

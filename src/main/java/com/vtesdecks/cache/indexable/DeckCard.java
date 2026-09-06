@@ -20,7 +20,6 @@ public class DeckCard {
     public static final Attribute<DeckCard, Integer> CARD_ID_ATTRIBUTE = QueryFactory.attribute(DeckCard.class, Integer.class, "cardId", DeckCard::getId);
     public static final Attribute<DeckCard, Integer> NUMBER_ATTRIBUTE = QueryFactory.attribute(DeckCard.class, Integer.class, "number", DeckCard::getNumber);
     public static final Attribute<DeckCard, Boolean> IS_CRYPT_ATTRIBUTE = QueryFactory.attribute(DeckCard.class, Boolean.class, "isCrypt", (DeckCard card) -> VtesUtils.isCrypt(card.getId()));
-    public static final Attribute<DeckCard, Boolean> IS_LIBRARY_ATTRIBUTE = QueryFactory.attribute(DeckCard.class, Boolean.class, "isLibrary", (DeckCard card) -> VtesUtils.isLibrary(card.getId()));
     private String deckId;
     private Integer id;
     private Integer number;
