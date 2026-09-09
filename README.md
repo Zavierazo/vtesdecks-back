@@ -87,6 +87,10 @@ avoid connection issues.
 
 ## Troubleshooting
 
+### Anonymous proxy PDFs
+
+`POST /api/1.0/proxy` caps PDF output at 20 MiB while writing (HTTP 413).
+
 If you encounter any issues with the database connection, ensure that your MySQL server is running and that the
 credentials and database URL are correct.
 Check the application logs for any errors during startup or when triggering the scheduler.

@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -27,6 +29,8 @@ import static org.springframework.util.CollectionUtils.isEmpty;
 @Service
 @RequiredArgsConstructor
 public class ProxyService {
+
+    private static final int MAX_PDF_BYTES = 20 * 1024 * 1024;
 
     private static final float MILLIMETERS = 2.834f;
     private static final float CARD_HEIGHT = 88 * MILLIMETERS;
@@ -69,7 +73,7 @@ public class ProxyService {
 
     public byte[] generatePDF(List<ApiProxyCard> cards, Map<Integer, List<ApiProxyCardOption>> cardOptions, Map<Integer, String> languageImages) throws DocumentException, IOException {
         final Document document = new Document();
-        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final PdfOutputStream outputStream = new PdfOutputStream(MAX_PDF_BYTES);
         PdfWriter pdfWriter = PdfWriter.getInstance(document, outputStream);
         document.open();
 
@@ -91,6 +95,32 @@ public class ProxyService {
         drawLines(pdfWriter);
         document.close();
         return outputStream.toByteArray();
+    }
+
+    static class PdfOutputStream extends ByteArrayOutputStream {
+        private final int limit;
+
+        PdfOutputStream(int limit) {
+            this.limit = limit;
+        }
+
+        private void check(int length) {
+            if (length > limit - count) {
+                throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "PDF exceeds the maximum size");
+            }
+        }
+
+        @Override
+        public synchronized void write(int value) {
+            check(1);
+            super.write(value);
+        }
+
+        @Override
+        public synchronized void write(byte[] bytes, int offset, int length) {
+            check(length);
+            super.write(bytes, offset, length);
+        }
     }
 
     private Image getPDFImage(String setAbbrev, Integer cardId, List<ApiProxyCardOption> cardOptions, String languageImageUrl) throws BadElementException, IOException {
