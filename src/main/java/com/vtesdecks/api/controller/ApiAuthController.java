@@ -71,7 +71,7 @@ public class ApiAuthController {
     @ResponseBody
     public ApiUser login(HttpServletRequest httpServletRequest, @RequestParam Map<String, String> data) {
         String username = data.get(FORM_DATA_USERNAME);
-        log.debug("Login request for {}", username);
+        log.debug("event=auth.password.login outcome=started");
         ApiUser user = new ApiUser();
         user.setUser(username);
         if (username != null) {
@@ -83,7 +83,7 @@ public class ApiAuthController {
                 String password = data.get(FORM_DATA_PASSWORD);
                 if (isEmpty(dbUser.getPassword())) {
                     user.setMessage("Your account doesn’t have a password yet. Please sign in using Google, or use Forgot password to create one.");
-                    log.warn("Login request for {} failed. No password set(Oauth user).", username);
+                    log.warn("event=auth.password.login outcome=failure reason=password_not_set userId={}", dbUser.getId());
                 } else if (password != null && passwordEncoder.matches(password, dbUser.getPassword())) {
                     List<String> roles = userRepository.selectRolesByUserId(dbUser.getId());
                     if (Boolean.FALSE.equals(dbUser.getValidated())) {
@@ -103,10 +103,10 @@ public class ApiAuthController {
                         }
                     } else {
                         user = userService.getAuthenticatedUser(dbUser, roles);
-                        log.info("Login request for {} success. Jwt token: {}", username, user.getToken());
+                        log.info("event=auth.password.login outcome=success userId={}", dbUser.getId());
                         String exposedCredentialCheck = httpServletRequest.getHeader(EXPOSED_CREDENTIAL_CHECK);
                         if (exposedCredentialCheck != null) {
-                            log.info("User {} has leaked credentials with flag {}.", username, exposedCredentialCheck);
+                            log.info("event=auth.password.exposed_credential_check outcome=flagged userId={}", dbUser.getId());
                         }
                     }
                 }
@@ -114,7 +114,7 @@ public class ApiAuthController {
         }
         if (user.getToken() == null && user.getMessage() == null) {
             user.setMessage("You have entered an invalid username or password");
-            log.warn("Invalid username or password for login {}", username);
+            log.warn("event=auth.password.login outcome=failure reason=invalid_credentials");
         }
         return user;
     }
@@ -125,7 +125,7 @@ public class ApiAuthController {
     @ResponseBody
     public ApiUser oauthLogin(HttpServletRequest httpServletRequest, @RequestParam Map<String, String> data) {
         String token = data.get(FORM_DATA_TOKEN);
-        log.debug("Login request for {}", token);
+        log.debug("event=auth.oauth.login outcome=started");
         ApiUser user = new ApiUser();
 
         GoogleIdToken googleId = oauthService.validateOauthToken(token);
@@ -163,12 +163,12 @@ public class ApiAuthController {
                 log.info("Validated user {} through oauth login", dbUser.getEmail());
             }
             user = userService.getAuthenticatedUser(dbUser, roles);
-            log.info("Oauth Login request for {} success. Jwt token: {}", user.getEmail(), user.getToken());
+            log.info("event=auth.oauth.login outcome=success userId={}", dbUser.getId());
         }
 
         if (user.getToken() == null && user.getMessage() == null) {
             user.setMessage("Invalid authentication");
-            log.warn("Invalid oauth token {}", token);
+            log.warn("event=auth.oauth.login outcome=failure reason=invalid_token");
         }
         return user;
     }

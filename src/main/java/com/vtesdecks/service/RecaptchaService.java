@@ -45,7 +45,7 @@ public class RecaptchaService {
                 return recaptchaResponse.success;
             }
         } catch (RestClientException e) {
-            log.error("Unable to validate recaptcha for {} and response {}", remoteIp, response, e);
+            log.error("event=auth.recaptcha.verify outcome=failure reason={}", e.getClass().getSimpleName());
         }
         return false;
     }

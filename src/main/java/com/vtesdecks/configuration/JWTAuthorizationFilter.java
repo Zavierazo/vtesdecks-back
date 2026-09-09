@@ -1,10 +1,8 @@
 package com.vtesdecks.configuration;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -44,12 +42,15 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
             } else {
                 SecurityContextHolder.clearContext();
             }
-            chain.doFilter(request, response);
-        } catch (ExpiredJwtException | UnsupportedJwtException | MalformedJwtException e) {
+        } catch (JwtException | IllegalArgumentException e) {
+            SecurityContextHolder.clearContext();
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Unauthorized access");
-            log.warn("Unable to authorize {}:{}", request.getHeader(HEADER), e.getMessage());
+            // Parser messages and exception causes can contain credential material.
+            log.warn("event=auth.jwt.authorize outcome=failure reason={}", e.getClass().getSimpleName());
+            return;
         }
+        chain.doFilter(request, response);
     }
 
     private Claims validateToken(HttpServletRequest request) {

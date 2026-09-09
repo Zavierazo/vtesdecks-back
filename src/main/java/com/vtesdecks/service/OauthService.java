@@ -24,7 +24,8 @@ public class OauthService {
         try {
             return verifier.verify(token);
         } catch (Exception e) {
-            log.error("Unable to verify oauth token: {}", token, e);
+            // Verification exceptions may include the supplied identity token.
+            log.error("event=auth.oauth.verify outcome=failure reason={}", e.getClass().getSimpleName());
             return null;
         }
     }
