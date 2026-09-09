@@ -16,12 +16,16 @@ import com.vtesdecks.jpa.repositories.CollectionRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.api.ApiCollectionCard;
+import com.vtesdecks.model.api.ApiCollectionBinder;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
 import com.vtesdecks.model.api.ApiCollectionPage;
 import com.vtesdecks.service.DeckService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mapstruct.factory.Mappers;
 import org.springframework.web.server.ResponseStatusException;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -35,6 +39,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +49,8 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -99,6 +106,97 @@ public class ApiCollectionServiceTest {
     @AfterEach
     public void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    public void shouldDiscardClientIdentityAndAuditFieldsWhenCreatingBinder() throws Exception {
+        ApiCollectionBinder request = new ApiCollectionBinder();
+        request.setId(12345);
+        request.setName("New binder");
+        request.setPublicHash("client-supplied-hash");
+        request.setCreationDate(LocalDateTime.of(2000, 1, 1, 0, 0));
+        request.setModificationDate(request.getCreationDate());
+        ApiCollectionMapper realMapper = Mappers.getMapper(ApiCollectionMapper.class);
+        when(apiCollectionMapper.mapBinderEntity(request)).thenAnswer(invocation -> {
+            CollectionBinderEntity entity = realMapper.mapBinderEntity(request);
+            assertNull(entity.getCollectionId());
+            assertNull(entity.getPublicHash());
+            return entity;
+        });
+
+        service.createBinder(request);
+
+        ArgumentCaptor<CollectionBinderEntity> saved = ArgumentCaptor.forClass(CollectionBinderEntity.class);
+        verify(collectionBinderRepository).save(saved.capture());
+        assertNull(saved.getValue().getId());
+        assertNull(saved.getValue().getCreationDate());
+        assertNull(saved.getValue().getModificationDate());
+        assertEquals(COLLECTION_ID, saved.getValue().getCollectionId());
+        assertEquals(request.getName(), saved.getValue().getName());
+        assertEquals(12345, request.getId());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void shouldDiscardClientIdentityAndAuditFieldsWhenCreatingCards(boolean bulk) throws Exception {
+        ApiCollectionCard request = creationRequest();
+        useRealCardCreationMapper(request);
+
+        if (bulk) {
+            service.createCardsBulk(List.of(request, request), null, CURRENCY);
+        } else {
+            service.createCards(request, null, CURRENCY);
+        }
+
+        ArgumentCaptor<CollectionCardEntity> saved = ArgumentCaptor.forClass(CollectionCardEntity.class);
+        verify(collectionCardRepository, org.mockito.Mockito.times(bulk ? 2 : 1)).save(saved.capture());
+        for (CollectionCardEntity entity : saved.getAllValues()) {
+            assertNull(entity.getId());
+            assertNull(entity.getCreationDate());
+            assertNull(entity.getModificationDate());
+            assertEquals(COLLECTION_ID, entity.getCollectionId());
+            assertEquals(LIBRARY_ID, entity.getCardId());
+            assertEquals(2, entity.getNumber());
+        }
+        assertEquals(67890, request.getId());
+    }
+
+    @Test
+    public void shouldAccumulateOnlyIntoDuplicateFromCallerCollection() throws Exception {
+        ApiCollectionCard request = creationRequest();
+        useRealCardCreationMapper(request);
+        CollectionCardEntity existing = collectionCard(LIBRARY_ID, 3);
+        existing.setId(99);
+        when(collectionCardRepository.findByCollectionIdAndCardIdAndSetAndConditionAndLanguageAndBinderId(
+                COLLECTION_ID, LIBRARY_ID, null, null, null, null)).thenReturn(List.of(existing));
+
+        service.createCards(request, null, CURRENCY);
+
+        ArgumentCaptor<CollectionCardEntity> saved = ArgumentCaptor.forClass(CollectionCardEntity.class);
+        verify(collectionCardRepository).save(saved.capture());
+        assertSame(existing, saved.getValue());
+        assertEquals(99, saved.getValue().getId());
+        assertEquals(COLLECTION_ID, saved.getValue().getCollectionId());
+        assertEquals(5, saved.getValue().getNumber());
+    }
+
+    private ApiCollectionCard creationRequest() {
+        ApiCollectionCard request = new ApiCollectionCard();
+        request.setId(67890);
+        request.setCardId(LIBRARY_ID);
+        request.setNumber(2);
+        request.setCreationDate(LocalDateTime.of(2000, 1, 1, 0, 0));
+        request.setModificationDate(request.getCreationDate());
+        return request;
+    }
+
+    private void useRealCardCreationMapper(ApiCollectionCard request) {
+        ApiCollectionMapper realMapper = Mappers.getMapper(ApiCollectionMapper.class);
+        when(apiCollectionMapper.mapCardToEntity(request)).thenAnswer(invocation -> {
+            CollectionCardEntity entity = realMapper.mapCardToEntity(request);
+            assertNull(entity.getCollectionId());
+            return entity;
+        });
     }
 
     @Test
