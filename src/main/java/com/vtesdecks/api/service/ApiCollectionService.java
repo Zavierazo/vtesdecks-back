@@ -43,6 +43,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -143,15 +145,12 @@ public class ApiCollectionService {
     }
 
     public ApiCollectionBinder getPublicBinder(String publicHash) throws Exception {
-        try {
-            CollectionBinderEntity binder = collectionBinderRepository.findByPublicHash(publicHash)
-                    .orElseThrow(() -> new IllegalArgumentException("Binder does not exist"));
-            return apiCollectionMapper.mapBinder(binder);
-        } catch (IllegalArgumentException e) {
-            throw e; // Propagate validation errors
-        } catch (Exception e) {
-            throw new Exception("An unexpected error occurred while retrieving the public binder", e);
-        }
+        return apiCollectionMapper.mapBinder(requirePublicBinder(publicHash));
+    }
+
+    private CollectionBinderEntity requirePublicBinder(String publicHash) {
+        return collectionBinderRepository.findPublicByPublicHash(publicHash)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Binder does not exist"));
     }
 
     public ApiCollectionBinder createBinder(ApiCollectionBinder binder) throws Exception {
@@ -270,8 +269,8 @@ public class ApiCollectionService {
     }
 
     public ApiCollectionPage<ApiCollectionCard> getPublicCards(String publicHash, Integer page, Integer size, String groupBy, String sortBy, String sortDirection, Map<String, String> filters, String currencyCode) throws Exception {
+        CollectionBinderEntity binder = requirePublicBinder(publicHash);
         try {
-            CollectionBinderEntity binder = collectionBinderRepository.findByPublicHash(publicHash).orElseThrow(() -> new IllegalArgumentException("Binder does not exist"));
             Sort.Direction sortDirectionEnum = StringUtils.equalsIgnoreCase(sortDirection, "desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
             String sortByEntity = StringUtils.isNotBlank(sortBy) ? sortBy : "cardName";
             Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirectionEnum, sortByEntity));
@@ -290,7 +289,7 @@ public class ApiCollectionService {
 
     public ApiCollectionPage<ApiCollectionCard> searchPublicCards(String publicHash, Integer page, Integer size, String groupBy, String sortBy, String sortDirection, Map<String, String> filters, List<Integer> cardIds, String currencyCode) throws Exception {
         if (!CardSearchUtils.applyCardIds(filters, cardIds)) {
-            collectionBinderRepository.findByPublicHash(publicHash).orElseThrow(() -> new IllegalArgumentException("Binder does not exist"));
+            requirePublicBinder(publicHash);
             return emptyPage();
         }
         return getPublicCards(publicHash, page, size, groupBy, sortBy, sortDirection, filters, currencyCode);

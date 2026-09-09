@@ -22,6 +22,7 @@ import com.vtesdecks.service.DeckService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.server.ResponseStatusException;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -239,15 +240,24 @@ public class ApiCollectionServiceTest {
 
     @Test
     public void shouldRejectPublicSearchWhenBinderDoesNotExist() {
-        when(collectionBinderRepository.findByPublicHash("unknown")).thenReturn(Optional.empty());
+        when(collectionBinderRepository.findPublicByPublicHash("unknown")).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(ResponseStatusException.class,
                 () -> service.searchPublicCards("unknown", 0, 20, null, null, null, new HashMap<>(), List.of(), CURRENCY));
     }
 
     @Test
+    public void shouldRejectUnavailablePublicMetadataWithoutReturningPrivateBinder() {
+        when(collectionBinderRepository.findPublicByPublicHash("hidden")).thenReturn(Optional.empty());
+        ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> service.getPublicBinder("hidden"));
+        assertEquals(404, error.getStatusCode().value());
+        verify(collectionBinderRepository, never()).findByPublicHash(any());
+        verify(apiCollectionMapper, never()).mapBinder(any());
+    }
+
+    @Test
     public void shouldReturnEmptyPageForPublicSearchWhenCardIdsAreEmpty() throws Exception {
-        when(collectionBinderRepository.findByPublicHash("hash")).thenReturn(Optional.of(binder()));
+        when(collectionBinderRepository.findPublicByPublicHash("hash")).thenReturn(Optional.of(binder()));
 
         ApiCollectionPage<ApiCollectionCard> result = service.searchPublicCards("hash", 0, 20, null, null, null, new HashMap<>(), List.of(), CURRENCY);
 
@@ -258,7 +268,7 @@ public class ApiCollectionServiceTest {
 
     @Test
     public void shouldForceBinderFilterInPublicSearch() throws Exception {
-        when(collectionBinderRepository.findByPublicHash("hash")).thenReturn(Optional.of(binder()));
+        when(collectionBinderRepository.findPublicByPublicHash("hash")).thenReturn(Optional.of(binder()));
         mockCardPage();
 
         service.searchPublicCards("hash", 0, 20, null, null, null, new HashMap<>(), List.of(CRYPT_ID), CURRENCY);
