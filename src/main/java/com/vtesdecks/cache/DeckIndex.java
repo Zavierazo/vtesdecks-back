@@ -184,8 +184,8 @@ public class DeckIndex {
 
     private void refreshDeck(DeckEntity deck, List<LimitedFormatPayload> limitedFormats) {
         try {
-            List<DeckCard> deckCards = deckCardIndex.refreshIndex(deck.getId());
-            Deck newDeck = deckFactory.getDeck(deck, deckCards, limitedFormats);
+            DeckCardIndex.RefreshResult result = deckCardIndex.refreshIndex(deck.getId());
+            Deck newDeck = deckFactory.getDeck(deck, result.cards(), limitedFormats, result.modificationDate());
             syncDeck(deck, newDeck);
         } catch (Exception e) {
             log.error("Error when refresh deck {}", deck.getId(), e);

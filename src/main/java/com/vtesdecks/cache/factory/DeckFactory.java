@@ -41,6 +41,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -92,7 +93,7 @@ public class DeckFactory {
     @Autowired
     private ReactionRepository reactionRepository;
 
-    public Deck getDeck(DeckEntity deck, List<DeckCard> deckCards, List<LimitedFormatPayload> limitedFormats) {
+    public Deck getDeck(DeckEntity deck, List<DeckCard> deckCards, List<LimitedFormatPayload> limitedFormats, LocalDateTime cardsModificationDate) {
         Deck value = new Deck();
         value.setId(deck.getId());
         value.setType(deck.getType() != null ? DeckType.valueOf(deck.getType().name()) : null);
@@ -253,6 +254,9 @@ public class DeckFactory {
         value.setStats(getDeckStats(deck, cards));
         value.setCreationDate(deck.getCreationDate());
         value.setModifyDate(deck.getModificationDate());
+        if (cardsModificationDate != null && (value.getModifyDate() == null || cardsModificationDate.isAfter(value.getModifyDate()))) {
+            value.setModifyDate(cardsModificationDate);
+        }
         LocalDate deckDate = value.getType() == DeckType.COMMUNITY && value.getModifyDate() != null ? value.getModifyDate().toLocalDate() : value.getCreationDate().toLocalDate();
         value.setErratas(cardErrataRepository.findByEffectiveDateAfterAndRequiresWarningTrueAndCardIdIn(deckDate, cards.stream().map(Card::getId).toList()));
         value.setTags(getDeckTags(value, limitedFormats));

@@ -16,6 +16,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -45,11 +46,19 @@ public class DeckCardIndex {
         return cache;
     }
 
-    public List<DeckCard> refreshIndex(String deckId) {
+    public record RefreshResult(List<DeckCard> cards, LocalDateTime modificationDate) {
+    }
+
+    public RefreshResult refreshIndex(String deckId) {
         List<DeckCard> deckCards = new ArrayList<>();
+        LocalDateTime modificationDate = null;
         try {
             List<DeckCardEntity> dbDeckCardEntities = deckCardRepository.findByIdDeckId(deckId);
             for (DeckCardEntity dbDeckCard : dbDeckCardEntities) {
+                LocalDateTime cardModificationDate = dbDeckCard.getModificationDate();
+                if (cardModificationDate != null && (modificationDate == null || cardModificationDate.isAfter(modificationDate))) {
+                    modificationDate = cardModificationDate;
+                }
                 if (dbDeckCard.getNumber() != null && dbDeckCard.getNumber() > 0) {
                     deckCards.add(DeckCard.builder()
                             .deckId(dbDeckCard.getId().getDeckId())
@@ -62,7 +71,7 @@ public class DeckCardIndex {
         } catch (Exception e) {
             log.error("Error when refresh cardDeck {}: {}", deckId, deckCards, e);
         }
-        return deckCards;
+        return new RefreshResult(deckCards, modificationDate);
     }
 
     private synchronized void refreshIndex(String deckId, List<DeckCard> deckCards) {
