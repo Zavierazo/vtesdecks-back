@@ -38,6 +38,7 @@ public class ApiAdminUserService {
     private final JdbcTemplate jdbcTemplate;
     private final PasswordResetService passwordResetService;
     private final ApiUserService apiUserService;
+    private final UserSecurityService security;
 
     @Transactional(readOnly = true)
     public Optional<ApiAdminUser> get(String identifier) {
@@ -106,10 +107,14 @@ public class ApiAdminUserService {
             throw new IllegalStateException("Email address is already in use");
         }
 
+        boolean emailChanged = !normalizedEmail.equals(user.getEmail());
         user.setEmail(normalizedEmail);
         user.setValidated(true);
         userRepository.save(user);
         log.info("Admin email updated actorUserId={} targetUsername={}", actorUserId, user.getUsername());
+        if (emailChanged) {
+            security.revoke(user);
+        }
         return Optional.of(map(user));
     }
 

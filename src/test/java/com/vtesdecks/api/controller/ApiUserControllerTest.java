@@ -6,6 +6,7 @@ import com.vtesdecks.api.service.AchievementService;
 import com.vtesdecks.api.service.ApiCommentService;
 import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.api.service.ApiUserService;
+import com.vtesdecks.api.service.UserSecurityService;
 import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.deck.DeckType;
@@ -14,7 +15,7 @@ import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.api.ApiDecks;
-import com.vtesdecks.model.api.ApiResponse;
+import com.vtesdecks.model.api.ApiUserSettingsResponse;
 import com.vtesdecks.model.api.ApiUserSettings;
 import com.vtesdecks.service.DeckUserService;
 import org.junit.jupiter.api.AfterEach;
@@ -68,6 +69,8 @@ public class ApiUserControllerTest {
     @Mock
     private ApiUserService userService;
     @Mock
+    private UserSecurityService security;
+    @Mock
     private AchievementService achievementService;
     @InjectMocks
     private ApiUserController controller;
@@ -100,11 +103,42 @@ public class ApiUserControllerTest {
     }
 
     @Test
+    void passwordChangeRevokesOlderTokensAndReturnsReplacement() {
+        user.setPassword("old-hash");
+        ApiUserSettings settings = new ApiUserSettings();
+        settings.setPassword("current-password");
+        settings.setNewPassword("NewPassword1");
+        when(passwordEncoder.matches("current-password", "old-hash")).thenReturn(true);
+        when(passwordEncoder.encode("NewPassword1")).thenReturn("new-hash");
+        var authenticated = new com.vtesdecks.model.api.ApiUser();
+        authenticated.setToken("replacement-jwt");
+        when(userService.getAuthenticatedUser(user, List.of())).thenReturn(authenticated);
+        var response = controller.changeSettings(settings);
+        assertTrue(response.getSuccessful());
+        assertEquals("new-hash", user.getPassword());
+        verify(security).revoke(user);
+        assertEquals("replacement-jwt", response.getAuthenticatedUser().getToken());
+    }
+
+    @Test
+    void wrongCurrentPasswordDoesNotChangeAccountOrRevokeTokens() {
+        ApiUserSettings settings = new ApiUserSettings();
+        settings.setDisplayName("Should not change");
+        settings.setPassword("wrong");
+        settings.setNewPassword("NewPassword1");
+        var response = controller.changeSettings(settings);
+        org.junit.jupiter.api.Assertions.assertFalse(response.getSuccessful());
+        assertEquals("Test User", user.getDisplayName());
+        verify(userRepository, never()).save(any());
+        verify(security, never()).revoke(any());
+    }
+
+    @Test
     public void shouldPersistCardPrintingPreference() {
         ApiUserSettings settings = new ApiUserSettings();
         settings.setCardPrintingPreference(CardPrintingPreference.FIRST);
 
-        ApiResponse response = controller.changeSettings(settings);
+        ApiUserSettingsResponse response = controller.changeSettings(settings);
 
         assertTrue(response.getSuccessful());
         verify(userRepository).save(argThat(saved -> saved.getCardPrintingPreference() == CardPrintingPreference.FIRST));
@@ -115,7 +149,7 @@ public class ApiUserControllerTest {
         ApiUserSettings settings = new ApiUserSettings();
         settings.setDisplayName("New Name");
 
-        ApiResponse response = controller.changeSettings(settings);
+        ApiUserSettingsResponse response = controller.changeSettings(settings);
 
         assertTrue(response.getSuccessful());
         verify(userRepository).save(argThat(saved -> saved.getCardPrintingPreference() == CardPrintingPreference.NEWEST));
@@ -123,11 +157,13 @@ public class ApiUserControllerTest {
 
     @Test
     public void shouldNotSaveWhenNothingChanged() {
+        user.setProfileImage("existing-image");
         ApiUserSettings settings = new ApiUserSettings();
 
-        ApiResponse response = controller.changeSettings(settings);
+        ApiUserSettingsResponse response = controller.changeSettings(settings);
 
         assertNull(response.getSuccessful());
+        assertEquals("existing-image", user.getProfileImage());
         verify(userRepository, never()).save(user);
         assertEquals(CardPrintingPreference.NEWEST, user.getCardPrintingPreference());
     }

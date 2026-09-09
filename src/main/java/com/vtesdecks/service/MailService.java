@@ -7,8 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Service
@@ -17,7 +15,7 @@ public class MailService {
     private AwsSimpleEmailSenderService awsSimpleEmailSenderService;
 
     public void sendConfirmationMail(String email, String token) {
-        String verifyEndpoint = "https://vtesdecks.com/verify?token=" + token;
+        String verifyEndpoint = "https://vtesdecks.com/verify#token=" + token;
         Mail mail = Mail.builder()
                 .from("no-reply@vtesdecks.com")
                 .to(email)
@@ -30,8 +28,7 @@ public class MailService {
     }
 
     public void sendForgotPasswordMail(String email, String token) {
-        String encodedEmail = URLEncoder.encode(email, StandardCharsets.UTF_8);
-        String passwordResetUrl = "https://vtesdecks.com/reset-password?email=" + encodedEmail + "&token=" + token;
+        String passwordResetUrl = "https://vtesdecks.com/reset-password#token=" + token;
         Mail mail = Mail.builder()
                 .from("no-reply@vtesdecks.com")
                 .to(email)
@@ -58,7 +55,7 @@ public class MailService {
         if (awsSimpleEmailSenderService != null) {
             awsSimpleEmailSenderService.sendMail(mail);
         } else {
-            log.warn("Local email {}", mail);
+            log.info("Email delivery disabled; message body omitted");
         }
     }
 }

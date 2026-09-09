@@ -32,6 +32,7 @@ public class ApiAdminSchedulerService {
             new ApiAdminScheduler("comments-clean", "Clean comments"),
             new ApiAdminScheduler("reactions-clean", "Clean orphan reactions"),
             new ApiAdminScheduler("notifications-clean", "Clean notifications"),
+            new ApiAdminScheduler("email-actions-clean", "Clean expired email action tokens"),
             new ApiAdminScheduler("scrap-decks", "Import tournament decks"),
             new ApiAdminScheduler("scrap-decks-eternal-vigilance", "Import Eternal Vigilance decks"),
             new ApiAdminScheduler("drive-thru-cards", "Synchronize DriveThruCards"),
@@ -75,6 +76,7 @@ public class ApiAdminSchedulerService {
             case "comments-clean" -> cleanUpScheduler.commentsCleanScheduler();
             case "reactions-clean" -> cleanUpScheduler.reactionsCleanScheduler();
             case "notifications-clean" -> cleanUpScheduler.notificationsCleanScheduler();
+            case "email-actions-clean" -> cleanUpScheduler.emailActionsCleanScheduler();
             case "scrap-decks" -> tournamentDeckScheduler.scrappingDecks();
             case "scrap-decks-eternal-vigilance" -> tournamentEternalVigilanceDeckScheduler.scrappingDecks();
             case "drive-thru-cards" -> driveThruCardsScheduler.scrapCards();

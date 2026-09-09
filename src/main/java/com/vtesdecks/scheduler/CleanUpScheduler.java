@@ -13,6 +13,8 @@ import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.jpa.repositories.DeckViewRepository;
 import com.vtesdecks.service.DatabaseCleanupService;
+import com.vtesdecks.jpa.repositories.UserEmailActionRepository;
+import java.time.ZoneOffset;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -42,6 +44,13 @@ public class CleanUpScheduler {
     private final CollectionCardHistoryRepository collectionCardHistoryRepository;
     private final CollectionBinderRepository collectionBinderRepository;
     private final DatabaseCleanupService databaseCleanupService;
+    private final UserEmailActionRepository emailActions;
+
+    @Scheduled(cron = "${jobs.emailActionsCleanCron:0 0 * * * *}")
+    @Transactional
+    public void emailActionsCleanScheduler() {
+        emailActions.deleteByExpiresAtLessThanEqual(LocalDateTime.now(ZoneOffset.UTC));
+    }
 
     @Scheduled(cron = "${jobs.commentsCleanCron:0 30 2 * * *}")
     public void commentsCleanScheduler() {

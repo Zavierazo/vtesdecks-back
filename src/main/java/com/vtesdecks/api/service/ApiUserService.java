@@ -27,7 +27,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ApiUserService {
     private static final long EXPIRATION_TIME = 30L * 24L * 60L * 60L * 1000L;
-    private static final long SHORT_EXPIRATION_TIME = 24L * 60L * 60L * 1000L;
     private final UserRepository userRepository;
     private final ApiUserNotificationService userNotificationService;
     private final ApiSecurityConfiguration securityConfiguration;
@@ -37,7 +36,7 @@ public class ApiUserService {
     public ApiUser getAuthenticatedUser(UserEntity dbUser, List<String> roles) {
         ApiUser user = new ApiUser();
         user.setUser(dbUser.getUsername());
-        user.setToken(getJWTToken(dbUser, roles, false));
+        user.setToken(getJWTToken(dbUser, roles));
         user.setEmail(dbUser.getEmail());
         user.setAdmin(dbUser.getAdmin() != null && dbUser.getAdmin());
         user.setRoles(roles);
@@ -48,7 +47,7 @@ public class ApiUserService {
         return user;
     }
 
-    public String getJWTToken(UserEntity user, List<String> roles, boolean expireOneDay) {
+    public String getJWTToken(UserEntity user, List<String> roles) {
         List<GrantedAuthority> grantedAuthorities = new ArrayList<>();
         grantedAuthorities.add(new SimpleGrantedAuthority("USER"));
         if (user.getAdmin() != null && user.getAdmin()) {
@@ -61,13 +60,15 @@ public class ApiUserService {
                 .builder()
                 .id(user.getUsername())
                 .subject(String.valueOf(user.getId()))
+                .claim("token_use", "access")
+                .claim("auth_version", user.getAuthVersion())
                 .claim("authorities",
                         grantedAuthorities.stream()
                                 .map(GrantedAuthority::getAuthority)
                                 .toList())
                 .claim("tester", roles.contains("tester"))
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + (expireOneDay ? SHORT_EXPIRATION_TIME : EXPIRATION_TIME)))
+                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(Keys.hmacShaKeyFor(securityConfiguration.getJwtSecret().getBytes()))
                 .compact();
 

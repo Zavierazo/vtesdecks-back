@@ -63,6 +63,18 @@ public class ApiUserServiceTest {
         assertEquals(CardPrintingPreference.NEWEST, apiUser.getCardPrintingPreference());
     }
 
+    @Test
+    void issuesAccessPurposeAndCurrentAccountVersion() {
+        UserEntity user = user();
+        user.setAuthVersion(4);
+        var claims = io.jsonwebtoken.Jwts.parser().verifyWith(
+                io.jsonwebtoken.security.Keys.hmacShaKeyFor(JWT_SECRET.getBytes())).build()
+                .parseSignedClaims(service.getJWTToken(user, List.of())).getPayload();
+        assertEquals("access", claims.get("token_use"));
+        assertEquals(4, claims.get("auth_version", Integer.class));
+        assertEquals(30, java.time.Duration.between(claims.getIssuedAt().toInstant(), claims.getExpiration().toInstant()).toDays());
+    }
+
     private UserEntity user() {
         UserEntity user = new UserEntity();
         user.setId(1);

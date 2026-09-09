@@ -25,6 +25,9 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(name = "auth_version", nullable = false)
+    private long authVersion;
+
     @Column(name = "username", nullable = false, unique = true)
     private String username;
 

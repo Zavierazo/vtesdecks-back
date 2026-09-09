@@ -22,7 +22,7 @@ class PasswordResetServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private ApiUserService userService;
+    private EmailActionService emailActions;
     @Mock
     private MailService mailService;
     private PasswordResetService service;
@@ -30,7 +30,7 @@ class PasswordResetServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PasswordResetService(userRepository, userService, mailService);
+        service = new PasswordResetService(userRepository, emailActions, mailService);
         user = new UserEntity();
         user.setId(3);
         user.setEmail("user@example.com");
@@ -38,8 +38,7 @@ class PasswordResetServiceTest {
 
     @Test
     void sendsResetAndPersistsCooldownTimestamp() {
-        when(userRepository.selectRolesByUserId(3)).thenReturn(List.of("tester"));
-        when(userService.getJWTToken(user, List.of("tester"), true)).thenReturn("token");
+        when(emailActions.issue(user, EmailActionService.Purpose.PASSWORD_RESET)).thenReturn("token");
 
         assertEquals(PasswordResetService.Result.SENT, service.request(user));
 

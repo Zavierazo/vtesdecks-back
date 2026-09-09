@@ -1,5 +1,8 @@
 package com.vtesdecks.configuration;
 
+import com.vtesdecks.api.service.UserSecurityService;
+import org.springframework.dao.DataAccessException;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -10,15 +13,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.crypto.SecretKey;
 import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -26,6 +25,16 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
 
     private static final String HEADER = "Authorization";
     private final String jwtSecret;
+    private final UserSecurityService userSecurityService;
+    private final boolean rejectLegacyTokens;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        // Recovery must also work with a stale login header. Neither endpoint uses JWT authentication.
+        return ("/api/1.0/auth/reset-password".equals(path) && "PUT".equals(request.getMethod()))
+                || ("/api/1.0/auth/verify".equals(path) && "POST".equals(request.getMethod()));
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -34,14 +43,15 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
         try {
             if (hasJWTToken(request)) {
                 Claims claims = validateToken(request);
-                if (claims.get("authorities") != null) {
-                    setUpSpringAuthentication(claims);
-                } else {
-                    SecurityContextHolder.clearContext();
-                }
+                SecurityContextHolder.getContext().setAuthentication(userSecurityService.authenticate(claims, rejectLegacyTokens));
             } else {
                 SecurityContextHolder.clearContext();
             }
+        } catch (DataAccessException e) {
+            SecurityContextHolder.clearContext();
+            response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, "Authentication temporarily unavailable");
+            log.warn("event=auth.jwt.authorize outcome=failure reason=database_unavailable");
+            return;
         } catch (JwtException | IllegalArgumentException e) {
             SecurityContextHolder.clearContext();
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
@@ -57,21 +67,6 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
         String jwtToken = request.getHeader(HEADER);
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
         return Jwts.parser().verifyWith(key).build().parseSignedClaims(jwtToken).getPayload();
-    }
-
-    /**
-     * Metodo para autenticarnos dentro del flujo de Spring
-     *
-     * @param claims
-     */
-    private void setUpSpringAuthentication(Claims claims) {
-        @SuppressWarnings("unchecked")
-        List<String> authorities = (List) claims.get("authorities");
-
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(claims.getSubject(), null,
-                authorities.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList()));
-        SecurityContextHolder.getContext().setAuthentication(auth);
-
     }
 
     private boolean hasJWTToken(HttpServletRequest request) {

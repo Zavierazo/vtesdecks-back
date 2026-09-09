@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -18,7 +17,7 @@ public class PasswordResetService {
     private static final long COOLDOWN_MINUTES = 30;
 
     private final UserRepository userRepository;
-    private final ApiUserService userService;
+    private final EmailActionService emailActions;
     private final MailService mailService;
 
     public enum Result {
@@ -41,8 +40,7 @@ public class PasswordResetService {
             return Result.COOLDOWN;
         }
 
-        List<String> roles = userRepository.selectRolesByUserId(user.getId());
-        mailService.sendForgotPasswordMail(user.getEmail(), userService.getJWTToken(user, roles, true));
+        mailService.sendForgotPasswordMail(user.getEmail(), emailActions.issue(user, EmailActionService.Purpose.PASSWORD_RESET));
         user.setForgotPasswordDate(LocalDateTime.now());
         userRepository.save(user);
         log.info("Password reset email sent userId={}", user.getId());

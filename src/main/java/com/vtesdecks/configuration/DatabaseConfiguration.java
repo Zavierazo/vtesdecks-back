@@ -6,7 +6,8 @@ import org.springframework.boot.autoconfigure.flyway.FlywayDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import jakarta.persistence.EntityManagerFactory;
+import org.springframework.orm.jpa.JpaTransactionManager;
 
 import javax.sql.DataSource;
 
@@ -36,7 +37,7 @@ public class DatabaseConfiguration {
     }
 
     @Bean
-    public DataSourceTransactionManager transactionManager() {
-        return new DataSourceTransactionManager(dataSource());
+    public JpaTransactionManager transactionManager(EntityManagerFactory entityManagerFactory) {
+        return new JpaTransactionManager(entityManagerFactory);
     }
 }

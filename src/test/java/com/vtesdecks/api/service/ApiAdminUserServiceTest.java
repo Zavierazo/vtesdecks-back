@@ -33,6 +33,8 @@ class ApiAdminUserServiceTest {
     @Mock
     private JdbcTemplate jdbcTemplate;
     @Mock
+    private UserSecurityService security;
+    @Mock
     private PasswordResetService passwordResetService;
     @Mock
     private ApiUserService apiUserService;
@@ -41,7 +43,7 @@ class ApiAdminUserServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ApiAdminUserService(userRepository, jdbcTemplate, passwordResetService, apiUserService);
+        service = new ApiAdminUserService(userRepository, jdbcTemplate, passwordResetService, apiUserService, security);
         user = new UserEntity();
         user.setId(7);
         user.setUsername("target");
@@ -94,6 +96,7 @@ class ApiAdminUserServiceTest {
         verify(jdbcTemplate).update(anyString(), eq(7));
         verify(jdbcTemplate, times(1)).update(anyString(), eq(7), eq("supporter"));
         verify(jdbcTemplate, times(1)).update(anyString(), eq(7), eq("tester"));
+        verify(security, never()).revoke(user);
     }
 
     @Test

@@ -1,5 +1,10 @@
 package com.vtesdecks.api.controller;
 
+import com.vtesdecks.api.service.EmailActionService;
+import com.vtesdecks.model.api.ApiEmailAction;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestBody;
+
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.vtesdecks.api.service.ApiUserNotificationService;
 import com.vtesdecks.api.service.ApiUserService;
@@ -9,7 +14,6 @@ import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiResponse;
 import com.vtesdecks.model.api.ApiUser;
 import com.vtesdecks.model.api.ApiUserCountry;
-import com.vtesdecks.service.MailService;
 import com.vtesdecks.service.OauthService;
 import com.vtesdecks.service.RecaptchaService;
 import com.vtesdecks.util.Utils;
@@ -28,8 +32,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.text.Normalizer;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -53,9 +55,9 @@ public class ApiAuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
-    private MailService mailService;
-    @Autowired
     private PasswordResetService passwordResetService;
+    @Autowired
+    private EmailActionService emailActions;
     @Autowired
     private RecaptchaService recaptchaService;
     @Autowired
@@ -88,9 +90,7 @@ public class ApiAuthController {
                     List<String> roles = userRepository.selectRolesByUserId(dbUser.getId());
                     if (Boolean.FALSE.equals(dbUser.getValidated())) {
                         if (recaptchaService.isResponseValid(Utils.getIp(httpServletRequest), data.get(FORM_DATA_RECAPTCHA))
-                                && (dbUser.getModificationDate() == null
-                                || dbUser.getModificationDate().isBefore(LocalDateTime.now().minusMinutes(30)))) {
-                            mailService.sendConfirmationMail(dbUser.getEmail(), userService.getJWTToken(dbUser, roles, true));
+                                && emailActions.sendVerification(dbUser.getId())) {
                             user.setMessage("Pending email verification! " +
                                     "We have sent another email for confirmation. " +
                                     "Please check your spam folder.");
@@ -178,6 +178,7 @@ public class ApiAuthController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
+    @Transactional
     public ApiResponse create(HttpServletRequest httpServletRequest, @RequestParam Map<String, String> data) {
         ApiResponse response = new ApiResponse();
         response.setSuccessful(false);
@@ -214,7 +215,7 @@ public class ApiAuthController {
                     user.setLoginHash(getRandomLoginHash());
                     user.setDisplayName(data.get(FORM_DATA_USERNAME));
                     UserEntity dbUser = userRepository.save(user);
-                    mailService.sendConfirmationMail(dbUser.getEmail(), userService.getJWTToken(dbUser, new ArrayList<>(), true));
+                    emailActions.sendVerification(dbUser.getId());
                     try {
                         userNotificationService.welcomeNotifications(dbUser.getId());
                     } catch (Exception e) {
@@ -273,6 +274,18 @@ public class ApiAuthController {
         return userCountry;
     }
 
+
+    @RequestMapping(method = RequestMethod.PUT, value = "/reset-password", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ApiResponse resetPassword(@RequestBody ApiEmailAction action) {
+        return emailActions.resetPassword(action.getToken(), action.getPassword());
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/verify", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ApiResponse verify(@RequestBody ApiEmailAction action) {
+        return emailActions.verify(action.getToken());
+    }
 
     private static boolean isValidEmailAddress(String email) {
         boolean result = true;

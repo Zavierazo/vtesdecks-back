@@ -7,6 +7,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.vtesdecks.api.controller.ApiAuthController;
 import com.vtesdecks.api.service.ApiUserService;
+import com.vtesdecks.api.service.UserSecurityService;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiUser;
@@ -96,12 +97,15 @@ class AuthenticationLoggingTest {
     void rejectsMalformedExpiredAndRotatedTokensWithoutLoggingThem() throws Exception {
         String currentKey = "a".repeat(64);
         String oldKey = "b".repeat(64);
+        UserSecurityService security = mock(UserSecurityService.class);
+        when(security.authenticate(any(), eq(false))).thenReturn(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken("42", null, List.of()));
         for (String token : List.of("malformed-secret-marker", "", jwt(currentKey, -60000), jwt(oldKey, 60000))) {
             MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/1.0/user/refresh");
             request.addHeader("Authorization", token);
             MockHttpServletResponse response = new MockHttpServletResponse();
             AtomicBoolean invoked = new AtomicBoolean();
-            new JWTAuthorizationFilter(currentKey).doFilter(request, response, (req, res) -> invoked.set(true));
+            new JWTAuthorizationFilter(currentKey, security, false).doFilter(request, response, (req, res) -> invoked.set(true));
             assertEquals(403, response.getStatus());
             assertFalse(invoked.get());
             assertNull(SecurityContextHolder.getContext().getAuthentication());
@@ -112,7 +116,7 @@ class AuthenticationLoggingTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", jwt(currentKey, 60000));
         AtomicBoolean invoked = new AtomicBoolean();
-        new JWTAuthorizationFilter(currentKey).doFilter(request, new MockHttpServletResponse(),
+        new JWTAuthorizationFilter(currentKey, security, false).doFilter(request, new MockHttpServletResponse(),
                 (req, res) -> invoked.set(true));
         assertTrue(invoked.get());
         assertEquals("42", SecurityContextHolder.getContext().getAuthentication().getName());

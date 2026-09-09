@@ -5,6 +5,8 @@ import com.vtesdecks.api.service.ApiCommentService;
 import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.api.service.ApiReactionService;
 import com.vtesdecks.api.service.ApiUserService;
+import com.vtesdecks.api.service.EmailActionService;
+import com.vtesdecks.api.service.UserSecurityService;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
@@ -15,10 +17,9 @@ import com.vtesdecks.model.api.ApiDeckReaction;
 import com.vtesdecks.model.api.ApiFavoriteDeck;
 import com.vtesdecks.model.api.ApiFollowUser;
 import com.vtesdecks.model.api.ApiRateDeck;
-import com.vtesdecks.model.api.ApiResponse;
 import com.vtesdecks.model.api.ApiUser;
-import com.vtesdecks.model.api.ApiUserPassword;
 import com.vtesdecks.model.api.ApiUserSettings;
+import com.vtesdecks.model.api.ApiUserSettingsResponse;
 import com.vtesdecks.service.DeckUserService;
 import com.vtesdecks.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -55,6 +57,8 @@ public class ApiUserController {
     @Autowired
     private ApiUserService userService;
     @Autowired
+    private UserSecurityService security;
+    @Autowired
     private ApiReactionService apiReactionService;
     @Autowired
     private AchievementService achievementService;
@@ -77,28 +81,13 @@ public class ApiUserController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
+    @Transactional
     public ApiUser refreshUser() {
         Integer userId = ApiUtils.extractUserId();
-        achievementService.activity(userId);
-        UserEntity user = userRepository.findById(userId).orElse(null);
+        UserEntity user = userRepository.findById(userId).orElseThrow();
         List<String> roles = userRepository.selectRolesByUserId(user.getId());
+        achievementService.activity(userId);
         return userService.getAuthenticatedUser(user, roles);
-    }
-
-    @RequestMapping(method = RequestMethod.POST, value = "/verify", produces = {
-            MediaType.APPLICATION_JSON_VALUE
-    })
-    @ResponseBody
-    public Boolean verify() {
-        log.info("Verify user {}", ApiUtils.extractUserId());
-        UserEntity user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
-        if (user != null) {
-            user.setValidated(true);
-            userRepository.save(user);
-            return true;
-        } else {
-            return false;
-        }
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/decks/rating", produces = {
@@ -173,10 +162,25 @@ public class ApiUserController {
             MediaType.APPLICATION_JSON_VALUE
     })
     @ResponseBody
-    public ApiResponse changeSettings(@RequestBody ApiUserSettings apiUserSettings) {
+    @Transactional
+    public ApiUserSettingsResponse changeSettings(@RequestBody ApiUserSettings apiUserSettings) {
         log.info("Change settings user {} with displayName {}", ApiUtils.extractUserId(), apiUserSettings.getDisplayName());
-        ApiResponse response = new ApiResponse();
-        UserEntity user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
+        ApiUserSettingsResponse response = new ApiUserSettingsResponse();
+        UserEntity user = userRepository.findById(ApiUtils.extractUserId()).orElseThrow();
+        boolean changingPassword = StringUtils.isNotEmpty(apiUserSettings.getNewPassword())
+                || StringUtils.isNotEmpty(apiUserSettings.getPassword());
+        // Validate credentials before mutating a managed entity (including profile fields).
+        if (changingPassword && (!EmailActionService.validPassword(apiUserSettings.getNewPassword())
+                || apiUserSettings.getPassword() == null
+                || !passwordEncoder.matches(apiUserSettings.getPassword(), user.getPassword()))) {
+            response.setSuccessful(false);
+            response.setMessage("Current password is incorrect or the new password is invalid.");
+            return response;
+        }
+        if (!changingPassword && StringUtils.isBlank(apiUserSettings.getDisplayName())
+                && apiUserSettings.getCardPrintingPreference() == null) {
+            return response;
+        }
         if (user != null) {
             boolean requireDeckRefresh = false;
             if (StringUtils.isNotBlank(apiUserSettings.getProfileImage())) {
@@ -199,48 +203,21 @@ public class ApiUserController {
                 user.setCardPrintingPreference(apiUserSettings.getCardPrintingPreference());
                 response.setSuccessful(true);
             }
-            if (StringUtils.isNotBlank(apiUserSettings.getPassword()) && StringUtils.isNotBlank(apiUserSettings.getNewPassword())) {
-                if (passwordEncoder.matches(apiUserSettings.getPassword(), user.getPassword())) {
-                    user.setPassword(passwordEncoder.encode(apiUserSettings.getNewPassword()));
-                    response.setSuccessful(true);
-                } else {
-                    response.setSuccessful(false);
-                    response.setMessage("Old Password doesn't match!");
-                }
+            if (changingPassword) {
+                user.setPassword(passwordEncoder.encode(apiUserSettings.getNewPassword()));
+                response.setSuccessful(true);
             }
             if (response.getSuccessful() != null && response.getSuccessful()) {
                 userRepository.save(user);
+                if (changingPassword) {
+                    security.revoke(user);
+                    response.setAuthenticatedUser(userService.getAuthenticatedUser(user, userRepository.selectRolesByUserId(user.getId())));
+                }
                 response.setMessage("Profile Settings changed!");
                 if (requireDeckRefresh) {
                     deckUserService.refreshUserDecks(user.getId());
                 }
             }
-        }
-        return response;
-    }
-
-    @RequestMapping(method = RequestMethod.PUT, value = "/reset-password", produces = {
-            MediaType.APPLICATION_JSON_VALUE
-    })
-    @ResponseBody
-    public ApiResponse resetPassword(@RequestBody ApiUserPassword apiUserPassword) {
-        log.info("Change password for user {}", ApiUtils.extractUserId());
-        ApiResponse response = new ApiResponse();
-        response.setSuccessful(false);
-        UserEntity user = userRepository.findById(ApiUtils.extractUserId()).orElse(null);
-        if (user != null) {
-            if (!apiUserPassword.getEmail().equalsIgnoreCase(user.getEmail())) {
-                log.warn("Invalid email when reset password");
-                response.setMessage("Invalid reset password link!");
-            } else {
-                user.setPassword(passwordEncoder.encode(apiUserPassword.getPassword()));
-                userRepository.save(user);
-                response.setSuccessful(true);
-                response.setMessage("Your password has been successfully reset. You can now log in using your new password.");
-            }
-        } else {
-            log.warn("Invalid user when reset password");
-            response.setMessage("Invalid reset password link!");
         }
         return response;
     }

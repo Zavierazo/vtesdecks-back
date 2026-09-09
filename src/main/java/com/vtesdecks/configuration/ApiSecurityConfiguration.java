@@ -1,5 +1,8 @@
 package com.vtesdecks.configuration;
 
+import com.vtesdecks.api.service.UserSecurityService;
+import org.springframework.security.config.http.SessionCreationPolicy;
+
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -24,6 +27,9 @@ public class ApiSecurityConfiguration {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
+    @Value("${jwt.reject-legacy-tokens:false}")
+    private boolean rejectLegacyTokens;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -35,9 +41,10 @@ public class ApiSecurityConfiguration {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, UserSecurityService userSecurityService) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
-                .addFilterAfter(new JWTAuthorizationFilter(jwtSecret), UsernamePasswordAuthenticationFilter.class)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterAfter(new JWTAuthorizationFilter(jwtSecret, userSecurityService, rejectLegacyTokens), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(authorizeHttpRequests ->
                         authorizeHttpRequests
                                 .requestMatchers("/api/1.0/user/**").authenticated()

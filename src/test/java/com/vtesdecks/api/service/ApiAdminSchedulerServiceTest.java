@@ -61,7 +61,7 @@ class ApiAdminSchedulerServiceTest {
 
     @Test
     void exposesEveryMigratedManualScheduler() {
-        assertEquals(19, service.getAll().size());
+        assertEquals(20, service.getAll().size());
         assertTrue(service.getAll().stream().anyMatch(item ->
                 item.key().equals("collection-clean") && item.description().equals("Clean collections")));
         assertTrue(service.getAll().stream().anyMatch(item ->
@@ -71,6 +71,7 @@ class ApiAdminSchedulerServiceTest {
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("comments-clean")));
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("reactions-clean")));
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("notifications-clean")));
+        assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("email-actions-clean")));
     }
 
     @Test
@@ -90,9 +91,11 @@ class ApiAdminSchedulerServiceTest {
         assertTrue(service.run("comments-clean", 42));
         assertTrue(service.run("reactions-clean", 42));
         assertTrue(service.run("notifications-clean", 42));
+        assertTrue(service.run("email-actions-clean", 42));
         verify(cleanUpScheduler).commentsCleanScheduler();
         verify(cleanUpScheduler).reactionsCleanScheduler();
         verify(cleanUpScheduler).notificationsCleanScheduler();
+        verify(cleanUpScheduler).emailActionsCleanScheduler();
     }
 
     @Test
