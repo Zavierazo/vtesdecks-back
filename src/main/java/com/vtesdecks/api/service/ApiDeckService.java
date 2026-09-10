@@ -188,7 +188,7 @@ public class ApiDeckService {
                 continue;
             }
             deck.setRated(interaction.getRate() != null);
-            boolean updated = deck.getType() == DeckType.COMMUNITY
+            boolean updated = (deck.getType() == DeckType.COMMUNITY || (deck.getType() == DeckType.PRECONSTRUCTED && deck.getTags() != null && deck.getTags().contains(DeckTag.SPOILER.getTag())))
                     && deck.getModifyDate() != null
                     && interaction.getModificationDate() != null
                     && deck.getModifyDate().isAfter(interaction.getModificationDate());
