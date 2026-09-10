@@ -128,6 +128,11 @@ INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-noites_brasileiras', 250021, 2)
 ON DUPLICATE KEY UPDATE number = 2;
 
+-- Dorinha, a Confusa
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-noites_brasileiras', 250025, 1)
+ON DUPLICATE KEY UPDATE number = 1;
+
 -- END Spoiler:NB / preconstructed-noites_brasileiras
 
 -- BEGIN Spoiler:SNY / preconstructed-secrets_of_new_york
