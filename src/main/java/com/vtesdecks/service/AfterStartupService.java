@@ -5,10 +5,6 @@ import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import com.opencsv.enums.CSVReaderNullFieldIndicator;
 import com.opencsv.exceptions.CsvException;
-import com.vtesdecks.cache.CryptCache;
-import com.vtesdecks.cache.DeckIndex;
-import com.vtesdecks.cache.LibraryCache;
-import com.vtesdecks.cache.SetCache;
 import com.vtesdecks.cache.redis.entity.ProxyCardOption;
 import com.vtesdecks.cache.redis.repositories.ProxyCardOptionRepository;
 import com.vtesdecks.csv.entity.CryptCsv;
@@ -90,20 +86,12 @@ public class AfterStartupService {
     @Autowired
     private SetRepository setRepository;
     @Autowired
-    private DeckIndex deckIndex;
-    @Autowired
-    private CryptCache cryptCache;
-    @Autowired
-    private LibraryCache libraryCache;
-    @Autowired
-    private SetCache setCache;
-    @Autowired
     private LoadHistoryService loadHistoryService;
     @Autowired
     private ProxyCardOptionRepository proxyCardOptionRepository;
 
     @Transactional
-    public void executeAfterStartupTasks() {
+    public boolean executeAfterStartupTasks() {
         boolean changed = false;
         //Startup actions
         if (!loadHistoryService.isLoaded(SETS_FILE)) {
@@ -133,13 +121,8 @@ public class AfterStartupService {
             libraryI18n();
             changed = true;
         }
-        if (changed) {
-            setCache.refreshIndex();
-            cryptCache.refreshIndex();
-            libraryCache.refreshIndex();
-            deckIndex.refreshIndex();
-        }
-        log.info("Finish background tasks...");
+        log.info("Finished startup data import...");
+        return changed;
     }
 
 
