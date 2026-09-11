@@ -231,4 +231,9 @@ INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-secrets_of_new_york', 250024, 1)
 ON DUPLICATE KEY UPDATE number = 1;
 
+-- Torque
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-secrets_of_new_york', 250026, 2)
+ON DUPLICATE KEY UPDATE number = 2;
+
 -- END Spoiler:SNY / preconstructed-secrets_of_new_york
