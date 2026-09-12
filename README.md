@@ -85,6 +85,12 @@ application-local.properties file.
 Make sure the MySQL service is running, and the credentials provided in the application-local.properties are correct to
 avoid connection issues.
 
+### Health endpoint
+
+`GET /health` (also available at `/api/health` for the reverse proxy) returns HTTP 200
+with `{"status":"UP"}` without authentication. Responses use `Cache-Control: no-store`.
+This is a lightweight liveness check; it does not check the database or external services.
+
 ## Troubleshooting
 
 ### Anonymous proxy PDFs

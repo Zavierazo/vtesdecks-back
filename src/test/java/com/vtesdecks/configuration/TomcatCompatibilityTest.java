@@ -1,6 +1,8 @@
 package com.vtesdecks.configuration;
 
 import com.vtesdecks.api.service.UserSecurityService;
+import com.vtesdecks.controller.HealthEndpoint;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -111,6 +113,17 @@ class TomcatCompatibilityTest {
     }
 
     @Test
+    void exposesHealthWithoutAuthentication() throws Exception {
+        for (String path : List.of("/health", "/api/health")) {
+            var response = send(path, null);
+            assertEquals(200, response.statusCode());
+            assertTrue(response.headers().firstValue("Content-Type").orElseThrow().startsWith("application/json"));
+            assertEquals("no-store", response.headers().firstValue("Cache-Control").orElseThrow());
+            assertEquals(Map.of("status", "UP"), new ObjectMapper().readValue(response.body(), Map.class));
+        }
+    }
+
+    @Test
     void preservesPublicRoutingRawJwtAuthenticationAndCors() throws Exception {
         assertEquals(200, send("/api/1.0/probe", null).statusCode());
         assertEquals(403, send("/api/1.0/user/probe", null).statusCode());
@@ -165,7 +178,7 @@ class TomcatCompatibilityTest {
             WebMvcAutoConfiguration.class, HttpMessageConvertersAutoConfiguration.class,
             JacksonAutoConfiguration.class, MultipartAutoConfiguration.class,
             SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
-    @Import({ApiSecurityConfiguration.class, WebConfiguration.class, ProbeController.class})
+    @Import({ApiSecurityConfiguration.class, WebConfiguration.class, ProbeController.class, HealthEndpoint.class})
     static class WebOnly {
         @Bean
         UserSecurityService userSecurityService() {
