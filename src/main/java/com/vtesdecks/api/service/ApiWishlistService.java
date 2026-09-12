@@ -16,7 +16,7 @@ import com.vtesdecks.jpa.repositories.WishlistCardRepositoryCustom;
 import com.vtesdecks.model.api.ApiWishlistCard;
 import com.vtesdecks.model.api.ApiWishlistPage;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

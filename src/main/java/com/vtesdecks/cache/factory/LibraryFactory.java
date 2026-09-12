@@ -14,7 +14,7 @@ import com.vtesdecks.model.LibraryTitle;
 import com.vtesdecks.service.CurrencyExchangeService;
 import com.vtesdecks.util.TrigramSimilarity;
 import com.vtesdecks.util.VtesUtils;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Context;

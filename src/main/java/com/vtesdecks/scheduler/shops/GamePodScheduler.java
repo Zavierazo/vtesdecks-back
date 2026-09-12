@@ -1,7 +1,5 @@
 package com.vtesdecks.scheduler.shops;
 
-import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
-import com.gargoylesoftware.htmlunit.WebClient;
 import com.vtesdecks.api.service.ApiCardService;
 import com.vtesdecks.integration.GamePodClient;
 import com.vtesdecks.jpa.entity.CardShopEntity;
@@ -14,7 +12,7 @@ import com.vtesdecks.model.shopify.Product;
 import com.vtesdecks.model.shopify.ProductsResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -68,31 +71,39 @@ public class GamePodScheduler {
     }
 
     private void cleanOutdatedCards(List<CardShopEntity> currentCards) {
-        WebClient client = configureClient();
+        try (HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build()) {
+            cleanOutdatedCards(currentCards, client);
+        }
+    }
+
+    void cleanOutdatedCards(List<CardShopEntity> currentCards, HttpClient client) {
         for (CardShopEntity cardShop : currentCards) {
             try {
-                client.getPage(cardShop.getLink());
-                log.warn("Card {} still exists in shop {}", cardShop.getCardId(), cardShop.getLink());
-            } catch (FailingHttpStatusCodeException e) {
-                if (e.getStatusCode() == 404) {
+                HttpRequest request = HttpRequest.newBuilder(URI.create(cardShop.getLink()))
+                        .timeout(Duration.ofSeconds(20))
+                        .GET()
+                        .build();
+                int status = client.send(request, HttpResponse.BodyHandlers.discarding()).statusCode();
+                if (status == 404) {
                     log.warn("Card {} no longer exists in shop {}", cardShop.getCardId(), cardShop.getLink());
                     cardShopRepository.deleteById(cardShop.getId());
+                } else if (status >= 200 && status < 300) {
+                    log.warn("Card {} still exists in shop {}", cardShop.getCardId(), cardShop.getLink());
                 } else {
-                    log.error("Error scrapping GP page {}", cardShop.getLink(), e);
+                    log.error("Error scrapping GP page {}: HTTP {}", cardShop.getLink(), status);
                 }
-            } catch (IOException e) {
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Interrupted checking GP page {}", cardShop.getLink());
+                break;
+            } catch (IOException | IllegalArgumentException e) {
                 log.error("Error scrapping GP page {}", cardShop.getLink(), e);
             }
         }
         cardShopRepository.flush();
-    }
-
-    private WebClient configureClient() {
-        WebClient client = new WebClient();
-        client.getOptions().setCssEnabled(false);
-        client.getOptions().setJavaScriptEnabled(false);
-
-        return client;
     }
 
     private void parsePage(List<Product> products, List<CardShopEntity> currentCards) {

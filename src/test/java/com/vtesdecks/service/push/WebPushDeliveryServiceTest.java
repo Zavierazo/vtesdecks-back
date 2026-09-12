@@ -22,9 +22,14 @@ import java.security.Security;
 import java.security.spec.ECGenParameterSpec;
 import java.util.Base64;
 import java.util.List;
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -99,6 +104,40 @@ class WebPushDeliveryServiceTest {
         deliveryService.deliver(notification);
 
         verify(pushService).send(any(Notification.class), org.mockito.ArgumentMatchers.eq(Encoding.AES128GCM));
+    }
+
+    @Test
+    void encryptsSignsAndDeliversToLocalPushEndpoint() throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("ECDH", BouncyCastleProvider.PROVIDER_NAME);
+        generator.initialize(new ECGenParameterSpec("secp256r1"));
+        var vapid = generator.generateKeyPair();
+        AtomicReference<byte[]> received = new AtomicReference<>();
+        AtomicReference<String> encoding = new AtomicReference<>();
+        AtomicReference<String> authorization = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/push", exchange -> {
+            received.set(exchange.getRequestBody().readAllBytes());
+            encoding.set(exchange.getRequestHeaders().getFirst("Content-Encoding"));
+            authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+            exchange.sendResponseHeaders(201, -1);
+            exchange.close();
+        });
+        server.start();
+        try {
+            String payload = "{\"notification\":{\"title\":\"Fixture\"}}";
+            Notification notification = new Notification("http://127.0.0.1:" + server.getAddress().getPort() + "/push",
+                    validP256dh(), Base64.getUrlEncoder().withoutPadding().encodeToString(new byte[16]), payload);
+            HttpResponse response = new PushService(vapid, "mailto:fixture@example.com")
+                    .send(notification, Encoding.AES128GCM);
+            assertEquals(201, response.getStatusLine().getStatusCode());
+            assertEquals("aes128gcm", encoding.get());
+            assertTrue(authorization.get().startsWith("vapid "));
+            assertTrue(received.get().length > payload.length());
+            assertFalse(new String(received.get(), StandardCharsets.UTF_8).contains(payload));
+        } finally {
+            server.stop(0);
+        }
     }
 
     private String validP256dh() throws Exception {
