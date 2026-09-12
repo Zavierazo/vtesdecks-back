@@ -158,6 +158,7 @@ public class ApiAuthController {
             }
             List<String> roles = userRepository.selectRolesByUserId(dbUser.getId());
             if (Boolean.FALSE.equals(dbUser.getValidated())) {
+                dbUser.setPassword(StringUtils.EMPTY);
                 dbUser.setValidated(true);
                 userRepository.save(dbUser);
                 log.info("Validated user {} through oauth login", dbUser.getEmail());
