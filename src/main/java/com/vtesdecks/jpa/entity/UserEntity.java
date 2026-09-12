@@ -37,9 +37,6 @@ public class UserEntity {
     @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(name = "login_hash", nullable = false)
-    private String loginHash;
-
     @Column(name = "display_name", nullable = false)
     private String displayName;
 

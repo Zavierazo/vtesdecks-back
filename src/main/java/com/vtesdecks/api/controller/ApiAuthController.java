@@ -33,7 +33,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import java.text.Normalizer;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static com.vtesdecks.util.Constants.USER_COUNTRY_HEADER;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -141,7 +140,6 @@ public class ApiAuthController {
                 dbUser.setPassword(StringUtils.EMPTY); // No password for oauth users (no default login)
                 dbUser.setValidated(true); // Oauth users are always validated
                 dbUser.setAdmin(false);
-                dbUser.setLoginHash(getRandomLoginHash());
                 dbUser.setDisplayName(emailUser);
                 userRepository.save(dbUser);
                 try {
@@ -208,7 +206,6 @@ public class ApiAuthController {
                     user.setPassword(passwordEncoder.encode(password));
                     user.setValidated(false);
                     user.setAdmin(false);
-                    user.setLoginHash(getRandomLoginHash());
                     user.setDisplayName(data.get(FORM_DATA_USERNAME));
                     UserEntity dbUser = userRepository.save(user);
                     emailActions.sendVerification(dbUser.getId());
@@ -294,7 +291,4 @@ public class ApiAuthController {
         return result;
     }
 
-    private String getRandomLoginHash() {
-        return UUID.randomUUID().toString().replace("-", "");
-    }
 }
