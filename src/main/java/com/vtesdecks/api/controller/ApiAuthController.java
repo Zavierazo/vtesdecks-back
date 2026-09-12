@@ -1,16 +1,13 @@
 package com.vtesdecks.api.controller;
 
-import com.vtesdecks.api.service.EmailActionService;
-import com.vtesdecks.model.api.ApiEmailAction;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
-
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.vtesdecks.api.service.ApiUserNotificationService;
 import com.vtesdecks.api.service.ApiUserService;
+import com.vtesdecks.api.service.EmailActionService;
 import com.vtesdecks.api.service.PasswordResetService;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
+import com.vtesdecks.model.api.ApiEmailAction;
 import com.vtesdecks.model.api.ApiResponse;
 import com.vtesdecks.model.api.ApiUser;
 import com.vtesdecks.model.api.ApiUserCountry;
@@ -26,6 +23,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -143,11 +142,7 @@ public class ApiAuthController {
                 dbUser.setValidated(true); // Oauth users are always validated
                 dbUser.setAdmin(false);
                 dbUser.setLoginHash(getRandomLoginHash());
-                if (googlePayload.get("name") != null) {
-                    dbUser.setDisplayName((String) googlePayload.get("name"));
-                } else {
-                    dbUser.setDisplayName(emailUser);
-                }
+                dbUser.setDisplayName(emailUser);
                 userRepository.save(dbUser);
                 try {
                     userNotificationService.welcomeNotifications(dbUser.getId());
