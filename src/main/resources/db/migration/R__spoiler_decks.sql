@@ -133,6 +133,11 @@ INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-noites_brasileiras', 250025, 1)
 ON DUPLICATE KEY UPDATE number = 1;
 
+-- Tubarão
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-noites_brasileiras', 250027, 2)
+ON DUPLICATE KEY UPDATE number = 2;
+
 -- END Spoiler:NB / preconstructed-noites_brasileiras
 
 -- BEGIN Spoiler:SNY / preconstructed-secrets_of_new_york
@@ -175,6 +180,11 @@ ON DUPLICATE KEY UPDATE number = 1;
 INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-secrets_of_new_york', 150017, 4)
 ON DUPLICATE KEY UPDATE number = 4;
+
+-- Circulatory System Outlet
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-secrets_of_new_york', 150021, 1)
+ON DUPLICATE KEY UPDATE number = 1;
 
 -- Kaiser
 INSERT INTO deck_card (deck_id, id, number)
