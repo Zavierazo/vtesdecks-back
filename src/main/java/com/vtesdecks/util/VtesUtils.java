@@ -108,6 +108,9 @@ public class VtesUtils {
     }
 
     public static String getIconFromName(String name) {
+        if ("1 CONVICTION".equalsIgnoreCase(name) || "1CONVICTION".equalsIgnoreCase(name)) {
+            return CardType.CONVICTION.getIcon();
+        }
         Discipline disciplineEnum = Discipline.getFromName(name);
         if (disciplineEnum != null) {
             return disciplineEnum.getIcon() + (StringUtils.isAllUpperCase(name) ? "sup" : "");

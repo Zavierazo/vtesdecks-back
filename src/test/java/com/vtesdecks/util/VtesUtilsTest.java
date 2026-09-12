@@ -6,9 +6,27 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class VtesUtilsTest {
+
+    @Test
+    public void resolvesConvictionCostIcons() {
+        assertEquals("conviction", VtesUtils.getIconFromName("1 CONVICTION"));
+        assertEquals("conviction", VtesUtils.getIconFromName("1CONVICTION"));
+        assertEquals("conviction", VtesUtils.getIconFromName("1 conviction"));
+        assertEquals("conviction", VtesUtils.getIconFromName("CONVICTION"));
+    }
+
+    @Test
+    public void preservesOtherIconLookups() {
+        assertEquals("reaction", VtesUtils.getIconFromName("REACTION"));
+        assertEquals("auspex", VtesUtils.getIconFromName("aus"));
+        assertEquals("auspexsup", VtesUtils.getIconFromName("AUS"));
+        assertNull(VtesUtils.getIconFromName("unknown"));
+        assertNull(VtesUtils.getIconFromName(null));
+    }
 
     @Test
     public void cryptVotesAreDerivedFromTitle() {
