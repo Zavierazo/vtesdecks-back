@@ -75,9 +75,14 @@ public class ProxyCardOptionScheduler {
         candidateSets.add(VtesUtils.PROMO_SET);
         Set<String> proxySets = new HashSet<>();
         for (String set : candidateSets) {
-            String proxyImageUrl = proxyService.getProxyImageUrl(set, proxyCardOption.getCardId());
-            if (proxyService.existImage(proxyImageUrl)) {
-                proxySets.add(set);
+            String proxyImageUrl = null;
+            try {
+                proxyImageUrl = proxyService.getProxyImageUrl(set, proxyCardOption.getCardId());
+                if (proxyService.existImage(proxyImageUrl)) {
+                    proxySets.add(set);
+                }
+            } catch (Exception e) {
+                log.error("Error checking proxy image url {}", proxyImageUrl, e);
             }
         }
         promoChecks.put(proxyCardOption.getCardId(),
