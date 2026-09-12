@@ -171,10 +171,35 @@ public class Utils {
     private static final int MAX_IMAGE_SIZE_BYTES = 512 * 1024; // 512 KB
     private static final int MAX_IMAGE_DIMENSION = 1024;
     private static final List<String> ALLOWED_EXTENSIONS = List.of("jpg", "jpeg", "png", "gif", "webp");
+    private static final okhttp3.OkHttpClient IMAGE_CLIENT = new okhttp3.OkHttpClient.Builder()
+            .proxy(java.net.Proxy.NO_PROXY)
+            .dns(Utils::resolveImageHost)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+            .build();
+
+    static List<java.net.InetAddress> resolveImageHost(String host) throws java.net.UnknownHostException {
+        List<java.net.InetAddress> addresses = List.of(java.net.InetAddress.getAllByName(host));
+        for (java.net.InetAddress address : addresses) {
+            byte[] bytes = address.getAddress();
+            if (address.isAnyLocalAddress() || address.isLoopbackAddress() || address.isLinkLocalAddress()
+                    || address.isSiteLocalAddress() || address.isMulticastAddress()
+                    || (bytes.length == 16 && (bytes[0] & 0xfe) == 0xfc)
+                    || (bytes.length == 4 && ((bytes[0] & 0xff) == 0
+                    || ((bytes[0] & 0xff) == 100 && (bytes[1] & 0xc0) == 64)
+                    || (bytes[0] & 0xff) >= 240))) {
+                throw new java.net.UnknownHostException("Image host must resolve to public addresses");
+            }
+        }
+        return addresses;
+    }
 
     /**
      * Verify if the image URL is valid.
      * Scheme: only HTTPS
+     * Public addresses only, standard port, no credentials or redirects
      * Max length: 250 characters
      * Extension: jpg, jpeg, png, gif, webp
      * Max size: 512 KB
@@ -211,44 +236,47 @@ public class Utils {
         // Check image size and dimensions by fetching the image
         try {
             java.net.URI uri = java.net.URI.create(imageUrl);
-            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) uri.toURL().openConnection();
-            connection.setRequestMethod("GET");
-            connection.setConnectTimeout(5000);
-            connection.setReadTimeout(5000);
-            connection.setRequestProperty("User-Agent", "VTESDecks Image Validator");
-
-            int responseCode = connection.getResponseCode();
-            if (responseCode != 200) {
-                return "unable to access image URL, HTTP status: " + responseCode;
+            if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null
+                    || uri.getUserInfo() != null || (uri.getPort() != -1 && uri.getPort() != 443)) {
+                return "must use HTTPS without credentials or a custom port";
             }
-
-            // Check content length if available
-            int contentLength = connection.getContentLength();
-            if (contentLength > MAX_IMAGE_SIZE_BYTES) {
-                return "size exceeds maximum of 512 KB";
+            okhttp3.Request request = new okhttp3.Request.Builder().url(uri.toURL())
+                    .header("User-Agent", "VTESDecks Image Validator").build();
+            // Check literals too, even if the HTTP client skips DNS for them.
+            if (request.url().host().matches("[0-9.]+") || request.url().host().contains(":")) {
+                resolveImageHost(request.url().host());
             }
-
-            // Read the image and validate size and dimensions
-            try (InputStream inputStream = connection.getInputStream()) {
-                byte[] imageBytes = inputStream.readNBytes(MAX_IMAGE_SIZE_BYTES + 1);
-                if (imageBytes.length > MAX_IMAGE_SIZE_BYTES) {
+            // The DNS hook returns the checked addresses directly to the connection.
+            try (okhttp3.Response response = IMAGE_CLIENT.newCall(request).execute()) {
+                if (response.code() != 200) {
+                    return "unable to access image URL, HTTP status: " + response.code();
+                }
+                // Check content length if available
+                long contentLength = response.body().contentLength();
+                if (contentLength > MAX_IMAGE_SIZE_BYTES) {
                     return "size exceeds maximum of 512 KB";
                 }
 
-                // Check dimensions
-                try (ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes)) {
-                    javax.imageio.ImageIO.setUseCache(false);
-                    java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(bais);
-                    if (image == null) {
-                        return "unable to read image from URL";
+                // Read the image and validate size and dimensions
+                try (InputStream inputStream = response.body().byteStream()) {
+                    byte[] imageBytes = inputStream.readNBytes(MAX_IMAGE_SIZE_BYTES + 1);
+                    if (imageBytes.length > MAX_IMAGE_SIZE_BYTES) {
+                        return "size exceeds maximum of 512 KB";
                     }
-                    if (image.getWidth() > MAX_IMAGE_DIMENSION || image.getHeight() > MAX_IMAGE_DIMENSION) {
-                        return "dimensions exceed maximum of " + MAX_IMAGE_DIMENSION + "x" + MAX_IMAGE_DIMENSION + " pixels";
+
+                    // Check dimensions
+                    try (ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes)) {
+                        javax.imageio.ImageIO.setUseCache(false);
+                        java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(bais);
+                        if (image == null) {
+                            return "unable to read image from URL";
+                        }
+                        if (image.getWidth() > MAX_IMAGE_DIMENSION || image.getHeight() > MAX_IMAGE_DIMENSION) {
+                            return "dimensions exceed maximum of " + MAX_IMAGE_DIMENSION + "x" + MAX_IMAGE_DIMENSION + " pixels";
+                        }
                     }
                 }
             }
-
-            connection.disconnect();
         } catch (IllegalArgumentException | java.net.MalformedURLException e) {
             return "image URL format";
         } catch (java.io.IOException e) {
