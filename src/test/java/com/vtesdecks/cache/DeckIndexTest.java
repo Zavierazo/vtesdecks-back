@@ -85,6 +85,28 @@ class DeckIndexTest {
         }
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void popularSortPreservesTieBreakersAndIndexUpdates() {
+        IndexedCollection<Deck> decks = (IndexedCollection<Deck>) ReflectionTestUtils.getField(index, "decks");
+        for (int number = 1; number <= 3; number++) {
+            Deck replacement = deck(number);
+            replacement.setViewsLastMonth(0L);
+            replacement.setViews(10L);
+            replacement.setRate(null);
+            decks.update(List.of(index.get(replacement.getId())), List.of(replacement));
+        }
+        DeckQuery query = DeckQuery.builder().order(DeckSort.POPULAR).build();
+        assertEquals(List.of("deck-3", "deck-2", "deck-1"), ids(query));
+        Deck replacement = deck(1);
+        replacement.setViewsLastMonth(0L);
+        replacement.setViews(11L);
+        decks.update(List.of(index.get(replacement.getId())), List.of(replacement));
+        assertEquals(List.of("deck-1", "deck-3", "deck-2"), ids(query));
+        decks.remove(replacement);
+        assertEquals(List.of("deck-3", "deck-2"), ids(query));
+    }
+
     private List<String> ids(DeckQuery query) {
         try (var result = index.selectAll(query)) {
             return result.stream().map(Deck::getId).toList();

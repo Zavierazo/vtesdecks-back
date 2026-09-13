@@ -5,6 +5,7 @@ import com.googlecode.cqengine.ConcurrentIndexedCollection;
 import com.googlecode.cqengine.IndexedCollection;
 import com.googlecode.cqengine.attribute.Attribute;
 import com.googlecode.cqengine.index.hash.HashIndex;
+import com.googlecode.cqengine.index.navigable.NavigableIndex;
 import com.googlecode.cqengine.index.unique.UniqueIndex;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.QueryFactory;
@@ -90,6 +91,7 @@ public class DeckIndex {
 
 
     @PostConstruct
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public void setUp() {
         //Id is always unique and is the Primary Key
         decks.addIndex(UniqueIndex.onAttribute(Deck.ID_ATTRIBUTE));
@@ -109,6 +111,9 @@ public class DeckIndex {
         decks.addIndex(HashIndex.onAttribute(Deck.PRICE_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.ARCHETYPE_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(Deck.DETAILED_ATTRIBUTE));
+        // Used for most common sort filters
+        decks.addIndex(NavigableIndex.onAttribute((Attribute) Deck.CREATION_DATE_ATTRIBUTE));
+        decks.addIndex(NavigableIndex.onAttribute(Deck.VIEWS_LAST_MONTH_ATTRIBUTE));
     }
 
 
