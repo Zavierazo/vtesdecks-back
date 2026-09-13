@@ -69,14 +69,11 @@ public class LibraryCache {
         //Id is always unique and is the Primary Key
         cache.addIndex(UniqueIndex.onAttribute(Library.ID_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Library.NAME_ATTRIBUTE));
-        cache.addIndex(HashIndex.onAttribute(Library.TEXT_ATTRIBUTE));
-        cache.addIndex(HashIndex.onAttribute(Library.TYPE_NUMBER_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Library.TYPE_MULTI_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Library.CLAN_NUMBER_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Library.CLAN_MULTI_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Library.DISCIPLINE_NUMBER_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Library.DISCIPLINE_MULTI_ATTRIBUTE));
-        cache.addIndex(HashIndex.onAttribute(Library.LAST_UPDATE_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Library.I18N_NAME_ATTRIBUTE));
     }
 

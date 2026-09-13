@@ -68,12 +68,10 @@ public class CryptCache {
         //Id is always unique and is the Primary Key
         cache.addIndex(UniqueIndex.onAttribute(Crypt.ID_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Crypt.NAME_ATTRIBUTE));
-        cache.addIndex(HashIndex.onAttribute(Crypt.TEXT_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Crypt.TYPE_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Crypt.CLAN_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Crypt.DISCIPLINE_NUMBER_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Crypt.DISCIPLINE_MULTI_ATTRIBUTE));
-        cache.addIndex(HashIndex.onAttribute(Crypt.LAST_UPDATE_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Crypt.I18N_NAME_ATTRIBUTE));
     }
 

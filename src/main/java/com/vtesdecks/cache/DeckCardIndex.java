@@ -38,7 +38,6 @@ public class DeckCardIndex {
         cache.addIndex(UniqueIndex.onAttribute(DeckCard.ID_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(DeckCard.DECK_ID_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(DeckCard.CARD_ID_ATTRIBUTE));
-        cache.addIndex(HashIndex.onAttribute(DeckCard.NUMBER_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(DeckCard.IS_CRYPT_ATTRIBUTE));
     }
 

@@ -51,8 +51,6 @@ public class SetCache {
         cache.addIndex(UniqueIndex.onAttribute(Set.ID_ATTRIBUTE));
         cache.addIndex(UniqueIndex.onAttribute(Set.ABBREV_ATTRIBUTE));
         cache.addIndex(HashIndex.onAttribute(Set.FULL_NAME_ATTRIBUTE));
-        cache.addIndex(HashIndex.onAttribute(Set.RELEASE_ATTRIBUTE));
-        cache.addIndex(HashIndex.onAttribute(Set.LAST_UPDATE_ATTRIBUTE));
     }
 
     @Scheduled(cron = "${jobs.cache.set.refresh:0 45 * * * *}")
