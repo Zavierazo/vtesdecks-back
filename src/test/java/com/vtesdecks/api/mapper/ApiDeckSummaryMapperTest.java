@@ -19,10 +19,14 @@ import com.vtesdecks.service.CurrencyExchangeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.springframework.data.redis.core.convert.MappingRedisConverter;
+import org.springframework.data.redis.core.convert.RedisData;
+import org.springframework.data.redis.core.mapping.RedisMappingContext;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -61,6 +65,22 @@ class ApiDeckSummaryMapperTest {
         CurrencyExchangeService currency = mock(CurrencyExchangeService.class);
         when(currency.convert(any(), anyString(), eq("USD"))).thenReturn(new BigDecimal("30.00"));
         ReflectionTestUtils.setField(mapper, "currencyExchangeService", currency);
+    }
+
+    @Test
+    void cachedDetailPreservesEmptyDisciplineAndClanArrays() {
+        full.getStats().getLibraryDisciplines().getFirst().setDisciplines(Set.of());
+        full.getStats().getLibraryClans().getFirst().setClans(Set.of());
+        var converter = new MappingRedisConverter(new RedisMappingContext());
+        converter.afterPropertiesSet();
+        RedisData data = new RedisData();
+        converter.write(full, data);
+        Deck cached = converter.read(Deck.class, data);
+
+        var response = json.valueToTree(mapper.map(cached, null, false, "EUR"));
+        assertTrue(response.at("/stats/libraryDisciplines/0/disciplines").isArray());
+        assertTrue(response.at("/stats/libraryClans/0/clans").isArray());
+        assertEquals(json.valueToTree(mapper.map(full, null, false, "EUR")), response);
     }
 
     @Test
