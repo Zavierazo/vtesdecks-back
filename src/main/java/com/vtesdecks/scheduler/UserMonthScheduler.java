@@ -2,7 +2,7 @@ package com.vtesdecks.scheduler;
 
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.DeckIndex;
-import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.UserMonthEntity;
 import com.vtesdecks.jpa.repositories.UserMonthRepository;
@@ -55,8 +55,8 @@ public class UserMonthScheduler {
                 .build();
 
         Map<Integer, Long> scoreByUser = new HashMap<>();
-        try (ResultSet<Deck> result = deckIndex.selectAll(query)) {
-            for (Deck deck : result) {
+        try (ResultSet<DeckSummary> result = deckIndex.selectAll(query)) {
+            for (DeckSummary deck : result) {
                 if (deck.getUser() == null || deck.getCreationDate() == null) {
                     continue;
                 }

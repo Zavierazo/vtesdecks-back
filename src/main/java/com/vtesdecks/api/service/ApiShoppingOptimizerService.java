@@ -2,11 +2,11 @@ package com.vtesdecks.api.service;
 
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.CryptCache;
+import com.vtesdecks.cache.DeckCardIndex;
 import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.LibraryCache;
-import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.deck.DeckType;
-import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.api.ApiCard;
 import com.vtesdecks.model.api.ApiShoppingOptimization;
@@ -33,6 +33,8 @@ import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
 @RequiredArgsConstructor
 @Slf4j
 public class ApiShoppingOptimizerService {
+    private final DeckCardIndex deckCardIndex;
+
     private final DeckIndex deckIndex;
     private final CryptCache cryptCache;
     private final LibraryCache libraryCache;
@@ -116,22 +118,14 @@ public class ApiShoppingOptimizerService {
 
     private List<PreconOption> getPreconOptions() {
         List<PreconOption> options = new ArrayList<>();
-        try (ResultSet<Deck> result = deckIndex.selectAll(DeckQuery.builder().type(DeckType.PRECONSTRUCTED).build())) {
-            for (Deck deck : result) {
+        try (ResultSet<DeckSummary> result = deckIndex.selectAll(DeckQuery.builder().type(DeckType.PRECONSTRUCTED).build())) {
+            for (DeckSummary deck : result) {
                 BigDecimal price = deck.getStats() != null ? deck.getStats().getMsrp() : null;
                 if (price == null) {
                     // Without a product price the precon can't compete against single cards
                     continue;
                 }
-                Map<Integer, Integer> cardCounts = new HashMap<>();
-                for (Card card : deck.getCrypt()) {
-                    cardCounts.merge(card.getId(), card.getNumber(), Integer::sum);
-                }
-                for (List<Card> libraryCards : deck.getLibraryByType().values()) {
-                    for (Card card : libraryCards) {
-                        cardCounts.merge(card.getId(), card.getNumber(), Integer::sum);
-                    }
-                }
+                Map<Integer, Integer> cardCounts = deckCardIndex.getCardCounts(deck.getId());
                 options.add(new PreconOption(deck, price, cardCounts));
             }
         }
@@ -156,7 +150,7 @@ public class ApiShoppingOptimizerService {
         BigDecimal totalPrice = BigDecimal.ZERO;
         List<ApiShoppingPrecon> preconDecks = new ArrayList<>();
         for (Selection selection : selections.values()) {
-            Deck deck = selection.precon.getDeck();
+            DeckSummary deck = selection.precon.getDeck();
             BigDecimal unitPrice = convert(selection.precon.getPrice(), currencyCode);
             BigDecimal selectionTotal = unitPrice.multiply(BigDecimal.valueOf(selection.number));
             totalPrice = totalPrice.add(selectionTotal);
@@ -214,7 +208,7 @@ public class ApiShoppingOptimizerService {
 
     @Value
     private static class PreconOption {
-        Deck deck;
+        DeckSummary deck;
         BigDecimal price;
         Map<Integer, Integer> cards;
     }

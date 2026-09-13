@@ -8,9 +8,11 @@ import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.DeckArchetypeMapper;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.CryptCache;
+import com.vtesdecks.cache.DeckCardIndex;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.card.Card;
@@ -56,6 +58,8 @@ import java.util.function.Function;
 @Service
 @RequiredArgsConstructor
 public class ApiDeckBuilderService {
+    private final DeckCardIndex deckCardIndex;
+
     public static final double MIN_SUGGESTION_SIMILARITY_THRESHOLD = 0.6;
 
     private final DeckRepository deckRepository;
@@ -346,10 +350,10 @@ public class ApiDeckBuilderService {
         }
 
         // Find all non-deleted decks (TOURNAMENT, COMMUNITY and USER/private) with cosine similarity
-        List<Deck> similarDecks = new ArrayList<>();
-        try (ResultSet<Deck> deckResultSet = deckService.getDecks(DeckQuery.builder().allDecks(true).build())) {
-            for (Deck candidate : deckResultSet) {
-                Map<Integer, Integer> candidateVector = CosineSimilarityUtils.getVector(candidate);
+        List<DeckSummary> similarDecks = new ArrayList<>();
+        try (ResultSet<DeckSummary> deckResultSet = deckService.getDecks(DeckQuery.builder().allDecks(true).build())) {
+            for (DeckSummary candidate : deckResultSet) {
+                Map<Integer, Integer> candidateVector = deckCardIndex.getCardCounts(candidate.getId());
                 double similarity = CosineSimilarityUtils.cosineSimilarity(inputDeck, inputVector, candidate, candidateVector);
                 if (similarity >= MIN_SUGGESTION_SIMILARITY_THRESHOLD) {
                     similarDecks.add(candidate);
@@ -436,9 +440,7 @@ public class ApiDeckBuilderService {
                 if (VtesUtils.isCrypt(apiCard.getId())) {
                     deck.getCrypt().add(card);
                 } else {
-                    deck.getLibraryByType()
-                            .computeIfAbsent("library", k -> new ArrayList<>())
-                            .add(card);
+                    deck.getLibrary().add(card);
                 }
             }
         }

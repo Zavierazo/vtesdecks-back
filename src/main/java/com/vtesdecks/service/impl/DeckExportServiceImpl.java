@@ -15,6 +15,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -51,8 +53,19 @@ public class DeckExportServiceImpl implements DeckExportService {
         return result.toString();
     }
 
+    private Map<String, List<Card>> getLibraryByType(Deck deck) {
+        Map<String, List<Card>> groups = new HashMap<>();
+        for (Card card : deck.getLibrary()) {
+            Library library = libraryCache.get(card.getId());
+            if (library != null) {
+                groups.computeIfAbsent(library.getType(), type -> new ArrayList<>()).add(card);
+            }
+        }
+        return groups;
+    }
+
     private void exportLackey(StringBuilder result, Deck deck) {
-        for (Map.Entry<String, List<Card>> entry : deck.getLibraryByType().entrySet()) {
+        for (Map.Entry<String, List<Card>> entry : getLibraryByType(deck).entrySet()) {
             for (Card card : entry.getValue()) {
                 Library library = libraryCache.get(card.getId());
                 if (library != null) {
@@ -86,7 +99,7 @@ public class DeckExportServiceImpl implements DeckExportService {
             }
         }
         result.append(NEW_LINE);
-        for (Map.Entry<String, List<Card>> entry : deck.getLibraryByType().entrySet()) {
+        for (Map.Entry<String, List<Card>> entry : getLibraryByType(deck).entrySet()) {
             for (Card card : entry.getValue()) {
                 Library library = libraryCache.get(card.getId());
                 if (library != null) {
@@ -181,7 +194,7 @@ public class DeckExportServiceImpl implements DeckExportService {
         }
         result.append(NEW_LINE);
         result.append("Library (").append(deck.getStats().getLibrary()).append(" cards)").append(NEW_LINE);
-        for (Map.Entry<String, List<Card>> entry : deck.getLibraryByType().entrySet()) {
+        for (Map.Entry<String, List<Card>> entry : getLibraryByType(deck).entrySet()) {
             result.append(entry.getKey()).append(" (").append(entry.getValue().stream().map(Card::getNumber).reduce(0, Integer::sum));
             if (entry.getKey().equals("Master")) {
                 int trifle = 0;

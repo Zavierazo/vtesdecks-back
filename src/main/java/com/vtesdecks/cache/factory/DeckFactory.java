@@ -13,6 +13,7 @@ import com.vtesdecks.cache.indexable.DeckWarning;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.ClanStat;
 import com.vtesdecks.cache.indexable.deck.DeckType;
+import com.vtesdecks.cache.indexable.deck.DeckUser;
 import com.vtesdecks.cache.indexable.deck.DisciplineStat;
 import com.vtesdecks.cache.indexable.deck.Stats;
 import com.vtesdecks.cache.indexable.deck.card.Card;
@@ -137,10 +138,9 @@ public class DeckFactory {
         value.setDeckArchetypeId(deck.getDeckArchetypeId());
         if (deck.getUser() != null) {
             userRepository.findById(deck.getUser()).ifPresent(user -> {
-                value.setUser(user);
                 value.setAuthor(user.getDisplayName());
                 List<String> roles = userRepository.selectRolesByUserId(user.getId());
-                value.setUserRoles(roles);
+                value.setUser(DeckUser.from(user, roles));
             });
         }
         if (deck.getExtra() != null && deck.getExtra().has("limitedFormat") && deck.getExtra().get("limitedFormat").has("name")) {
@@ -170,11 +170,8 @@ public class DeckFactory {
                 card.setId(deckCard.getId());
                 card.setNumber(deckCard.getNumber());
                 Library library = libraryCache.get(card.getId());
-                if (!value.getLibraryByType().containsKey(library.getType())) {
-                    value.getLibraryByType().put(library.getType(), new ArrayList<>());
-                }
                 fillWarnings(warnings, library.getBanned(), library.getSets());
-                value.getLibraryByType().get(library.getType()).add(card);
+                value.getLibrary().add(card);
             }
             if (card != null) {
                 cards.add(card);
@@ -187,9 +184,12 @@ public class DeckFactory {
                     Crypt crypt = cryptCache.get(card.getId());
                     return crypt.getCapacity();
                 }).reversed());
-        for (List<Card> libraries : value.getLibraryByType().values()) {
-            libraries.sort(Comparator.comparing(Card::getNumber).reversed());
-        }
+        // Preserve the existing type grouping and quantity order in detail responses.
+        value.setLibrary(value.getLibrary().stream()
+                .collect(Collectors.groupingBy(card -> libraryCache.get(card.getId()).getType()))
+                .values().stream()
+                .flatMap(group -> group.stream().sorted(Comparator.comparing(Card::getNumber).reversed()))
+                .collect(Collectors.toList()));
         //Other fields
         value.setGroups(cards
                 .stream()
@@ -579,18 +579,16 @@ public class DeckFactory {
                 }
             }
         }
-        if (deck.getLibraryByType() != null && !deck.getLibraryByType().isEmpty()) {
+        if (deck.getLibrary() != null && !deck.getLibrary().isEmpty()) {
             BigDecimal libraryFactor = BigDecimal.valueOf(90.0).divide(BigDecimal.valueOf(deck.getStats().getLibrary()), HALF_UP);
-            for (List<Card> cards : deck.getLibraryByType().values()) {
-                for (Card card : cards) {
-                    Library library = libraryCache.get(card.getId());
-                    if (library != null) {
-                        for (DeckTag deckTag : DeckTag.values()) {
-                            if (Boolean.TRUE.equals(deckTag.getLibraryTest().test(library))) {
-                                BigDecimal score = deckTagScore.getOrDefault(deckTag, BigDecimal.ZERO);
-                                BigDecimal newScore = score.add(BigDecimal.valueOf(card.getNumber()).multiply(libraryFactor));
-                                deckTagScore.put(deckTag, newScore);
-                            }
+            for (Card card : deck.getLibrary()) {
+                Library library = libraryCache.get(card.getId());
+                if (library != null) {
+                    for (DeckTag deckTag : DeckTag.values()) {
+                        if (Boolean.TRUE.equals(deckTag.getLibraryTest().test(library))) {
+                            BigDecimal score = deckTagScore.getOrDefault(deckTag, BigDecimal.ZERO);
+                            BigDecimal newScore = score.add(BigDecimal.valueOf(card.getNumber()).multiply(libraryFactor));
+                            deckTagScore.put(deckTag, newScore);
                         }
                     }
                 }
@@ -667,20 +665,18 @@ public class DeckFactory {
         if (librarySize > maxLibrary) {
             isValid = false;
         }
-        for (List<Card> libraries : deck.getLibraryByType().values()) {
-            for (Card library : libraries) {
-                Library libraryInfo = libraryCache.get(library.getId());
-                if (!isEmpty(libraryInfo.getBanned())) {
+        for (Card library : deck.getLibrary()) {
+            Library libraryInfo = libraryCache.get(library.getId());
+            if (!isEmpty(libraryInfo.getBanned())) {
+                isValid = false;
+            } else {
+                boolean allowed = limitedFormat.getAllowed().getLibrary().containsKey(String.valueOf(library.getId()));
+                boolean banned = limitedFormat.getBanned().getLibrary().containsKey(String.valueOf(library.getId()));
+                boolean inSet = limitedFormat.getSets().keySet().stream().anyMatch(set ->
+                        libraryInfo.getSets().stream().anyMatch(librarySet -> librarySet.split(":")[0].equals(set))
+                );
+                if (!allowed && (banned || !inSet)) {
                     isValid = false;
-                } else {
-                    boolean allowed = limitedFormat.getAllowed().getLibrary().containsKey(String.valueOf(library.getId()));
-                    boolean banned = limitedFormat.getBanned().getLibrary().containsKey(String.valueOf(library.getId()));
-                    boolean inSet = limitedFormat.getSets().keySet().stream().anyMatch(set ->
-                            libraryInfo.getSets().stream().anyMatch(librarySet -> librarySet.split(":")[0].equals(set))
-                    );
-                    if (!allowed && (banned || !inSet)) {
-                        isValid = false;
-                    }
                 }
             }
         }

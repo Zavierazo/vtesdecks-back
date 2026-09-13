@@ -1,6 +1,7 @@
 package com.vtesdecks.api.service;
 
-import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
+import com.vtesdecks.cache.indexable.deck.DeckUser;
 import com.vtesdecks.enums.ReactionTargetType;
 import com.vtesdecks.enums.ReactionType;
 import com.vtesdecks.jpa.entity.CommentEntity;
@@ -48,14 +49,14 @@ public class ApiReactionServiceTest {
     @InjectMocks
     private ApiReactionService service;
 
-    private Deck deck(Integer ownerId) {
-        Deck deck = new Deck();
+    private DeckSummary deck(Integer ownerId) {
+        DeckSummary deck = new DeckSummary();
         deck.setId(DECK_ID);
         deck.setName("Test Deck");
         if (ownerId != null) {
             UserEntity owner = new UserEntity();
             owner.setId(ownerId);
-            deck.setUser(owner);
+            deck.setUser(DeckUser.builder().id(owner.getId()).username(owner.getUsername()).build());
         }
         return deck;
     }
@@ -68,7 +69,7 @@ public class ApiReactionServiceTest {
 
     @Test
     public void reactDeckActivationSaves() {
-        when(deckService.getDeck(DECK_ID)).thenReturn(deck(OWNER_ID));
+        when(deckService.getSummary(DECK_ID)).thenReturn(deck(OWNER_ID));
         when(reactionRepository.existsById(any())).thenReturn(false);
 
         assertTrue(service.reactDeck(USER_ID, DECK_ID, ReactionType.SPICY, true));
@@ -79,7 +80,7 @@ public class ApiReactionServiceTest {
 
     @Test
     public void reactDeckActivationIsIdempotent() {
-        when(deckService.getDeck(DECK_ID)).thenReturn(deck(OWNER_ID));
+        when(deckService.getSummary(DECK_ID)).thenReturn(deck(OWNER_ID));
         when(reactionRepository.existsById(any())).thenReturn(true);
 
         assertTrue(service.reactDeck(USER_ID, DECK_ID, ReactionType.SPICY, true));
@@ -90,7 +91,7 @@ public class ApiReactionServiceTest {
 
     @Test
     public void reactDeckDeactivationDeletesAndSyncs() {
-        when(deckService.getDeck(DECK_ID)).thenReturn(deck(OWNER_ID));
+        when(deckService.getSummary(DECK_ID)).thenReturn(deck(OWNER_ID));
         when(reactionRepository.existsById(any())).thenReturn(true);
 
         assertTrue(service.reactDeck(USER_ID, DECK_ID, ReactionType.SPICY, false));
@@ -115,7 +116,7 @@ public class ApiReactionServiceTest {
 
     @Test
     public void reactDeckUnknownDeckReturnsFalse() {
-        when(deckService.getDeck(DECK_ID)).thenReturn(null);
+        when(deckService.getSummary(DECK_ID)).thenReturn(null);
 
         assertFalse(service.reactDeck(USER_ID, DECK_ID, ReactionType.SPICY, true));
 

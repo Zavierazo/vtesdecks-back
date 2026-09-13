@@ -3,16 +3,17 @@ package com.vtesdecks.service;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.DeckArchetypeMapper;
 import com.vtesdecks.cache.DeckArchetypeIndex;
-import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.DeckCardIndex;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.redis.entity.DeckArchetype;
 import com.vtesdecks.cache.redis.repositories.DeckArchetypeRedisRepository;
 import com.vtesdecks.jpa.entity.DeckArchetypeEntity;
 import com.vtesdecks.jpa.repositories.DeckArchetypeRepository;
 import com.vtesdecks.messaging.MessageProducer;
+import com.vtesdecks.model.ArchetypeMetaMetrics;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
-import com.vtesdecks.model.ArchetypeMetaMetrics;
 import com.vtesdecks.model.MetaType;
 import com.vtesdecks.model.api.ApiDeckArchetype;
 import com.vtesdecks.model.api.ApiSearchArchetype;
@@ -24,9 +25,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -38,6 +40,8 @@ import java.util.stream.StreamSupport;
 @Service
 @RequiredArgsConstructor
 public class DeckArchetypeService {
+    private final DeckCardIndex deckCardIndex;
+
 
     private final DeckArchetypeRepository repository;
     private final DeckArchetypeMapper mapper;
@@ -201,8 +205,8 @@ public class DeckArchetypeService {
         LocalDateTime currentStart = days == null ? null : LocalDate.now().minusDays(days).atStartOfDay();
         LocalDateTime previousStart = days == null ? null : LocalDate.now().minusDays(days * 2L).atStartOfDay();
 
-        try (ResultSet<Deck> decks = deckService.getDecks(DeckQuery.builder().type(DeckType.TOURNAMENT).build())) {
-            for (Deck deck : decks) {
+        try (ResultSet<DeckSummary> decks = deckService.getDecks(DeckQuery.builder().type(DeckType.TOURNAMENT).build())) {
+            for (DeckSummary deck : decks) {
                 Integer archetypeId = deck.getDeckArchetypeId() == null ? 0 : deck.getDeckArchetypeId();
                 LocalDateTime created = deck.getCreationDate();
                 if (days == null || (created != null && !created.isBefore(currentStart))) {
@@ -228,31 +232,31 @@ public class DeckArchetypeService {
 
 
     public List<ApiDeckArchetype> getSuggestions() {
-        Set<String> visitedDeckIds = new java.util.HashSet<>();
+        Set<String> visitedDeckIds = new HashSet<>();
         List<ApiDeckArchetype> apiDeckArchetypes = new ArrayList<>();
-        try (ResultSet<Deck> deckResultSet = deckService.getDecks(DeckQuery.builder()
+        try (ResultSet<DeckSummary> deckResultSet = deckService.getDecks(DeckQuery.builder()
                 .type(DeckType.TOURNAMENT)
                 .order(DeckSort.PLAYERS)
                 .archetype(0)
                 .minPlayers(20)
                 .creationDate(LocalDate.now().minusYears(3))
                 .build())) {
-            for (Deck candidateDeck : deckResultSet) {
+            for (DeckSummary candidateDeck : deckResultSet) {
                 if (visitedDeckIds.contains(candidateDeck.getId())) {
                     continue;
                 }
-                Map<Integer, Integer> candidateVector = CosineSimilarityUtils.getVector(candidateDeck);
-                try (ResultSet<Deck> tournamentResultSet = deckService.getDecks(DeckQuery.builder()
+                Map<Integer, Integer> candidateVector = deckCardIndex.getCardCounts(candidateDeck.getId());
+                try (ResultSet<DeckSummary> tournamentResultSet = deckService.getDecks(DeckQuery.builder()
                         .type(DeckType.TOURNAMENT)
                         .minPlayers(10)
                         .creationDate(LocalDate.now().minusYears(3))
                         .build())) {
-                    List<Deck> similarTournamentDecks = tournamentResultSet.stream()
-                            .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(candidateDeck, candidateVector, target, CosineSimilarityUtils.getVector(target))))
+                    List<DeckSummary> similarTournamentDecks = tournamentResultSet.stream()
+                            .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(candidateDeck, candidateVector, target, deckCardIndex.getCardCounts(target.getId()))))
                             .filter(pair -> pair.getValue() > 0.5)
                             .map(Pair::getKey)
                             .toList();
-                    visitedDeckIds.addAll(similarTournamentDecks.stream().map(Deck::getId).toList());
+                    visitedDeckIds.addAll(similarTournamentDecks.stream().map(DeckSummary::getId).toList());
                     if (similarTournamentDecks.stream().filter(deck -> deck.getDeckArchetypeId() == null).count() >= 2
                             && similarTournamentDecks.stream().filter(deck -> deck.getPlayers() >= 20).count() >= 2
                             && (similarTournamentDecks.size() >= 4 || similarTournamentDecks.stream().anyMatch(deck -> deck.getPlayers() >= 50))) {
@@ -272,7 +276,7 @@ public class DeckArchetypeService {
     }
 
     private long deckCount(DeckQuery query) {
-        try (ResultSet<Deck> deckResultSet = deckService.getDecks(query)) {
+        try (ResultSet<DeckSummary> deckResultSet = deckService.getDecks(query)) {
             return deckResultSet.stream().count();
         }
     }

@@ -1,9 +1,11 @@
 package com.vtesdecks.service;
 
-import com.vtesdecks.cache.indexable.Deck;
-import com.vtesdecks.cache.indexable.deck.card.Card;
+import com.vtesdecks.cache.DeckCardIndex;
+import com.vtesdecks.cache.indexable.DeckCard;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.redis.entity.ArchetypeKeyCard;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -17,6 +19,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class DeckKeyCardsService {
+    @Autowired
+    private DeckCardIndex deckCardIndex;
+
 
     /**
      * Threshold used by archetypes: card must appear in at least 10% of decks.
@@ -37,23 +42,18 @@ public class DeckKeyCardsService {
      * @param threshold minimum appearance rate (0.0–1.0) for a card to be included
      * @return list of key cards sorted by appearance rate descending, empty if no decks provided
      */
-    public List<ArchetypeKeyCard> computeKeyCards(List<Deck> decks, double threshold) {
+    public List<ArchetypeKeyCard> computeKeyCards(List<DeckSummary> decks, double threshold) {
         // Map<cardId, Map<copies, deckCount>>
         Map<Integer, Map<Integer, Integer>> cardCopyDistribution = new HashMap<>();
         Map<Integer, Integer> cardDeckCount = new HashMap<>();
         long totalDecks = 0;
 
-        for (Deck deck : decks) {
+        for (DeckSummary deck : decks) {
             totalDecks++;
             Set<Integer> seenInThisDeck = new HashSet<>();
 
-            for (Card card : deck.getCrypt()) {
+            for (var card : deckCardIndex.getByDeckId(deck.getId())) {
                 accumulateCard(card, seenInThisDeck, cardCopyDistribution, cardDeckCount);
-            }
-            for (List<Card> cards : deck.getLibraryByType().values()) {
-                for (Card card : cards) {
-                    accumulateCard(card, seenInThisDeck, cardCopyDistribution, cardDeckCount);
-                }
             }
         }
 
@@ -117,7 +117,7 @@ public class DeckKeyCardsService {
         return keyCards;
     }
 
-    private void accumulateCard(Card card, Set<Integer> seenInThisDeck,
+    private void accumulateCard(DeckCard card, Set<Integer> seenInThisDeck,
                                 Map<Integer, Map<Integer, Integer>> cardCopyDistribution,
                                 Map<Integer, Integer> cardDeckCount) {
         int cardId = card.getId();

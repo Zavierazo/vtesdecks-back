@@ -9,6 +9,7 @@ import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.indexable.DeckCard;
 import com.vtesdecks.jpa.entity.DeckCardEntity;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
+import com.vtesdecks.util.Constants;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +19,8 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.googlecode.cqengine.query.QueryFactory.equal;
@@ -69,6 +70,7 @@ public class DeckCardIndex {
             refreshIndex(deckId, deckCards);
         } catch (Exception e) {
             log.error("Error when refresh cardDeck {}: {}", deckId, deckCards, e);
+            throw new IllegalStateException("Cannot refresh cards for " + deckId, e);
         }
         return new RefreshResult(deckCards, modificationDate);
     }
@@ -103,22 +105,28 @@ public class DeckCardIndex {
 
     public DeckCard get(String key) {
         Query<DeckCard> findByKeyQuery = equal(DeckCard.ID_ATTRIBUTE, key);
-        ResultSet<DeckCard> result = cache.retrieve(findByKeyQuery);
-        return (result.size() >= 1) ? result.uniqueResult() : null;
+        try (ResultSet<DeckCard> result = cache.retrieve(findByKeyQuery)) {
+            return (result.size() >= 1) ? result.uniqueResult() : null;
+        }
     }
 
     public List<DeckCard> getByDeckId(String deckId) {
         Query<DeckCard> findByKeyQuery = equal(DeckCard.DECK_ID_ATTRIBUTE, deckId);
-        ResultSet<DeckCard> result = cache.retrieve(findByKeyQuery);
-        return (result.size() >= 1) ? result.stream().collect(Collectors.toList()) : Collections.emptyList();
+        try (ResultSet<DeckCard> result = cache.retrieve(findByKeyQuery)) {
+            return result.stream().collect(Collectors.toList());
+        }
     }
 
+    public Map<Integer, Integer> getCardCounts(String deckId) {
+        return getByDeckId(deckId).stream().collect(Collectors.toMap(DeckCard::getId, DeckCard::getNumber, Integer::sum));
+    }
+
+    public int getCardNumber(String deckId, Integer cardId) {
+        DeckCard card = get(String.join(Constants.SEPARATOR, deckId, cardId.toString()));
+        return card == null ? 0 : card.getNumber();
+    }
 
     public void removeDeck(String deckId) {
-        Query<DeckCard> findByDeckIdQuery = equal(DeckCard.DECK_ID_ATTRIBUTE, deckId);
-        ResultSet<DeckCard> result = cache.retrieve(findByDeckIdQuery);
-        for (DeckCard deckCard : result) {
-            cache.remove(deckCard);
-        }
+        cache.removeAll(getByDeckId(deckId));
     }
 }

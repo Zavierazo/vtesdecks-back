@@ -1,6 +1,7 @@
 package com.vtesdecks.cache;
 
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Striped;
 import com.googlecode.cqengine.ConcurrentIndexedCollection;
 import com.googlecode.cqengine.IndexedCollection;
 import com.googlecode.cqengine.attribute.Attribute;
@@ -18,8 +19,10 @@ import com.vtesdecks.cache.factory.DeckFactory;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.DeckCard;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.DeckType;
+import com.vtesdecks.cache.redis.repositories.DeckRedisRepository;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.LimitedFormatEntity;
 import com.vtesdecks.jpa.entity.UserEntity;
@@ -33,12 +36,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
+import java.time.Duration;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +52,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
 import static com.googlecode.cqengine.query.QueryFactory.all;
@@ -87,33 +93,38 @@ public class DeckIndex {
     private LimitedFormatRepository limitedFormatRepository;
     @Autowired
     private UserRepository userRepository;
-    private IndexedCollection<Deck> decks = new ConcurrentIndexedCollection<>();
+    @Autowired
+    private DeckRedisRepository deckRedisRepository;
+    @Value("${deck.cache.ttl:15m}")
+    private Duration cacheTtl = Duration.ofMinutes(15);
+    private final Striped<Lock> locks = Striped.lock(256);
+    private IndexedCollection<DeckSummary> decks = new ConcurrentIndexedCollection<>();
 
 
     @PostConstruct
     @SuppressWarnings({"rawtypes", "unchecked"})
     public void setUp() {
         //Id is always unique and is the Primary Key
-        decks.addIndex(UniqueIndex.onAttribute(Deck.ID_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.PUBLISHED_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.TYPE_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.USER_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.AUTHOR_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.ROUNDS_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.CLAN_MULTI_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.DISCIPLINE_MULTI_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.GROUP_MULTI_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.CLAN_NUMBER_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.DISCIPLINE_NUMBER_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.TAG_MULTI_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.FAVORITE_MULTI_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.PATH_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.PRICE_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.ARCHETYPE_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(Deck.DETAILED_ATTRIBUTE));
+        decks.addIndex(UniqueIndex.onAttribute(DeckSummary.ID_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.PUBLISHED_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.TYPE_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.USER_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.AUTHOR_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.ROUNDS_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.CLAN_MULTI_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.DISCIPLINE_MULTI_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.GROUP_MULTI_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.CLAN_NUMBER_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.DISCIPLINE_NUMBER_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.TAG_MULTI_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.FAVORITE_MULTI_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.PATH_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.PRICE_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.ARCHETYPE_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.DETAILED_ATTRIBUTE));
         // Used for most common sort filters
-        decks.addIndex(NavigableIndex.onAttribute((Attribute) Deck.CREATION_DATE_ATTRIBUTE));
-        decks.addIndex(NavigableIndex.onAttribute(Deck.VIEWS_LAST_MONTH_ATTRIBUTE));
+        decks.addIndex(NavigableIndex.onAttribute((Attribute) DeckSummary.CREATION_DATE_ATTRIBUTE));
+        decks.addIndex(NavigableIndex.onAttribute(DeckSummary.VIEWS_LAST_MONTH_ATTRIBUTE));
     }
 
 
@@ -122,19 +133,19 @@ public class DeckIndex {
         StopWatch stopWatch = new StopWatch();
         try (ExecutorService executor = Executors.newFixedThreadPool(5)) {
             stopWatch.start();
-            Set<String> currentKeys = decks.stream().map(Deck::getId).collect(Collectors.toSet());
+            Set<String> currentKeys = decks.stream().map(DeckSummary::getId).collect(Collectors.toSet());
 
             List<LimitedFormatPayload> limitedFormats = getLimitedFormats();
             for (DeckEntity deck : deckRepository.findAll()) {
                 if (Boolean.FALSE.equals(deck.getDeleted())) {
-                    executor.execute(() -> refreshDeck(deck, limitedFormats));
+                    executor.execute(() -> refreshIndex(deck.getId(), limitedFormats));
                     currentKeys.remove(deck.getId());
                 }
             }
             if (!currentKeys.isEmpty()) {
                 log.warn("Deleting from index decks {}", currentKeys);
                 for (String deleteKeys : currentKeys) {
-                    deleteDeck(deleteKeys);
+                    refreshIndex(deleteKeys, limitedFormats);
                 }
             }
         } finally {
@@ -144,39 +155,94 @@ public class DeckIndex {
     }
 
     public void refreshIndex(String deckId) {
-        Optional<DeckEntity> deck = deckRepository.findById(deckId);
-        if (deck.isPresent() && Boolean.FALSE.equals(deck.get().getDeleted())) {
-            refreshDeck(deck.get(), getLimitedFormats());
-        } else {
-            deleteDeck(deckId);
-        }
+        refreshIndex(deckId, getLimitedFormats());
     }
 
-    private void refreshDeck(DeckEntity deck, List<LimitedFormatPayload> limitedFormats) {
+    private void refreshIndex(String deckId, List<LimitedFormatPayload> limitedFormats) {
+        var lock = locks.get(deckId);
+        lock.lock();
         try {
-            DeckCardIndex.RefreshResult result = deckCardIndex.refreshIndex(deck.getId());
-            Deck newDeck = deckFactory.getDeck(deck, result.cards(), limitedFormats, result.modificationDate());
-            syncDeck(deck, newDeck);
+            rebuild(deckId, limitedFormats, false);
         } catch (Exception e) {
-            log.error("Error when refresh deck {}", deck.getId(), e);
+            log.error("Error when refreshing deck {}", deckId, e);
+        } finally {
+            lock.unlock();
         }
     }
 
+    /** Only detail/export requests enter this path. Full decks live in Redis, never in this index. */
+    public Deck getFull(String deckId) {
+        var lock = locks.get(deckId);
+        lock.lock();
+        try {
+            DeckSummary summary = get(deckId);
+            if (summary == null) {
+                return null;
+            }
+            try {
+                Deck cached = deckRedisRepository.findById(deckId).orElse(null);
+                if (cached != null && deckId.equals(cached.getId())) {
+                    return cached;
+                }
+            } catch (Exception e) {
+                log.warn("Deck payload cache read failed for {}: {}", deckId, e.toString());
+            }
+            return rebuild(deckId, getLimitedFormats(), true);
+        } finally {
+            lock.unlock();
+        }
+    }
 
-    private synchronized void syncDeck(DeckEntity deck, Deck newDeck) {
-        Deck oldDeck = get(deck.getId());
-        if (oldDeck != null && !oldDeck.equals(newDeck)) {
-            decks.update(Lists.newArrayList(oldDeck), Lists.newArrayList(newDeck));
+    private Deck rebuild(String deckId, List<LimitedFormatPayload> limitedFormats, boolean cachePayload) {
+        Optional<DeckEntity> entity = deckRepository.findById(deckId);
+        if (entity.isEmpty() || !Boolean.FALSE.equals(entity.get().getDeleted())) {
+            deleteDeck(deckId);
+            return null;
+        }
+        DeckCardIndex.RefreshResult cards = deckCardIndex.refreshIndex(deckId);
+        Deck full = deckFactory.getDeck(entity.get(), cards.cards(), limitedFormats, cards.modificationDate());
+        DeckSummary summary = DeckSummary.from(full);
+        syncDeck(summary);
+        try {
+            // @TimeToLive reads the remaining Redis TTL, so refreshes do not renew it.
+            long ttl = cachePayload ? Math.max(1L, cacheTtl.toSeconds())
+                    : deckRedisRepository.findById(deckId).map(Deck::getCacheTtl).orElse(0L);
+            if (ttl > 0) {
+                full.setCacheTtl(ttl);
+                deckRedisRepository.save(full);
+            }
+        } catch (Exception e) {
+            log.warn("Deck payload cache write failed for {}: {}", deckId, e.toString());
+            if (!cachePayload) {
+                invalidate(deckId);
+            }
+        }
+        return full;
+    }
+
+    private void syncDeck(DeckSummary summary) {
+        DeckSummary oldDeck = get(summary.getId());
+        if (oldDeck != null && !oldDeck.equals(summary)) {
+            decks.update(List.of(oldDeck), List.of(summary));
         } else if (oldDeck == null) {
-            decks.add(newDeck);
+            decks.add(summary);
         }
     }
 
-    private synchronized void deleteDeck(String deckId) {
-        Deck deck = get(deckId);
+    private void deleteDeck(String deckId) {
+        DeckSummary deck = get(deckId);
         if (deck != null) {
             decks.remove(deck);
-            deckCardIndex.removeDeck(deck.getId());
+        }
+        deckCardIndex.removeDeck(deckId);
+        invalidate(deckId);
+    }
+
+    private void invalidate(String deckId) {
+        try {
+            deckRedisRepository.deleteById(deckId);
+        } catch (Exception e) {
+            log.warn("Deck payload cache invalidation failed for {}: {}", deckId, e.toString());
         }
     }
 
@@ -186,81 +252,81 @@ public class DeckIndex {
     }
 
 
-    public Deck get(String id) {
-        Query<Deck> findByKeyQuery = equal(Deck.ID_ATTRIBUTE, id);
-        try (ResultSet<Deck> result = decks.retrieve(findByKeyQuery)) {
+    public DeckSummary get(String id) {
+        Query<DeckSummary> findByKeyQuery = equal(DeckSummary.ID_ATTRIBUTE, id);
+        try (ResultSet<DeckSummary> result = decks.retrieve(findByKeyQuery)) {
             return (!result.isEmpty()) ? result.uniqueResult() : null;
         }
     }
 
-    public ResultSet<Deck> selectAll(DeckQuery deckQuery) {
+    public ResultSet<DeckSummary> selectAll(DeckQuery deckQuery) {
         DeduplicationOption deduplication = deduplicate(DeduplicationStrategy.MATERIALIZE);
         Thresholds threshold = applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0));
         QueryOptions queryOptions;
-        Query<Deck> query = null;
+        Query<DeckSummary> query = null;
         switch (deckQuery.getOrder()) {
             case NAME:
-                queryOptions = queryOptions(orderBy(ascending(Deck.NAME_ATTRIBUTE),
-                        descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                queryOptions = queryOptions(orderBy(ascending(DeckSummary.NAME_ATTRIBUTE),
+                        descending(DeckSummary.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
             case VOTES:
-                queryOptions = queryOptions(orderBy(descending(Deck.VOTES_ATTRIBUTE),
-                        descending(Deck.RATE_ATTRIBUTE),
-                        descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                queryOptions = queryOptions(orderBy(descending(DeckSummary.VOTES_ATTRIBUTE),
+                        descending(DeckSummary.RATE_ATTRIBUTE),
+                        descending(DeckSummary.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
             case RATE:
-                queryOptions = queryOptions(orderBy(descending(Deck.RATE_ATTRIBUTE),
-                        descending(Deck.VOTES_ATTRIBUTE),
-                        descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                queryOptions = queryOptions(orderBy(descending(DeckSummary.RATE_ATTRIBUTE),
+                        descending(DeckSummary.VOTES_ATTRIBUTE),
+                        descending(DeckSummary.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
             case VIEWS:
-                queryOptions = queryOptions(orderBy(descending(Deck.VIEWS_ATTRIBUTE),
-                        descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                queryOptions = queryOptions(orderBy(descending(DeckSummary.VIEWS_ATTRIBUTE),
+                        descending(DeckSummary.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
             case COMMENTS:
-                queryOptions = queryOptions(orderBy(descending(Deck.COMMENTS_ATTRIBUTE),
-                        descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                queryOptions = queryOptions(orderBy(descending(DeckSummary.COMMENTS_ATTRIBUTE),
+                        descending(DeckSummary.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
             case MODIFIED:
-                queryOptions = queryOptions(orderBy(descending(Deck.MODIFY_DATE_ATTRIBUTE)), threshold, deduplication);
+                queryOptions = queryOptions(orderBy(descending(DeckSummary.MODIFY_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
             case OLDEST:
-                queryOptions = queryOptions(orderBy(ascending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                queryOptions = queryOptions(orderBy(ascending(DeckSummary.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
             case POPULAR:
-                queryOptions = queryOptions(orderBy(descending(Deck.VIEWS_LAST_MONTH_ATTRIBUTE),
-                                descending(Deck.VIEWS_ATTRIBUTE),
-                                descending(Deck.RATE_ATTRIBUTE),
-                                descending(Deck.CREATION_DATE_ATTRIBUTE)),
+                queryOptions = queryOptions(orderBy(descending(DeckSummary.VIEWS_LAST_MONTH_ATTRIBUTE),
+                                descending(DeckSummary.VIEWS_ATTRIBUTE),
+                                descending(DeckSummary.RATE_ATTRIBUTE),
+                                descending(DeckSummary.CREATION_DATE_ATTRIBUTE)),
                         threshold,
                         deduplication);
                 break;
             case PLAYERS:
-                queryOptions = queryOptions(orderBy(descending(Deck.PLAYERS_ATTRIBUTE),
-                        descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                queryOptions = queryOptions(orderBy(descending(DeckSummary.PLAYERS_ATTRIBUTE),
+                        descending(DeckSummary.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
             case CHEAPEST:
-                query = and(query, has(Deck.PRICE_ATTRIBUTE));
-                queryOptions = queryOptions(orderBy(ascending(Deck.PRICE_ATTRIBUTE), descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                query = and(query, has(DeckSummary.PRICE_ATTRIBUTE));
+                queryOptions = queryOptions(orderBy(ascending(DeckSummary.PRICE_ATTRIBUTE), descending(DeckSummary.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
             case EXPENSIVE:
-                query = and(query, has(Deck.PRICE_ATTRIBUTE));
-                queryOptions = queryOptions(orderBy(descending(Deck.PRICE_ATTRIBUTE), descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                query = and(query, has(DeckSummary.PRICE_ATTRIBUTE));
+                queryOptions = queryOptions(orderBy(descending(DeckSummary.PRICE_ATTRIBUTE), descending(DeckSummary.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
             case NEWEST:
             default:
-                queryOptions = queryOptions(orderBy(descending(Deck.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                queryOptions = queryOptions(orderBy(descending(DeckSummary.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
         }
-        Query<Deck> published = equal(Deck.PUBLISHED_ATTRIBUTE, true);
+        Query<DeckSummary> published = equal(DeckSummary.PUBLISHED_ATTRIBUTE, true);
         if (deckQuery.isAllDecks()) {
             // Skip published and type filters — returns every non-deleted deck in the index
-            query = and(query, all(Deck.class));
+            query = and(query, all(DeckSummary.class));
         } else if (deckQuery.getUserId() != null) {
             query = and(query, or(
-                    published, // Deck is public
+                    published, // DeckSummary is public
                     or(
-                            equal(Deck.USER_ATTRIBUTE, deckQuery.getUserId()), // Deck is owned by requesting user
-                            in(Deck.FAVORITE_MULTI_ATTRIBUTE, deckQuery.getUserId()) // Deck is bookmarked by requesting user
+                            equal(DeckSummary.USER_ATTRIBUTE, deckQuery.getUserId()), // DeckSummary is owned by requesting user
+                            in(DeckSummary.FAVORITE_MULTI_ATTRIBUTE, deckQuery.getUserId()) // DeckSummary is bookmarked by requesting user
                     )
             ));
         } else {
@@ -269,9 +335,9 @@ public class DeckIndex {
         if (deckQuery.getUsername() != null) {
             UserEntity filterUser = userRepository.findByUsername(deckQuery.getUsername());
             if (filterUser != null) {
-                query = and(query, equal(Deck.USER_ATTRIBUTE, filterUser.getId()));
+                query = and(query, equal(DeckSummary.USER_ATTRIBUTE, filterUser.getId()));
             } else {
-                query = and(query, equal(Deck.USER_ATTRIBUTE, -1));
+                query = and(query, equal(DeckSummary.USER_ATTRIBUTE, -1));
             }
         }
         if (deckQuery.getCards() != null && !deckQuery.getCards().isEmpty()) {
@@ -280,7 +346,7 @@ public class DeckIndex {
                 Integer cardNumber = card.getValue();
                 query = and(query, existsIn(
                         deckCardIndex.getRepository(),
-                        Deck.ID_ATTRIBUTE,
+                        DeckSummary.ID_ATTRIBUTE,
                         DeckCard.DECK_ID_ATTRIBUTE,
                         QueryFactory.and(in(DeckCard.CARD_ID_ATTRIBUTE, cardId),
                                 greaterThanOrEqualTo(DeckCard.NUMBER_ATTRIBUTE, cardNumber))));
@@ -289,17 +355,17 @@ public class DeckIndex {
         if (CollectionUtils.isNotEmpty(deckQuery.getExcludedCards())) {
             query = and(query, not(existsIn(
                     deckCardIndex.getRepository(),
-                    Deck.ID_ATTRIBUTE,
+                    DeckSummary.ID_ATTRIBUTE,
                     DeckCard.DECK_ID_ATTRIBUTE,
                     in(DeckCard.CARD_ID_ATTRIBUTE, deckQuery.getExcludedCards()))));
         }
         if (deckQuery.getMinPrice() != null || deckQuery.getMaxPrice() != null) {
-            query = and(query, has(Deck.PRICE_ATTRIBUTE));
+            query = and(query, has(DeckSummary.PRICE_ATTRIBUTE));
             if (deckQuery.getMinPrice() != null) {
-                query = and(query, greaterThanOrEqualTo(Deck.PRICE_ATTRIBUTE, deckQuery.getMinPrice()));
+                query = and(query, greaterThanOrEqualTo(DeckSummary.PRICE_ATTRIBUTE, deckQuery.getMinPrice()));
             }
             if (deckQuery.getMaxPrice() != null) {
-                query = and(query, lessThanOrEqualTo(Deck.PRICE_ATTRIBUTE, deckQuery.getMaxPrice()));
+                query = and(query, lessThanOrEqualTo(DeckSummary.PRICE_ATTRIBUTE, deckQuery.getMaxPrice()));
             }
         }
         if (StringUtils.isNotBlank(deckQuery.getCardText())) {
@@ -316,211 +382,211 @@ public class DeckIndex {
             }
             query = and(query, existsIn(
                     deckCardIndex.getRepository(),
-                    Deck.ID_ATTRIBUTE,
+                    DeckSummary.ID_ATTRIBUTE,
                     DeckCard.DECK_ID_ATTRIBUTE,
                     in(DeckCard.CARD_ID_ATTRIBUTE, ids)));
         }
         if (deckQuery.isStarVampire()) {
             query = and(query, existsIn(
                     deckCardIndex.getRepository(),
-                    Deck.ID_ATTRIBUTE,
+                    DeckSummary.ID_ATTRIBUTE,
                     DeckCard.DECK_ID_ATTRIBUTE,
                     QueryFactory.and(equal(DeckCard.IS_CRYPT_ATTRIBUTE, true), greaterThanOrEqualTo(DeckCard.NUMBER_ATTRIBUTE, CRYPT_MAIN_MIN_NUMBER))));
         }
         if (CollectionUtils.isNotEmpty(deckQuery.getClans())) {
             if (deckQuery.isClanAny()) {
-                Query<Deck> clanQuery = null;
+                Query<DeckSummary> clanQuery = null;
                 for (String clan : deckQuery.getClans()) {
-                    clanQuery = or(clanQuery, in(Deck.CLAN_MULTI_ATTRIBUTE, clan));
+                    clanQuery = or(clanQuery, in(DeckSummary.CLAN_MULTI_ATTRIBUTE, clan));
                 }
                 query = and(query, clanQuery);
             } else {
                 for (String clan : deckQuery.getClans()) {
-                    query = and(query, in(Deck.CLAN_MULTI_ATTRIBUTE, clan));
+                    query = and(query, in(DeckSummary.CLAN_MULTI_ATTRIBUTE, clan));
                 }
             }
         }
         if (CollectionUtils.isNotEmpty(deckQuery.getNotClans())) {
             for (String clan : deckQuery.getNotClans()) {
-                query = and(query, not(in(Deck.CLAN_MULTI_ATTRIBUTE, clan)));
+                query = and(query, not(in(DeckSummary.CLAN_MULTI_ATTRIBUTE, clan)));
             }
         }
         if (deckQuery.isSingleClan()) {
-            query = and(query, equal(Deck.CLAN_NUMBER_ATTRIBUTE, 1));
+            query = and(query, equal(DeckSummary.CLAN_NUMBER_ATTRIBUTE, 1));
         }
         if (CollectionUtils.isNotEmpty(deckQuery.getDisciplines())) {
             if (deckQuery.isDisciplineAny()) {
-                Query<Deck> disciplineQuery = null;
+                Query<DeckSummary> disciplineQuery = null;
                 for (String discipline : deckQuery.getDisciplines()) {
-                    disciplineQuery = or(disciplineQuery, in(Deck.DISCIPLINE_MULTI_ATTRIBUTE, discipline));
+                    disciplineQuery = or(disciplineQuery, in(DeckSummary.DISCIPLINE_MULTI_ATTRIBUTE, discipline));
                 }
                 query = and(query, disciplineQuery);
             } else {
                 for (String discipline : deckQuery.getDisciplines()) {
-                    query = and(query, in(Deck.DISCIPLINE_MULTI_ATTRIBUTE, discipline));
+                    query = and(query, in(DeckSummary.DISCIPLINE_MULTI_ATTRIBUTE, discipline));
                 }
             }
         }
         if (CollectionUtils.isNotEmpty(deckQuery.getNotDisciplines())) {
             for (String discipline : deckQuery.getNotDisciplines()) {
-                query = and(query, not(in(Deck.DISCIPLINE_MULTI_ATTRIBUTE, discipline)));
+                query = and(query, not(in(DeckSummary.DISCIPLINE_MULTI_ATTRIBUTE, discipline)));
             }
         }
         if (deckQuery.isSingleDiscipline()) {
-            query = and(query, equal(Deck.DISCIPLINE_NUMBER_ATTRIBUTE, 1));
+            query = and(query, equal(DeckSummary.DISCIPLINE_NUMBER_ATTRIBUTE, 1));
         }
         if (deckQuery.getCryptSizeMin() != null) {
-            query = and(query, greaterThanOrEqualTo(Deck.CRYPT_SIZE_ATTRIBUTE, deckQuery.getCryptSizeMin()));
+            query = and(query, greaterThanOrEqualTo(DeckSummary.CRYPT_SIZE_ATTRIBUTE, deckQuery.getCryptSizeMin()));
         }
         if (deckQuery.getCryptSizeMax() != null) {
-            query = and(query, lessThanOrEqualTo(Deck.CRYPT_SIZE_ATTRIBUTE, deckQuery.getCryptSizeMax()));
+            query = and(query, lessThanOrEqualTo(DeckSummary.CRYPT_SIZE_ATTRIBUTE, deckQuery.getCryptSizeMax()));
         }
         if (deckQuery.getLibrarySizeMin() != null) {
-            query = and(query, greaterThanOrEqualTo(Deck.LIBRARY_SIZE_ATTRIBUTE, deckQuery.getLibrarySizeMin()));
+            query = and(query, greaterThanOrEqualTo(DeckSummary.LIBRARY_SIZE_ATTRIBUTE, deckQuery.getLibrarySizeMin()));
         }
         if (deckQuery.getLibrarySizeMax() != null) {
-            query = and(query, lessThanOrEqualTo(Deck.LIBRARY_SIZE_ATTRIBUTE, deckQuery.getLibrarySizeMax()));
+            query = and(query, lessThanOrEqualTo(DeckSummary.LIBRARY_SIZE_ATTRIBUTE, deckQuery.getLibrarySizeMax()));
         }
         if (deckQuery.getType() != null) {
             if (deckQuery.getUserId() != null && deckQuery.getType() == DeckType.USER) {
-                query = and(query, equal(Deck.USER_ATTRIBUTE, deckQuery.getUserId()));
+                query = and(query, equal(DeckSummary.USER_ATTRIBUTE, deckQuery.getUserId()));
             } else {
-                query = and(query, equal(Deck.TYPE_ATTRIBUTE, deckQuery.getType()));
+                query = and(query, equal(DeckSummary.TYPE_ATTRIBUTE, deckQuery.getType()));
             }
         } else {
-            query = and(query, in(Deck.TYPE_ATTRIBUTE, ALL_DECK_TYPES));
+            query = and(query, in(DeckSummary.TYPE_ATTRIBUTE, ALL_DECK_TYPES));
         }
         if (deckQuery.getName() != null) {
-            query = and(query, contains(Deck.NAME_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getName())));
+            query = and(query, contains(DeckSummary.NAME_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getName())));
         }
         if (deckQuery.getAuthor() != null) {
             if (Boolean.TRUE.equals(deckQuery.getExactAuthor())) {
-                query = and(query, equal(Deck.AUTHOR_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getAuthor())));
+                query = and(query, equal(DeckSummary.AUTHOR_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getAuthor())));
             } else {
-                query = and(query, contains(Deck.AUTHOR_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getAuthor())));
+                query = and(query, contains(DeckSummary.AUTHOR_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getAuthor())));
             }
         }
         if (StringUtils.isNotBlank(deckQuery.getTournament())) {
-            query = and(query, contains(Deck.TOURNAMENT_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getTournament())));
+            query = and(query, contains(DeckSummary.TOURNAMENT_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getTournament())));
         }
         if (StringUtils.isNotBlank(deckQuery.getPlace())) {
             String place = StringUtils.lowerCase(deckQuery.getPlace());
-            query = and(query, or(contains(Deck.PLACE_ATTRIBUTE, place), contains(Deck.COUNTRY_ATTRIBUTE, place)));
+            query = and(query, or(contains(DeckSummary.PLACE_ATTRIBUTE, place), contains(DeckSummary.COUNTRY_ATTRIBUTE, place)));
         }
         if (CollectionUtils.isNotEmpty(deckQuery.getRounds())) {
-            query = and(query, in(Deck.ROUNDS_ATTRIBUTE, deckQuery.getRounds()));
+            query = and(query, in(DeckSummary.ROUNDS_ATTRIBUTE, deckQuery.getRounds()));
         }
         if (deckQuery.getGroup() != null) {
-            Query<Deck> groupQuery = null;
+            Query<DeckSummary> groupQuery = null;
             for (Integer group : deckQuery.getGroup()) {
-                groupQuery = or(groupQuery, in(Deck.GROUP_MULTI_ATTRIBUTE, group));
+                groupQuery = or(groupQuery, in(DeckSummary.GROUP_MULTI_ATTRIBUTE, group));
             }
             query = and(query, groupQuery);
         }
         if (deckQuery.getMaxYear() != null) {
-            query = and(query, lessThanOrEqualTo(Deck.YEAR_ATTRIBUTE, deckQuery.getMaxYear()));
+            query = and(query, lessThanOrEqualTo(DeckSummary.YEAR_ATTRIBUTE, deckQuery.getMaxYear()));
         }
         if (deckQuery.getMinYear() != null) {
-            query = and(query, greaterThanOrEqualTo(Deck.YEAR_ATTRIBUTE, deckQuery.getMinYear()));
+            query = and(query, greaterThanOrEqualTo(DeckSummary.YEAR_ATTRIBUTE, deckQuery.getMinYear()));
         }
         if (deckQuery.getMaxPlayers() != null) {
-            query = and(query, lessThanOrEqualTo(Deck.PLAYERS_ATTRIBUTE, deckQuery.getMaxPlayers()));
+            query = and(query, lessThanOrEqualTo(DeckSummary.PLAYERS_ATTRIBUTE, deckQuery.getMaxPlayers()));
         }
         if (deckQuery.getMinPlayers() != null) {
-            query = and(query, greaterThanOrEqualTo(Deck.PLAYERS_ATTRIBUTE, deckQuery.getMinPlayers()));
+            query = and(query, greaterThanOrEqualTo(DeckSummary.PLAYERS_ATTRIBUTE, deckQuery.getMinPlayers()));
         }
         if (deckQuery.getMaster() != null) {
             if (deckQuery.getProportionType() == DeckQuery.ProportionType.ABSOLUTE) {
-                query = and(query, cardPercentage(deckQuery.getMaster(), Deck.MASTER_ABSOLUTE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getMaster(), DeckSummary.MASTER_ABSOLUTE_ATTRIBUTE));
             } else {
-                query = and(query, cardPercentage(deckQuery.getMaster(), Deck.MASTER_PERCENTAGE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getMaster(), DeckSummary.MASTER_PERCENTAGE_ATTRIBUTE));
             }
         }
         if (deckQuery.getAction() != null) {
             if (deckQuery.getProportionType() == DeckQuery.ProportionType.ABSOLUTE) {
-                query = and(query, cardPercentage(deckQuery.getAction(), Deck.ACTION_ABSOLUTE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getAction(), DeckSummary.ACTION_ABSOLUTE_ATTRIBUTE));
             } else {
-                query = and(query, cardPercentage(deckQuery.getAction(), Deck.ACTION_PERCENTAGE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getAction(), DeckSummary.ACTION_PERCENTAGE_ATTRIBUTE));
             }
         }
         if (deckQuery.getPolitical() != null) {
             if (deckQuery.getProportionType() == DeckQuery.ProportionType.ABSOLUTE) {
-                query = and(query, cardPercentage(deckQuery.getPolitical(), Deck.POLITICAL_ABSOLUTE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getPolitical(), DeckSummary.POLITICAL_ABSOLUTE_ATTRIBUTE));
             } else {
-                query = and(query, cardPercentage(deckQuery.getPolitical(), Deck.POLITICAL_PERCENTAGE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getPolitical(), DeckSummary.POLITICAL_PERCENTAGE_ATTRIBUTE));
             }
         }
         if (deckQuery.getRetainer() != null) {
             if (deckQuery.getProportionType() == DeckQuery.ProportionType.ABSOLUTE) {
-                query = and(query, cardPercentage(deckQuery.getRetainer(), Deck.RETAINER_ABSOLUTE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getRetainer(), DeckSummary.RETAINER_ABSOLUTE_ATTRIBUTE));
             } else {
-                query = and(query, cardPercentage(deckQuery.getRetainer(), Deck.RETAINER_PERCENTAGE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getRetainer(), DeckSummary.RETAINER_PERCENTAGE_ATTRIBUTE));
             }
         }
         if (deckQuery.getEquipment() != null) {
             if (deckQuery.getProportionType() == DeckQuery.ProportionType.ABSOLUTE) {
-                query = and(query, cardPercentage(deckQuery.getEquipment(), Deck.EQUIPMENT_ABSOLUTE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getEquipment(), DeckSummary.EQUIPMENT_ABSOLUTE_ATTRIBUTE));
             } else {
-                query = and(query, cardPercentage(deckQuery.getEquipment(), Deck.EQUIPMENT_PERCENTAGE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getEquipment(), DeckSummary.EQUIPMENT_PERCENTAGE_ATTRIBUTE));
             }
         }
         if (deckQuery.getAlly() != null) {
             if (deckQuery.getProportionType() == DeckQuery.ProportionType.ABSOLUTE) {
-                query = and(query, cardPercentage(deckQuery.getAlly(), Deck.ALLY_ABSOLUTE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getAlly(), DeckSummary.ALLY_ABSOLUTE_ATTRIBUTE));
             } else {
-                query = and(query, cardPercentage(deckQuery.getAlly(), Deck.ALLY_PERCENTAGE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getAlly(), DeckSummary.ALLY_PERCENTAGE_ATTRIBUTE));
             }
         }
         if (deckQuery.getModifier() != null) {
             if (deckQuery.getProportionType() == DeckQuery.ProportionType.ABSOLUTE) {
-                query = and(query, cardPercentage(deckQuery.getModifier(), Deck.MODIFIER_ABSOLUTE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getModifier(), DeckSummary.MODIFIER_ABSOLUTE_ATTRIBUTE));
             } else {
-                query = and(query, cardPercentage(deckQuery.getModifier(), Deck.MODIFIER_PERCENTAGE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getModifier(), DeckSummary.MODIFIER_PERCENTAGE_ATTRIBUTE));
             }
         }
         if (deckQuery.getCombat() != null) {
             if (deckQuery.getProportionType() == DeckQuery.ProportionType.ABSOLUTE) {
-                query = and(query, cardPercentage(deckQuery.getCombat(), Deck.COMBAT_ABSOLUTE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getCombat(), DeckSummary.COMBAT_ABSOLUTE_ATTRIBUTE));
             } else {
-                query = and(query, cardPercentage(deckQuery.getCombat(), Deck.COMBAT_PERCENTAGE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getCombat(), DeckSummary.COMBAT_PERCENTAGE_ATTRIBUTE));
             }
         }
         if (deckQuery.getReaction() != null) {
             if (deckQuery.getProportionType() == DeckQuery.ProportionType.ABSOLUTE) {
-                query = and(query, cardPercentage(deckQuery.getReaction(), Deck.REACTION_ABSOLUTE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getReaction(), DeckSummary.REACTION_ABSOLUTE_ATTRIBUTE));
             } else {
-                query = and(query, cardPercentage(deckQuery.getReaction(), Deck.REACTION_PERCENTAGE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getReaction(), DeckSummary.REACTION_PERCENTAGE_ATTRIBUTE));
             }
         }
         if (deckQuery.getEvent() != null) {
             if (deckQuery.getProportionType() == DeckQuery.ProportionType.ABSOLUTE) {
-                query = and(query, cardPercentage(deckQuery.getEvent(), Deck.EVENT_ABSOLUTE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getEvent(), DeckSummary.EVENT_ABSOLUTE_ATTRIBUTE));
             } else {
-                query = and(query, cardPercentage(deckQuery.getEvent(), Deck.EVENT_PERCENTAGE_ATTRIBUTE));
+                query = and(query, cardPercentage(deckQuery.getEvent(), DeckSummary.EVENT_PERCENTAGE_ATTRIBUTE));
             }
         }
         if (CollectionUtils.isNotEmpty(deckQuery.getTags())) {
             for (String tag : deckQuery.getTags()) {
-                query = and(query, in(Deck.TAG_MULTI_ATTRIBUTE, tag));
+                query = and(query, in(DeckSummary.TAG_MULTI_ATTRIBUTE, tag));
             }
         }
         if (deckQuery.isFavorite() && deckQuery.getUserId() != null) {
-            query = and(query, in(Deck.FAVORITE_MULTI_ATTRIBUTE, deckQuery.getUserId()));
+            query = and(query, in(DeckSummary.FAVORITE_MULTI_ATTRIBUTE, deckQuery.getUserId()));
         }
         if (deckQuery.isDetailed()) {
-            query = and(query, equal(Deck.DETAILED_ATTRIBUTE, Boolean.TRUE));
+            query = and(query, equal(DeckSummary.DETAILED_ATTRIBUTE, Boolean.TRUE));
         }
         if (deckQuery.getLimitedFormat() != null) {
-            query = and(query, contains(Deck.LIMITED_FORMAT_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getLimitedFormat())));
+            query = and(query, contains(DeckSummary.LIMITED_FORMAT_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getLimitedFormat())));
         }
         if (CollectionUtils.isNotEmpty(deckQuery.getPaths())) {
-            query = and(query, in(Deck.PATH_ATTRIBUTE, deckQuery.getPaths()));
+            query = and(query, in(DeckSummary.PATH_ATTRIBUTE, deckQuery.getPaths()));
         }
         if (deckQuery.getArchetype() != null) {
             if (deckQuery.getArchetype() == 0) {
-                query = and(query, not(has(Deck.ARCHETYPE_ATTRIBUTE)));
+                query = and(query, not(has(DeckSummary.ARCHETYPE_ATTRIBUTE)));
             } else {
-                query = and(query, equal(Deck.ARCHETYPE_ATTRIBUTE, deckQuery.getArchetype()));
+                query = and(query, equal(DeckSummary.ARCHETYPE_ATTRIBUTE, deckQuery.getArchetype()));
             }
         }
         if (deckQuery.getCreationDate() != null) {
@@ -529,7 +595,7 @@ public class DeckIndex {
                     .atZone(ZoneId.systemDefault())
                     .toInstant()
                     .toEpochMilli();
-            query = and(query, greaterThanOrEqualTo(Deck.CREATION_TIMESTAMP_ATTRIBUTE, creationTimestamp));
+            query = and(query, greaterThanOrEqualTo(DeckSummary.CREATION_TIMESTAMP_ATTRIBUTE, creationTimestamp));
         }
         if (log.isDebugEnabled()) {
             log.debug("Query {} with options {}", query, queryOptions);
@@ -538,15 +604,15 @@ public class DeckIndex {
     }
 
 
-    private Query<Deck> cardPercentage(DeckQuery.CardProportion percentage, Attribute<Deck, Integer> attributeFilter) {
+    private Query<DeckSummary> cardPercentage(DeckQuery.CardProportion percentage, Attribute<DeckSummary, Integer> attributeFilter) {
         return and(greaterThanOrEqualTo(attributeFilter, percentage.getMin()), lessThanOrEqualTo(attributeFilter, percentage.getMax()));
     }
 
-    private Query<Deck> and(Query<Deck> first, Query<Deck> second) {
+    private Query<DeckSummary> and(Query<DeckSummary> first, Query<DeckSummary> second) {
         return first != null ? QueryFactory.and(first, second) : second;
     }
 
-    private Query<Deck> or(Query<Deck> first, Query<Deck> second) {
+    private Query<DeckSummary> or(Query<DeckSummary> first, Query<DeckSummary> second) {
         return first != null ? QueryFactory.or(first, second) : second;
     }
 

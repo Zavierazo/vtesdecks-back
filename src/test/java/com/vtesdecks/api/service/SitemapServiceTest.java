@@ -1,14 +1,17 @@
 package com.vtesdecks.api.service;
 
 import com.googlecode.cqengine.resultset.ResultSet;
-import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
+import com.vtesdecks.cache.indexable.deck.DeckUser;
 import com.vtesdecks.cache.redis.entity.DeckArchetype;
 import com.vtesdecks.cache.redis.repositories.DeckArchetypeRedisRepository;
+import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.CollectionBinderRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
-import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.service.DeckService;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -19,8 +22,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -38,7 +39,7 @@ class SitemapServiceTest {
     @Mock DeckArchetypeRedisRepository archetypes;
     @Mock UserRepository users;
     @Mock CollectionBinderRepository binders;
-    @Mock ResultSet<Deck> results;
+    @Mock ResultSet<DeckSummary> results;
     @InjectMocks SitemapService service;
 
     private record User(Integer id, String username, Boolean wishlistPublicVisibility) implements UserRepository.SitemapUser {
@@ -49,19 +50,19 @@ class SitemapServiceTest {
 
     @Test
     void enumeratesPublicResourcesOnlyAndUsesReliableDates() {
-        Deck published = new Deck();
+        DeckSummary published = new DeckSummary();
         published.setId("public-deck");
         published.setPublished(true);
         UserEntity alice = new UserEntity();
         alice.setId(1);
-        published.setUser(alice);
+        published.setUser(DeckUser.builder().id(alice.getId()).username(alice.getUsername()).build());
         published.setCreationDate(LocalDateTime.of(2024, 1, 2, 0, 0));
         published.setModifyDate(LocalDateTime.of(2026, 7, 8, 12, 0));
-        Deck privateDeck = new Deck();
+        DeckSummary privateDeck = new DeckSummary();
         privateDeck.setId("private-deck");
         UserEntity bob = new UserEntity();
         bob.setId(2);
-        privateDeck.setUser(bob);
+        privateDeck.setUser(DeckUser.builder().id(bob.getId()).username(bob.getUsername()).build());
         when(decks.getDecks(any())).thenReturn(results);
         when(results.stream()).thenReturn(Stream.of(published, privateDeck, published));
         when(archetypes.findAll()).thenReturn(List.of(

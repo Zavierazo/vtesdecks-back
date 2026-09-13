@@ -1,6 +1,6 @@
 package com.vtesdecks.api.service;
 
-import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.enums.ReactionTargetType;
 import com.vtesdecks.enums.ReactionType;
 import com.vtesdecks.jpa.entity.CommentEntity;
@@ -39,7 +39,7 @@ public class ApiReactionService {
             log.warn("Reaction {} is not valid for decks (user {})", reaction, userId);
             return false;
         }
-        Deck deck = deckService.getDeck(deckId);
+        DeckSummary deck = deckService.getSummary(deckId);
         if (deck == null) {
             log.warn("Deck {} not found for reaction {} by user {}", deckId, reaction, userId);
             return false;

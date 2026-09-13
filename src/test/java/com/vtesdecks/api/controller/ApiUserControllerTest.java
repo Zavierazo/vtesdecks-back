@@ -8,23 +8,25 @@ import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.api.service.ApiUserService;
 import com.vtesdecks.api.service.UserSecurityService;
 import com.vtesdecks.cache.DeckIndex;
-import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.enums.CardPrintingPreference;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.api.ApiDecks;
-import com.vtesdecks.model.api.ApiUserSettingsResponse;
+import com.vtesdecks.model.api.ApiUser;
 import com.vtesdecks.model.api.ApiUserSettings;
+import com.vtesdecks.model.api.ApiUserSettingsResponse;
 import com.vtesdecks.service.DeckUserService;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -41,9 +43,9 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -110,7 +112,7 @@ public class ApiUserControllerTest {
         settings.setNewPassword("NewPassword1");
         when(passwordEncoder.matches("current-password", "old-hash")).thenReturn(true);
         when(passwordEncoder.encode("NewPassword1")).thenReturn("new-hash");
-        var authenticated = new com.vtesdecks.model.api.ApiUser();
+        var authenticated = new ApiUser();
         authenticated.setToken("replacement-jwt");
         when(userService.getAuthenticatedUser(user, List.of())).thenReturn(authenticated);
         var response = controller.changeSettings(settings);
@@ -127,7 +129,7 @@ public class ApiUserControllerTest {
         settings.setPassword("wrong");
         settings.setNewPassword("NewPassword1");
         var response = controller.changeSettings(settings);
-        org.junit.jupiter.api.Assertions.assertFalse(response.getSuccessful());
+        Assertions.assertFalse(response.getSuccessful());
         assertEquals("Test User", user.getDisplayName());
         verify(userRepository, never()).save(any());
         verify(security, never()).revoke(any());
@@ -172,7 +174,7 @@ public class ApiUserControllerTest {
     @SuppressWarnings("unchecked")
     public void shouldFilterDecksByAllAnySingleAndTournamentName() {
         DeckIndex index = new DeckIndex();
-        IndexedCollection<Deck> decks = (IndexedCollection<Deck>) ReflectionTestUtils.getField(index, "decks");
+        IndexedCollection<DeckSummary> decks = (IndexedCollection<DeckSummary>) ReflectionTestUtils.getField(index, "decks");
         decks.add(deck("brujah", Set.of("Brujah"), Set.of("Celerity", "Potence"), "Madrid Grand Prix"));
         decks.add(deck("gangrel", Set.of("Gangrel"), Set.of("Animalism", "Protean"), "Paris Open"));
         decks.add(deck("mixed", Set.of("Brujah", "Gangrel"), Set.of("Animalism", "Celerity"), null));
@@ -230,7 +232,7 @@ public class ApiUserControllerTest {
     @SuppressWarnings("unchecked")
     public void shouldFilterDecksByPlaceCountryAndRounds() {
         DeckIndex index = new DeckIndex();
-        IndexedCollection<Deck> decks = (IndexedCollection<Deck>) ReflectionTestUtils.getField(index, "decks");
+        IndexedCollection<DeckSummary> decks = (IndexedCollection<DeckSummary>) ReflectionTestUtils.getField(index, "decks");
         decks.add(event("madrid", "Madrid, Spain", "Spain", 3));
         decks.add(event("newark", "Newark (OH), USA", "United States", 2));
         decks.add(event("online", "Online", null, null));
@@ -266,8 +268,8 @@ public class ApiUserControllerTest {
         assertEquals(List.of(2, 3), query.getRounds());
     }
 
-    private Deck event(String id, String place, String country, Integer rounds) {
-        Deck deck = deck(id, Set.of("Brujah"), Set.of("Celerity"), "Event " + id);
+    private DeckSummary event(String id, String place, String country, Integer rounds) {
+        DeckSummary deck = deck(id, Set.of("Brujah"), Set.of("Celerity"), "Event " + id);
         deck.setPlace(place);
         deck.setCountry(country);
         deck.setRounds(rounds);
@@ -275,13 +277,13 @@ public class ApiUserControllerTest {
     }
 
     private List<String> ids(DeckIndex index, DeckQuery query) {
-        try (ResultSet<Deck> result = index.selectAll(query)) {
-            return result.stream().map(Deck::getId).toList();
+        try (ResultSet<DeckSummary> result = index.selectAll(query)) {
+            return result.stream().map(DeckSummary::getId).toList();
         }
     }
 
-    private Deck deck(String id, Set<String> clans, Set<String> disciplines, String tournament) {
-        Deck deck = new Deck();
+    private DeckSummary deck(String id, Set<String> clans, Set<String> disciplines, String tournament) {
+        DeckSummary deck = new DeckSummary();
         deck.setId(id);
         deck.setName(id);
         deck.setPublished(true);

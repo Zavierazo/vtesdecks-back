@@ -1,8 +1,8 @@
 package com.vtesdecks.cache;
 
 import com.googlecode.cqengine.IndexedCollection;
-import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.DeckCard;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.Stats;
 import com.vtesdecks.model.DeckQuery;
@@ -32,7 +32,7 @@ class DeckIndexTest {
         DeckCardIndex cards = new DeckCardIndex();
         cards.setUp();
         ReflectionTestUtils.setField(index, "deckCardIndex", cards);
-        IndexedCollection<Deck> decks = (IndexedCollection<Deck>) ReflectionTestUtils.getField(index, "decks");
+        IndexedCollection<DeckSummary> decks = (IndexedCollection<DeckSummary>) ReflectionTestUtils.getField(index, "decks");
         for (int number = 1; number <= 4; number++) {
             decks.add(deck(number));
             cards.getRepository().add(DeckCard.builder()
@@ -88,9 +88,9 @@ class DeckIndexTest {
     @Test
     @SuppressWarnings("unchecked")
     void popularSortPreservesTieBreakersAndIndexUpdates() {
-        IndexedCollection<Deck> decks = (IndexedCollection<Deck>) ReflectionTestUtils.getField(index, "decks");
+        IndexedCollection<DeckSummary> decks = (IndexedCollection<DeckSummary>) ReflectionTestUtils.getField(index, "decks");
         for (int number = 1; number <= 3; number++) {
-            Deck replacement = deck(number);
+            DeckSummary replacement = deck(number);
             replacement.setViewsLastMonth(0L);
             replacement.setViews(10L);
             replacement.setRate(null);
@@ -98,7 +98,7 @@ class DeckIndexTest {
         }
         DeckQuery query = DeckQuery.builder().order(DeckSort.POPULAR).build();
         assertEquals(List.of("deck-3", "deck-2", "deck-1"), ids(query));
-        Deck replacement = deck(1);
+        DeckSummary replacement = deck(1);
         replacement.setViewsLastMonth(0L);
         replacement.setViews(11L);
         decks.update(List.of(index.get(replacement.getId())), List.of(replacement));
@@ -109,12 +109,12 @@ class DeckIndexTest {
 
     private List<String> ids(DeckQuery query) {
         try (var result = index.selectAll(query)) {
-            return result.stream().map(Deck::getId).toList();
+            return result.stream().map(DeckSummary::getId).toList();
         }
     }
 
-    private Deck deck(int number) {
-        Deck deck = new Deck();
+    private DeckSummary deck(int number) {
+        DeckSummary deck = new DeckSummary();
         deck.setId("deck-" + number);
         deck.setName("Deck " + number);
         deck.setType(DeckType.COMMUNITY);

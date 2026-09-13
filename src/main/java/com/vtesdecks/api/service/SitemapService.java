@@ -1,7 +1,7 @@
 package com.vtesdecks.api.service;
 
 import com.googlecode.cqengine.resultset.ResultSet;
-import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.redis.entity.DeckArchetype;
 import com.vtesdecks.cache.redis.repositories.DeckArchetypeRedisRepository;
 import com.vtesdecks.jpa.repositories.CollectionBinderRepository;
@@ -9,6 +9,9 @@ import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.service.DeckService;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -16,9 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriUtils;
 
-import javax.xml.stream.XMLOutputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -56,8 +56,8 @@ public class SitemapService {
         Set<Integer> publicDeckOwners = new HashSet<>();
         STATIC_PAGES.forEach(path -> add(entries, path, null));
         // The anonymous ALL query reuses the index's published/non-deleted visibility rules.
-        try (ResultSet<Deck> decks = deckService.getDecks(DeckQuery.builder().apiType(ApiDeckType.ALL).build())) {
-            decks.stream().filter(Deck::isPublished).forEach(deck -> {
+        try (ResultSet<DeckSummary> decks = deckService.getDecks(DeckQuery.builder().apiType(ApiDeckType.ALL).build())) {
+            decks.stream().filter(DeckSummary::isPublished).forEach(deck -> {
                 add(entries, "/deck/" + segment(deck.getId()),
                         deck.getModifyDate() != null ? deck.getModifyDate() : deck.getCreationDate());
                 if (deck.getUser() != null && deck.getUser().getId() != null) {

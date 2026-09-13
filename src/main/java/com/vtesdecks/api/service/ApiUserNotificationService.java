@@ -3,7 +3,7 @@ package com.vtesdecks.api.service;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.vtesdecks.api.mapper.ApiUserNotificationMapper;
 import com.vtesdecks.api.util.ApiUtils;
-import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.enums.UserNotificationType;
 import com.vtesdecks.jpa.entity.CommentEntity;
 import com.vtesdecks.jpa.entity.DeckEntity;
@@ -18,8 +18,8 @@ import com.vtesdecks.service.DeckService;
 import com.vtesdecks.service.push.WebPushDeliveryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -90,7 +90,7 @@ public class ApiUserNotificationService {
     }
 
     public void processCommentNotification(String deckId, CommentEntity comment, List<CommentEntity> commentList) {
-        Deck deck = deckService.getDeck(deckId);
+        DeckSummary deck = deckService.getSummary(deckId);
         if (deck != null) {
             /* Case 1: Notify deck owner
              *  Exceptions:
@@ -113,7 +113,7 @@ public class ApiUserNotificationService {
         }
     }
 
-    private void addCommentNotification(CommentEntity comment, Deck deck, Integer notifyUserId) {
+    private void addCommentNotification(CommentEntity comment, DeckSummary deck, Integer notifyUserId) {
         UserNotificationEntity userNotification = new UserNotificationEntity();
         userNotification.setUser(notifyUserId);
         userNotification.setReferenceId(String.valueOf(comment.getId()));

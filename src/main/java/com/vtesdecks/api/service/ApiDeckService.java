@@ -3,10 +3,11 @@ package com.vtesdecks.api.service;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.ApiDeckMapper;
 import com.vtesdecks.api.util.ApiUtils;
+import com.vtesdecks.cache.DeckCardIndex;
 import com.vtesdecks.cache.factory.DeckFactory;
 import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.deck.DeckType;
-import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.cache.redis.entity.DeckTags;
 import com.vtesdecks.cache.redis.repositories.DeckTagsRepository;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
@@ -42,6 +43,9 @@ import java.util.stream.Stream;
 @Service
 public class ApiDeckService {
     @Autowired
+    private DeckCardIndex deckCardIndex;
+
+    @Autowired
     private DeckService deckService;
     @Autowired
     private ApiDeckMapper mapper;
@@ -61,14 +65,14 @@ public class ApiDeckService {
     private UserRepository userRepository;
 
     public ApiDeck getDeck(String deckId, boolean detailed, boolean collectionTracker, String currencyCode) {
-        Deck deck = deckService.getDeck(deckId);
+        DeckSummary deck = detailed ? deckService.getDeck(deckId) : deckService.getSummary(deckId);
         if (deck == null) {
             return null;
         }
         Integer userId = ApiUtils.extractUserId();
         ApiDeck apiDeck;
         if (detailed) {
-            apiDeck = mapper.map(deck, userId, collectionTracker, currencyCode);
+            apiDeck = mapper.map((Deck) deck, userId, collectionTracker, currencyCode);
         } else {
             apiDeck = mapper.mapSummary(deck, userId, null, currencyCode);
         }
@@ -96,9 +100,9 @@ public class ApiDeckService {
 
     private List<String> findAndCacheDeckTags() {
         Set<String> existingTags = new HashSet<>();
-        try (ResultSet<Deck> decks = deckService.getDecks(DeckQuery.builder().build())) {
+        try (ResultSet<DeckSummary> decks = deckService.getDecks(DeckQuery.builder().build())) {
             decks.stream()
-                    .map(Deck::getTags)
+                    .map(DeckSummary::getTags)
                     .filter(Objects::nonNull)
                     .forEach(existingTags::addAll);
         }
@@ -114,12 +118,12 @@ public class ApiDeckService {
     }
 
     public ApiDecks getDecks(DeckQuery deckQuery, Integer collectionPercentage, String bySimilarity, String currencyCode, int offset, int limit) {
-        ResultSet<Deck> decks = deckService.getDecks(deckQuery);
+        ResultSet<DeckSummary> decks = deckService.getDecks(deckQuery);
         ApiDecks apiDecks = new ApiDecks();
         apiDecks.setOffset(offset);
         apiDecks.setCurrency(currencyCode);
 
-        Stream<Deck> deckStream = decks.stream();
+        Stream<DeckSummary> deckStream = decks.stream();
         boolean filteredInMemory = false;
         // Filter by collection percentage
         if (collectionPercentage != null && collectionPercentage > 0) {
@@ -129,12 +133,12 @@ public class ApiDeckService {
         }
         // Sort by similarity if requested
         if (bySimilarity != null) {
-            Deck queryDeck = deckService.getDeck(bySimilarity);
+            DeckSummary queryDeck = deckService.getSummary(bySimilarity);
             if (queryDeck != null) {
-                Map<Integer, Integer> queryVector = CosineSimilarityUtils.getVector(queryDeck);
+                Map<Integer, Integer> queryVector = deckCardIndex.getCardCounts(queryDeck.getId());
                 deckStream = deckStream
                         .filter(target -> !target.getId().equals(bySimilarity))
-                        .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(queryDeck, queryVector, target, CosineSimilarityUtils.getVector(target))))
+                        .map(target -> Pair.of(target, CosineSimilarityUtils.cosineSimilarity(queryDeck, queryVector, target, deckCardIndex.getCardCounts(target.getId()))))
                         .filter(pair -> pair.getValue() >= 0.5)
                         .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                         .map(Pair::getKey);
@@ -142,7 +146,7 @@ public class ApiDeckService {
             }
         }
         if (filteredInMemory) {
-            List<Deck> filteredDecks = deckStream.toList();
+            List<DeckSummary> filteredDecks = deckStream.toList();
             apiDecks.setTotal(filteredDecks.size());
             deckStream = filteredDecks.stream();
         } else {
@@ -196,31 +200,13 @@ public class ApiDeckService {
         }
     }
 
-    private boolean matchCollectionPercentage(Deck deck, Map<Integer, Integer> collectionMap, Integer collectionPercentage) {
+    private boolean matchCollectionPercentage(DeckSummary deck, Map<Integer, Integer> collectionMap, Integer collectionPercentage) {
         int totalCards = 0;
         int collectionCards = 0;
-        if (deck.getCrypt() != null) {
-            for (Card card : deck.getCrypt()) {
-                if (card.getNumber() != null && card.getNumber() > 0) {
-                    totalCards += card.getNumber();
-                    if (collectionMap.containsKey(card.getId())) {
-                        collectionCards += Math.min(card.getNumber(), collectionMap.get(card.getId()));
-                    }
-                }
-            }
-        }
-        if (deck.getLibraryByType() != null) {
-            for (List<Card> cards : deck.getLibraryByType().values()) {
-                if (cards != null) {
-                    for (Card card : cards) {
-                        if (card.getNumber() != null && card.getNumber() > 0) {
-                            totalCards += card.getNumber();
-                            if (collectionMap.containsKey(card.getId())) {
-                                collectionCards += Math.min(card.getNumber(), collectionMap.get(card.getId()));
-                            }
-                        }
-                    }
-                }
+        for (var card : deckCardIndex.getByDeckId(deck.getId())) {
+            if (card.getNumber() != null && card.getNumber() > 0) {
+                totalCards += card.getNumber();
+                collectionCards += Math.min(card.getNumber(), collectionMap.getOrDefault(card.getId(), 0));
             }
         }
         return totalCards > 0 && (collectionCards * 100 / totalCards) >= collectionPercentage;

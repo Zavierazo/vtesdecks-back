@@ -1,7 +1,8 @@
 package com.vtesdecks.service.impl;
 
 import com.googlecode.cqengine.resultset.ResultSet;
-import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.api.service.AchievementService;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
@@ -10,7 +11,6 @@ import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.service.DeckService;
 import com.vtesdecks.service.DeckUserService;
-import com.vtesdecks.api.service.AchievementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -71,7 +71,7 @@ public class DeckUserServiceImpl implements DeckUserService {
             }
             if (updated) {
                 messageProducer.publishDeckSync(deckId);
-                Deck deck = deckService.getDeck(deckId);
+                DeckSummary deck = deckService.getSummary(deckId);
                 if (deck != null && deck.getUser() != null) {
                     achievementService.activity(deck.getUser().getId());
                 }
@@ -83,7 +83,7 @@ public class DeckUserServiceImpl implements DeckUserService {
 
     @Override
     public void refreshUserDecks(Integer userId) {
-        ResultSet<Deck> deckUsers = deckService.getDecks(DeckQuery
+        ResultSet<DeckSummary> deckUsers = deckService.getDecks(DeckQuery
                 .builder()
                 .type(DeckType.USER)
                 .order(DeckSort.NEWEST)

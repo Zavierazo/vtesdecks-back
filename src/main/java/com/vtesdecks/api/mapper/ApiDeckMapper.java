@@ -2,8 +2,10 @@ package com.vtesdecks.api.mapper;
 
 import com.vtesdecks.api.service.ApiCollectionService;
 import com.vtesdecks.api.service.ApiReactionService;
+import com.vtesdecks.cache.DeckCardIndex;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.CollectionTracker;
 import com.vtesdecks.cache.indexable.deck.card.Card;
@@ -24,18 +26,18 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import static com.vtesdecks.util.Constants.DEFAULT_CURRENCY;
-import static com.vtesdecks.util.VtesUtils.isCrypt;
 
 @Mapper(componentModel = "spring", uses = {ApiPublicUserMapper.class, ApiCardErrataMapper.class})
 public abstract class ApiDeckMapper {
 
+    @Autowired
+    private DeckCardIndex deckCardIndex;
     @Autowired
     private LibraryCache libraryCache;
     @Autowired
@@ -60,6 +62,7 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "source", ignore = true)
     @Mapping(target = "description", ignore = true)
     @Mapping(target = "crypt", ignore = true)
+    @Mapping(target = "library", ignore = true)
     @Mapping(target = "stats.cryptDisciplines", ignore = true)
     @Mapping(target = "stats.libraryDisciplines", ignore = true)
     @Mapping(target = "stats.libraryClans", ignore = true)
@@ -71,18 +74,11 @@ public abstract class ApiDeckMapper {
     @Mapping(target = "bookmarks", ignore = true)
     @Mapping(target = "user", source = "deck", qualifiedByName = "mapDeckUser")
     @Mapping(target = "reaction", source = "reaction")
-    public abstract ApiDeck mapSummary(Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode);
+    public abstract ApiDeck mapSummary(DeckSummary deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode);
 
     @Named("map")
     @AfterMapping
     protected void afterMapping(@MappingTarget ApiDeck api, Deck deck, @Context Integer userId, @Context boolean collectionTracker, @Context String currencyCode) {
-        if (deck.getLibraryByType() != null) {
-            List<ApiCard> cardList = new ArrayList<>();
-            for (Map.Entry<String, List<Card>> deckEntry : deck.getLibraryByType().entrySet()) {
-                cardList.addAll(map(deckEntry.getValue()));
-            }
-            api.setLibrary(cardList);
-        }
         if (userId != null) {
             afterMappingUser(api, userId, deck);
         }
@@ -124,7 +120,7 @@ public abstract class ApiDeckMapper {
 
     @Named("mapSummary")
     @AfterMapping
-    protected void afterMappingSummary(@MappingTarget ApiDeck api, Deck deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode) {
+    protected void afterMappingSummary(@MappingTarget ApiDeck api, DeckSummary deck, @Context Integer userId, @Context Map<Integer, Integer> cardsFilter, @Context String currencyCode) {
         if (userId != null) {
             afterMappingUser(api, userId, deck);
         }
@@ -138,26 +134,14 @@ public abstract class ApiDeckMapper {
                     .map(entry -> {
                         ApiCard apiCard = new ApiCard();
                         apiCard.setId(entry.getKey());
-                        apiCard.setNumber(0);
-                        if (isCrypt(entry.getKey())) {
-                            deck.getCrypt().stream()
-                                    .filter(card -> entry.getKey().equals(card.getId()))
-                                    .findFirst()
-                                    .ifPresent(card -> apiCard.setNumber(card.getNumber()));
-                        } else {
-                            deck.getLibraryByType().values().stream()
-                                    .flatMap(List::stream)
-                                    .filter(card -> entry.getKey().equals(card.getId()))
-                                    .findFirst()
-                                    .ifPresent(card -> apiCard.setNumber(card.getNumber()));
-                        }
+                        apiCard.setNumber(deckCardIndex.getCardNumber(deck.getId(), entry.getKey()));
                         return apiCard;
                     }).toList());
         }
         convertPriceCurrency(api.getStats(), currencyCode);
     }
 
-    private void afterMappingUser(ApiDeck api, Integer userId, Deck deck) {
+    private void afterMappingUser(ApiDeck api, Integer userId, DeckSummary deck) {
         api.setOwner(Objects.equals(userId, deck.getUser() != null ? deck.getUser().getId() : null));
         api.setFavorite(deck.getFavoriteUsers() != null && deck.getFavoriteUsers().contains(userId));
     }

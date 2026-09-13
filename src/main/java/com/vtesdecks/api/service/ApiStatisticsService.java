@@ -3,7 +3,7 @@ package com.vtesdecks.api.service;
 import com.google.common.collect.Lists;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.util.ApiUtils;
-import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.model.ApiDeckType;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
@@ -37,12 +37,12 @@ public class ApiStatisticsService {
     public ApiYearStatistic getYearStatistic(ApiDeckType type, Integer year) {
         ApiYearStatistic apiYearStatistic = new ApiYearStatistic();
 
-        ResultSet<Deck> decks = getDecks(type, year);
+        ResultSet<DeckSummary> decks = getDecks(type, year);
 
         Map<String, ApiStatistic> tags = new HashMap<>();
         Map<String, ApiStatistic> clans = new HashMap<>();
         Map<String, ApiStatistic> disciplines = new HashMap<>();
-        for (Deck deck : decks) {
+        for (DeckSummary deck : decks) {
             for (String tag : deck.getTags()) {
                 ApiStatistic apiStatistic = tags.get(tag);
                 if (apiStatistic == null) {
@@ -92,10 +92,10 @@ public class ApiStatisticsService {
 
     public List<ApiHistoricStatistic> getHistoricTagStatistic(ApiDeckType type) {
         List<ApiHistoricStatistic> apiHistoricStatistic = new ArrayList<>();
-        ResultSet<Deck> decks = getDecks(type, null);
+        ResultSet<DeckSummary> decks = getDecks(type, null);
         Map<String, Map<Integer, ApiStatistic>> years = new HashMap<>();
         Map<Integer, Integer> deckCount = new HashMap<>();
-        for (Deck deck : decks) {
+        for (DeckSummary deck : decks) {
             for (String tag : deck.getTags()) {
                 Map<Integer, ApiStatistic> yearStatistics = years.getOrDefault(tag, new HashMap<>());
                 ApiStatistic apiStatistic = yearStatistics.get(deck.getYear());
@@ -120,10 +120,10 @@ public class ApiStatisticsService {
 
     public List<ApiHistoricStatistic> getHistoricClanStatistic(ApiDeckType type) {
         List<ApiHistoricStatistic> apiHistoricStatistic = new ArrayList<>();
-        ResultSet<Deck> decks = getDecks(type, null);
+        ResultSet<DeckSummary> decks = getDecks(type, null);
         Map<String, Map<Integer, ApiStatistic>> years = new HashMap<>();
         Map<Integer, Integer> deckCount = new HashMap<>();
-        for (Deck deck : decks) {
+        for (DeckSummary deck : decks) {
             for (String clan : deck.getClans()) {
                 Map<Integer, ApiStatistic> yearStatistics = years.getOrDefault(clan, new HashMap<>());
                 ApiStatistic apiStatistic = yearStatistics.get(deck.getYear());
@@ -148,10 +148,10 @@ public class ApiStatisticsService {
 
     public List<ApiHistoricStatistic> getHistoricDisciplineStatistic(ApiDeckType type) {
         List<ApiHistoricStatistic> apiHistoricStatistic = new ArrayList<>();
-        ResultSet<Deck> decks = getDecks(type, null);
+        ResultSet<DeckSummary> decks = getDecks(type, null);
         Map<String, Map<Integer, ApiStatistic>> years = new HashMap<>();
         Map<Integer, Integer> deckCount = new HashMap<>();
-        for (Deck deck : decks) {
+        for (DeckSummary deck : decks) {
             for (String discipline : deck.getDisciplines()) {
                 Map<Integer, ApiStatistic> yearStatistics = years.getOrDefault(discipline, new HashMap<>());
                 ApiStatistic apiStatistic = yearStatistics.get(deck.getYear());
@@ -174,7 +174,7 @@ public class ApiStatisticsService {
         return apiHistoricStatistic;
     }
 
-    private ResultSet<Deck> getDecks(ApiDeckType type, Integer year) {
+    private ResultSet<DeckSummary> getDecks(ApiDeckType type, Integer year) {
         DeckQuery deckQuery = DeckQuery.builder()
                 .apiType(type)
                 .order(DeckSort.NEWEST)

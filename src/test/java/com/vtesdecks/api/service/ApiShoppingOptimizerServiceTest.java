@@ -2,10 +2,12 @@ package com.vtesdecks.api.service;
 
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.cache.CryptCache;
+import com.vtesdecks.cache.DeckCardIndex;
 import com.vtesdecks.cache.DeckIndex;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.Stats;
@@ -18,10 +20,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -50,6 +53,8 @@ public class ApiShoppingOptimizerServiceTest {
     private LibraryCache libraryCache;
     @Mock
     private CurrencyExchangeService currencyExchangeService;
+    @Mock
+    private DeckCardIndex deckCardIndex;
     @InjectMocks
     private ApiShoppingOptimizerService service;
 
@@ -119,8 +124,8 @@ public class ApiShoppingOptimizerServiceTest {
 
     private void mockPrecons(Deck... decks) {
         @SuppressWarnings("unchecked")
-        ResultSet<Deck> resultSet = mock(ResultSet.class);
-        when(resultSet.iterator()).thenReturn(List.of(decks).iterator());
+        ResultSet<DeckSummary> resultSet = mock(ResultSet.class);
+        when(resultSet.iterator()).thenReturn(Arrays.stream(decks).map(DeckSummary::from).toList().iterator());
         when(deckIndex.selectAll(any())).thenReturn(resultSet);
     }
 
@@ -132,12 +137,13 @@ public class ApiShoppingOptimizerServiceTest {
         Stats stats = new Stats();
         stats.setMsrp(msrp);
         deck.setStats(stats);
+        Mockito.lenient().when(deckCardIndex.getCardCounts(id)).thenReturn(cards);
         cards.forEach((cardId, number) -> {
             Card card = Card.builder().id(cardId).number(number).build();
             if (cardId >= 200000) {
                 deck.getCrypt().add(card);
             } else {
-                deck.getLibraryByType().computeIfAbsent("Master", k -> new ArrayList<>()).add(card);
+                deck.getLibrary().add(card);
             }
         });
         return deck;

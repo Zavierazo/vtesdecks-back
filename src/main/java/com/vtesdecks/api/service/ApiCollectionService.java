@@ -4,7 +4,8 @@ import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.ApiCollectionMapper;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.api.util.CardSearchUtils;
-import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.DeckCardIndex;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.jpa.entity.CollectionBinderEntity;
 import com.vtesdecks.jpa.entity.CollectionCardEntity;
@@ -32,7 +33,6 @@ import com.vtesdecks.model.api.ApiCollectionPage;
 import com.vtesdecks.model.api.ApiDecks;
 import com.vtesdecks.service.DeckService;
 import com.vtesdecks.util.Utils;
-import com.vtesdecks.util.VtesUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -42,10 +42,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -63,6 +63,8 @@ import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 @Service
 @RequiredArgsConstructor
 public class ApiCollectionService {
+    private final DeckCardIndex deckCardIndex;
+
     /** Same window as the single-card stats endpoint, which sums over the 10 newest decks containing the card. */
     private static final int MAX_STATS_DECKS = 10;
     private static final int MAX_BULK_STATS_CARDS = 500;
@@ -648,8 +650,8 @@ public class ApiCollectionService {
                     .userId(ApiUtils.extractUserId())
                     .build();
             List<ApiCollectionCardStats> statsList = new ArrayList<>(distinctCardIds.size());
-            try (ResultSet<Deck> resultSet = deckService.getDecks(deckQuery)) {
-                List<Deck> decks = resultSet.stream().toList();
+            try (ResultSet<DeckSummary> resultSet = deckService.getDecks(deckQuery)) {
+                List<DeckSummary> decks = resultSet.stream().toList();
                 for (Integer cardId : distinctCardIds) {
                     ApiCollectionCardStats stats = new ApiCollectionCardStats();
                     stats.setCardId(cardId);
@@ -657,7 +659,7 @@ public class ApiCollectionService {
                     int decksNumber = 0;
                     int trackedDecksNumber = 0;
                     int decksWithCard = 0;
-                    for (Deck deck : decks) {
+                    for (DeckSummary deck : decks) {
                         int number = getCardNumber(deck, cardId);
                         if (number > 0) {
                             decksNumber += number;
@@ -682,23 +684,8 @@ public class ApiCollectionService {
         }
     }
 
-    private static int getCardNumber(Deck deck, Integer cardId) {
-        if (VtesUtils.isCrypt(cardId)) {
-            for (Card card : deck.getCrypt()) {
-                if (cardId.equals(card.getId())) {
-                    return card.getNumber() != null ? card.getNumber() : 0;
-                }
-            }
-        } else {
-            for (List<Card> cards : deck.getLibraryByType().values()) {
-                for (Card card : cards) {
-                    if (cardId.equals(card.getId())) {
-                        return card.getNumber() != null ? card.getNumber() : 0;
-                    }
-                }
-            }
-        }
-        return 0;
+    private int getCardNumber(DeckSummary deck, Integer cardId) {
+        return deckCardIndex.getCardNumber(deck.getId(), cardId);
     }
 
     public Map<Integer, Integer> getCollectionCardsMap() {

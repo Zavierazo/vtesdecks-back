@@ -2,7 +2,9 @@ package com.vtesdecks.api.service;
 
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.ApiCollectionMapper;
+import com.vtesdecks.cache.DeckCardIndex;
 import com.vtesdecks.cache.indexable.Deck;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.jpa.entity.CollectionBinderEntity;
@@ -15,30 +17,30 @@ import com.vtesdecks.jpa.repositories.CollectionCardRepositoryCustom;
 import com.vtesdecks.jpa.repositories.CollectionRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.DeckQuery;
-import com.vtesdecks.model.api.ApiCollectionCard;
 import com.vtesdecks.model.api.ApiCollectionBinder;
+import com.vtesdecks.model.api.ApiCollectionCard;
 import com.vtesdecks.model.api.ApiCollectionCardStats;
 import com.vtesdecks.model.api.ApiCollectionPage;
 import com.vtesdecks.service.DeckService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mapstruct.factory.Mappers;
-import org.springframework.web.server.ResponseStatusException;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -90,6 +92,8 @@ public class ApiCollectionServiceTest {
     private ApiCollectionMapper apiCollectionMapper;
     @Mock
     private ApiCollectionImportService apiCollectionImportService;
+    @Mock
+    private DeckCardIndex deckCardIndex;
     @InjectMocks
     private ApiCollectionService service;
 
@@ -149,7 +153,7 @@ public class ApiCollectionServiceTest {
         }
 
         ArgumentCaptor<CollectionCardEntity> saved = ArgumentCaptor.forClass(CollectionCardEntity.class);
-        verify(collectionCardRepository, org.mockito.Mockito.times(bulk ? 2 : 1)).save(saved.capture());
+        verify(collectionCardRepository, Mockito.times(bulk ? 2 : 1)).save(saved.capture());
         for (CollectionCardEntity entity : saved.getAllValues()) {
             assertNull(entity.getId());
             assertNull(entity.getCreationDate());
@@ -392,8 +396,8 @@ public class ApiCollectionServiceTest {
 
     private void mockDecks(Deck... decks) {
         @SuppressWarnings("unchecked")
-        ResultSet<Deck> resultSet = mock(ResultSet.class);
-        when(resultSet.stream()).thenAnswer(invocation -> Stream.of(decks));
+        ResultSet<DeckSummary> resultSet = mock(ResultSet.class);
+        when(resultSet.stream()).thenAnswer(invocation -> Stream.of(decks).map(DeckSummary::from));
         when(deckService.getDecks(any(DeckQuery.class))).thenReturn(resultSet);
     }
 
@@ -402,12 +406,13 @@ public class ApiCollectionServiceTest {
         deck.setId(id);
         deck.setName(id);
         deck.setCollection(tracked);
+        Mockito.lenient().when(deckCardIndex.getCardNumber(eq(id), any())).thenAnswer(invocation -> cards.getOrDefault(invocation.getArgument(1), 0));
         cards.forEach((cardId, number) -> {
             Card card = Card.builder().id(cardId).number(number).build();
             if (cardId >= 200000) {
                 deck.getCrypt().add(card);
             } else {
-                deck.getLibraryByType().computeIfAbsent("Master", k -> new ArrayList<>()).add(card);
+                deck.getLibrary().add(card);
             }
         });
         return deck;
