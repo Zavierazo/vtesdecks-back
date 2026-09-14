@@ -5997,9 +5997,14 @@ During an action, you can lock a ready Caitiff [caitiff] you control to give ano
 "150019","Chave de Braço","","Combat","","","Potence","","","","","Grapple.
 [pot] Strike: hand strike at +2 damage.
 [POT] As above, and at the end of the round, if the range is close and this vampire has successfully inflicted more damage than the opposing minion, put this card on the opposing minion. The attached minion gets -2 strength. They can burn 2 blood or 1 life to burn this card.","","Spoiler:NB","","Carlos Díaz",""
-"150020","Hálito Negro","","Combat","","Death and the Soul","Oblivion/Thaumaturgy","","1","","","Requires a Laibon.
-[obl] or [thn] Strike: 2R damage on the opposing minion and 1R damage on all retainers on the opposing minion.
+"150020","Hálito Negro","","Combat","","Death and the Soul","Oblivion/Thaumaturgy","","1","","","[obl] or [thn] Strike: 2R damage on the opposing minion and 1R damage on all retainers on the opposing minion.
 [OBL] or [THN] Strike: 3R damage on the opposing minion and 2R damage on all retainers on the opposing minion.","","Spoiler:NB","","Anastasiia Horbunova",""
 "150021","Circulatory System Outlet","","Master","","","","","","","","Unique location.
 Hunting ground.
 During your unlock phase, a ready vampire you control with no blood can gain 1 blood. A vampire can gain blood from only one hunting ground each turn. Vampires can steal this location as a (D) action.","","Spoiler:SNY","","Kim Aldau",""
+"150022","Emboldened Councilor","","Reaction","","","","","","","","Requires a primogen.
+[REACTION] +1 intercept.
+[REACTION] Only usable by a locked primogen. This primogen unlocks and attempts to block.","","Spoiler:SNY","","Raquel Cornejo",""
+"150023","Ron Zertnert, S.A.D. Agent","","Ally","","","","2","","","","Unique mortal with 2 life. 1 strength, 1 bleed. Government.
+Ron can prevent 1 damage each combat. He can strike: 1R damage.
+If another minion you control is in combat, he can lock during the press step to inflict 1 unpreventable damage on the opposing minion.","","Spoiler:SNY","","Matheus Calza",""

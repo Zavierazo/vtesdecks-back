@@ -186,6 +186,16 @@ INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-secrets_of_new_york', 150021, 1)
 ON DUPLICATE KEY UPDATE number = 1;
 
+-- Emboldened Councilor
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-secrets_of_new_york', 150022, 4)
+ON DUPLICATE KEY UPDATE number = 4;
+
+-- Ron Zertnert, S.A.D. Agent
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-secrets_of_new_york', 150023, 1)
+ON DUPLICATE KEY UPDATE number = 1;
+
 -- Kaiser
 INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-secrets_of_new_york', 250008, 2)
@@ -249,6 +259,11 @@ ON DUPLICATE KEY UPDATE number = 2;
 -- Vritra
 INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-secrets_of_new_york', 250028, 2)
+ON DUPLICATE KEY UPDATE number = 2;
+
+-- Aisling Sturbridge
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-secrets_of_new_york', 250029, 2)
 ON DUPLICATE KEY UPDATE number = 2;
 
 -- END Spoiler:SNY / preconstructed-secrets_of_new_york
