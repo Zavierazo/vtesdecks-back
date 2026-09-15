@@ -266,4 +266,14 @@ INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-secrets_of_new_york', 250029, 2)
 ON DUPLICATE KEY UPDATE number = 2;
 
+-- Addison Payne
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-secrets_of_new_york', 250030, 2)
+ON DUPLICATE KEY UPDATE number = 2;
+
+-- Samira
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-secrets_of_new_york', 250031, 1)
+ON DUPLICATE KEY UPDATE number = 1;
+
 -- END Spoiler:SNY / preconstructed-secrets_of_new_york
