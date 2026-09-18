@@ -63,6 +63,11 @@ INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-noites_brasileiras', 150020, 3)
 ON DUPLICATE KEY UPDATE number = 3;
 
+-- Lambreta
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-noites_brasileiras', 150024, 3)
+ON DUPLICATE KEY UPDATE number = 3;
+
 -- Caique
 INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-noites_brasileiras', 250001, 1)
@@ -275,5 +280,10 @@ ON DUPLICATE KEY UPDATE number = 2;
 INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-secrets_of_new_york', 250031, 1)
 ON DUPLICATE KEY UPDATE number = 1;
+
+-- Carter Vanderweyden
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-secrets_of_new_york', 250032, 2)
+ON DUPLICATE KEY UPDATE number = 2;
 
 -- END Spoiler:SNY / preconstructed-secrets_of_new_york
