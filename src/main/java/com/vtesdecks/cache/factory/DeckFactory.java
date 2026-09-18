@@ -48,6 +48,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -159,17 +160,25 @@ public class DeckFactory {
         for (DeckCard deckCard : deckCards) {
             Card card = null;
             if (VtesUtils.isCrypt(deckCard.getId())) {
+                Crypt crypt = cryptCache.get(deckCard.getId());
+                if (crypt == null) {
+                    log.warn("Skipping missing crypt card {} when indexing deck {}", deckCard.getId(), deck.getId());
+                    continue;
+                }
                 card = new Card();
                 card.setId(deckCard.getId());
                 card.setNumber(deckCard.getNumber());
-                Crypt crypt = cryptCache.get(card.getId());
                 fillWarnings(warnings, crypt.getBanned(), crypt.getSets());
                 value.getCrypt().add(card);
             } else if (VtesUtils.isLibrary(deckCard.getId())) {
+                Library library = libraryCache.get(deckCard.getId());
+                if (library == null) {
+                    log.warn("Skipping missing library card {} when indexing deck {}", deckCard.getId(), deck.getId());
+                    continue;
+                }
                 card = new Card();
                 card.setId(deckCard.getId());
                 card.setNumber(deckCard.getNumber());
-                Library library = libraryCache.get(card.getId());
                 fillWarnings(warnings, library.getBanned(), library.getSets());
                 value.getLibrary().add(card);
             }
@@ -182,12 +191,17 @@ public class DeckFactory {
         value.getCrypt().sort(Comparator.comparingInt(Card::getNumber)
                 .thenComparingInt(card -> {
                     Crypt crypt = cryptCache.get(card.getId());
-                    return crypt.getCapacity();
+                    return crypt != null ? crypt.getCapacity() : 0;
                 }).reversed());
         // Preserve the existing type grouping and quantity order in detail responses.
-        value.setLibrary(value.getLibrary().stream()
-                .collect(Collectors.groupingBy(card -> libraryCache.get(card.getId()).getType()))
-                .values().stream()
+        Map<String, List<Card>> libraryByType = new HashMap<>();
+        for (Card card : value.getLibrary()) {
+            Library library = libraryCache.get(card.getId());
+            if (library != null) {
+                libraryByType.computeIfAbsent(library.getType(), type -> new ArrayList<>()).add(card);
+            }
+        }
+        value.setLibrary(libraryByType.values().stream()
                 .flatMap(group -> group.stream().sorted(Comparator.comparing(Card::getNumber).reversed()))
                 .collect(Collectors.toList()));
         //Other fields
@@ -196,6 +210,7 @@ public class DeckFactory {
                 .map(Card::getId)
                 .filter(VtesUtils::isCrypt)
                 .map(cryptCache::get)
+                .filter(Objects::nonNull)
                 .map(Crypt::getGroup)
                 .collect(Collectors.toSet()));
         value.setClans(cards
@@ -203,6 +218,7 @@ public class DeckFactory {
                 .map(Card::getId)
                 .filter(VtesUtils::isCrypt)
                 .map(cryptCache::get)
+                .filter(Objects::nonNull)
                 .map(Crypt::getClan)
                 .collect(Collectors.toSet()));
         value.setClanIcons(cards
@@ -210,6 +226,7 @@ public class DeckFactory {
                 .map(Card::getId)
                 .filter(VtesUtils::isCrypt)
                 .map(cryptCache::get)
+                .filter(Objects::nonNull)
                 .map(Crypt::getClan)
                 .map(VtesUtils::getClanIcon)
                 .collect(Collectors.toSet()));
@@ -217,14 +234,18 @@ public class DeckFactory {
                 cards.stream()
                         .map(Card::getId)
                         .filter(VtesUtils::isLibrary)
-                        .map(id -> libraryCache.get(id).getDisciplines())
+                        .map(libraryCache::get)
+                        .filter(Objects::nonNull)
+                        .map(Library::getDisciplines)
                         .filter(Objects::nonNull)
                         .flatMap(Collection::stream)
                         .collect(Collectors.toSet()),
                 cards.stream()
                         .map(Card::getId)
                         .filter(VtesUtils::isCrypt)
-                        .map(id -> cryptCache.get(id).getDisciplines())
+                        .map(cryptCache::get)
+                        .filter(Objects::nonNull)
+                        .map(Crypt::getDisciplines)
                         .filter(Objects::nonNull)
                         .flatMap(Collection::stream)
                         .collect(Collectors.toSet())
@@ -240,6 +261,7 @@ public class DeckFactory {
                 .map(Card::getId)
                 .filter(VtesUtils::isLibrary)
                 .map(libraryCache::get)
+                .filter(Objects::nonNull)
                 .map(Library::getPath)
                 .filter(Objects::nonNull)
                 .findAny().orElse(null));
@@ -248,6 +270,7 @@ public class DeckFactory {
                 .map(Card::getId)
                 .filter(VtesUtils::isLibrary)
                 .map(libraryCache::get)
+                .filter(Objects::nonNull)
                 .map(Library::getPathIcon)
                 .filter(Objects::nonNull)
                 .findAny().orElse(null));
@@ -363,8 +386,11 @@ public class DeckFactory {
         boolean fullPrice = true;
         for (Card card : cards) {
             if (VtesUtils.isCrypt(card.getId())) {
-                deckStats.setCrypt(deckStats.getCrypt() + card.getNumber());
                 Crypt crypt = cryptCache.get(card.getId());
+                if (crypt == null) {
+                    continue;
+                }
+                deckStats.setCrypt(deckStats.getCrypt() + card.getNumber());
                 groups.add(crypt.getCapacity());
                 fillCryptDisciplineStats(deckStats, crypt);
                 if (fullPrice && crypt.getMinPrice() != null) {
@@ -373,8 +399,11 @@ public class DeckFactory {
                     fullPrice = false;
                 }
             } else if (VtesUtils.isLibrary(card.getId())) {
-                deckStats.setLibrary(deckStats.getLibrary() + card.getNumber());
                 Library library = libraryCache.get(card.getId());
+                if (library == null) {
+                    continue;
+                }
+                deckStats.setLibrary(deckStats.getLibrary() + card.getNumber());
                 if (library.getBloodCost() != null) {
                     deckStats.setBloodCost(deckStats.getBloodCost() + (Math.max(0, library.getBloodCost()) * card.getNumber()));
                 }
@@ -564,7 +593,7 @@ public class DeckFactory {
 
     private Set<String> getDeckTags(Deck deck, List<LimitedFormatPayload> limitedFormats) {
         Map<DeckTag, BigDecimal> deckTagScore = new EnumMap<>(DeckTag.class);
-        if (!CollectionUtils.isEmpty(deck.getCrypt())) {
+        if (!CollectionUtils.isEmpty(deck.getCrypt()) && deck.getStats().getCrypt() > 0) {
             BigDecimal cryptFactor = BigDecimal.valueOf(12.0).divide(BigDecimal.valueOf(deck.getStats().getCrypt()), HALF_UP).multiply(BigDecimal.valueOf(1.5));
             for (Card card : deck.getCrypt()) {
                 Crypt crypt = cryptCache.get(card.getId());
@@ -579,7 +608,7 @@ public class DeckFactory {
                 }
             }
         }
-        if (deck.getLibrary() != null && !deck.getLibrary().isEmpty()) {
+        if (!CollectionUtils.isEmpty(deck.getLibrary()) && deck.getStats().getLibrary() > 0) {
             BigDecimal libraryFactor = BigDecimal.valueOf(90.0).divide(BigDecimal.valueOf(deck.getStats().getLibrary()), HALF_UP);
             for (Card card : deck.getLibrary()) {
                 Library library = libraryCache.get(card.getId());
@@ -629,6 +658,9 @@ public class DeckFactory {
         Set<Integer> groups = new HashSet<>();
         for (Card crypt : deck.getCrypt()) {
             Crypt cryptInfo = cryptCache.get(crypt.getId());
+            if (cryptInfo == null) {
+                continue;
+            }
             if (!isEmpty(cryptInfo.getBanned())) {
                 isValid = false;
             } else {
@@ -667,6 +699,9 @@ public class DeckFactory {
         }
         for (Card library : deck.getLibrary()) {
             Library libraryInfo = libraryCache.get(library.getId());
+            if (libraryInfo == null) {
+                continue;
+            }
             if (!isEmpty(libraryInfo.getBanned())) {
                 isValid = false;
             } else {
