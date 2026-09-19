@@ -143,6 +143,16 @@ INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-noites_brasileiras', 250027, 2)
 ON DUPLICATE KEY UPDATE number = 2;
 
+-- Caçador de Raposas
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-noites_brasileiras', 250033, 2)
+ON DUPLICATE KEY UPDATE number = 2;
+
+-- Durok
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-noites_brasileiras', 250034, 2)
+ON DUPLICATE KEY UPDATE number = 2;
+
 -- END Spoiler:NB / preconstructed-noites_brasileiras
 
 -- BEGIN Spoiler:SNY / preconstructed-secrets_of_new_york
@@ -199,6 +209,11 @@ ON DUPLICATE KEY UPDATE number = 4;
 -- Ron Zertnert, S.A.D. Agent
 INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-secrets_of_new_york', 150023, 1)
+ON DUPLICATE KEY UPDATE number = 1;
+
+-- Vial of Zapathasura's Vitae
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-secrets_of_new_york', 150025, 1)
 ON DUPLICATE KEY UPDATE number = 1;
 
 -- Kaiser
