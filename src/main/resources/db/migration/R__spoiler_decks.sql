@@ -221,6 +221,11 @@ INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-secrets_of_new_york', 150025, 1)
 ON DUPLICATE KEY UPDATE number = 1;
 
+-- Respected Representative
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-secrets_of_new_york', 150027, 2)
+ON DUPLICATE KEY UPDATE number = 2;
+
 -- Kaiser
 INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-secrets_of_new_york', 250008, 2)
@@ -304,6 +309,11 @@ ON DUPLICATE KEY UPDATE number = 1;
 -- Carter Vanderweyden
 INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-secrets_of_new_york', 250032, 2)
+ON DUPLICATE KEY UPDATE number = 2;
+
+-- Valerie Duval
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-secrets_of_new_york', 250036, 2)
 ON DUPLICATE KEY UPDATE number = 2;
 
 -- END Spoiler:SNY / preconstructed-secrets_of_new_york
