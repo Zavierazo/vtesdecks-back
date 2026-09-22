@@ -316,4 +316,9 @@ INSERT INTO deck_card (deck_id, id, number)
 VALUES ('preconstructed-secrets_of_new_york', 250036, 2)
 ON DUPLICATE KEY UPDATE number = 2;
 
+-- Elie Sansaricq
+INSERT INTO deck_card (deck_id, id, number)
+VALUES ('preconstructed-secrets_of_new_york', 250037, 1)
+ON DUPLICATE KEY UPDATE number = 1;
+
 -- END Spoiler:SNY / preconstructed-secrets_of_new_york
