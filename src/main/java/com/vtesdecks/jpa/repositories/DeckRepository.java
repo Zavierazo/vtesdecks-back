@@ -9,6 +9,8 @@ import java.util.List;
 
 public interface DeckRepository extends JpaRepository<DeckEntity, String> {
 
+    boolean existsByIdAndUser(String id, Integer user);
+
     List<DeckEntity> findByTypeAndNameContainingIgnoreCase(DeckType type, String name);
 
     @Query(value = "SELECT * FROM deck WHERE type ='COMMUNITY' AND deleted = true AND modification_date < (NOW() - INTERVAL 60 DAY)", nativeQuery = true)

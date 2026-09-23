@@ -6,6 +6,7 @@ import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
+import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
@@ -14,12 +15,15 @@ import com.vtesdecks.service.DeckUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeckUserServiceImpl implements DeckUserService {
     private final DeckUserRepository deckUserRepository;
+    private final DeckRepository deckRepository;
     private final DeckService deckService;
     private final MessageProducer messageProducer;
     private final AchievementService achievementService;
@@ -27,6 +31,7 @@ public class DeckUserServiceImpl implements DeckUserService {
     @Override
     public void rate(Integer userId, String deckId, Integer rate) {
         if (rate != null && userId != null && deckId != null) {
+            validateNotOwner(userId, deckId);
             DeckUserEntity deckUser = deckUserRepository.findById(new DeckUserEntity.DeckUserId(userId, deckId)).orElse(null);
             boolean updated = false;
             if (deckUser == null) {
@@ -53,6 +58,7 @@ public class DeckUserServiceImpl implements DeckUserService {
     @Override
     public Boolean favorite(Integer userId, String deckId, Boolean favorite) {
         if (userId != null && deckId != null && favorite != null) {
+            validateNotOwner(userId, deckId);
             DeckUserEntity deckUser = deckUserRepository.findById(new DeckUserEntity.DeckUserId(userId, deckId)).orElse(null);
             log.debug("Update favorite for {} {} to {}", userId, deckId, favorite);
             boolean updated = false;
@@ -79,6 +85,12 @@ public class DeckUserServiceImpl implements DeckUserService {
             return favorite;
         }
         return false;
+    }
+
+    private void validateNotOwner(Integer userId, String deckId) {
+        if (deckRepository.existsByIdAndUser(deckId, userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot rate or bookmark your own deck");
+        }
     }
 
     @Override

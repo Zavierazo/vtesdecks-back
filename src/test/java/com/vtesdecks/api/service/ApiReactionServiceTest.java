@@ -8,6 +8,7 @@ import com.vtesdecks.jpa.entity.CommentEntity;
 import com.vtesdecks.jpa.entity.ReactionEntity;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.CommentRepository;
+import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.ReactionRepository;
 import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.api.ApiReactionSummary;
@@ -17,6 +18,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -25,10 +30,12 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 public class ApiReactionServiceTest {
@@ -38,6 +45,8 @@ public class ApiReactionServiceTest {
 
     @Mock
     private ReactionRepository reactionRepository;
+    @Mock
+    private DeckRepository deckRepository;
     @Mock
     private CommentRepository commentRepository;
     @Mock
@@ -65,6 +74,18 @@ public class ApiReactionServiceTest {
         ReactionEntity entity = new ReactionEntity();
         entity.setId(new ReactionEntity.ReactionId(userId, ReactionTargetType.DECK, DECK_ID, type));
         return entity;
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void rejectsOwnDeckUsingDatabaseOwnershipBeforeAnySideEffects(boolean active) {
+        when(deckRepository.existsByIdAndUser(DECK_ID, OWNER_ID)).thenReturn(true);
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.reactDeck(OWNER_ID, DECK_ID, ReactionType.SPICY, active));
+
+        assertEquals(HttpStatus.FORBIDDEN, error.getStatusCode());
+        verifyNoInteractions(reactionRepository, deckService, messageProducer, achievementService);
     }
 
     @Test

@@ -104,14 +104,14 @@ public class DeckFactory {
         value.setViewsLastMonth(getViewsLastMonth(deck.getId(), views));
         value.setViews(deck.getViews() + (views != null ? views.size() : 0));
         List<DeckUserEntity> deckUsers = deckUserRepository.findEngagedByDeckId(deck.getId());
-        if (!CollectionUtils.isEmpty(deckUsers) && deckUsers.stream().anyMatch(deckUser -> isDeckRatingExcludingAuthor(deck, deckUser))) {
+        if (!CollectionUtils.isEmpty(deckUsers) && deckUsers.stream().anyMatch(deckUser -> deckUser.getRate() != null)) {
             value.setRate(Math.round(deckUsers.stream()
-                    .filter(deckUser -> isDeckRatingExcludingAuthor(deck, deckUser))
+                    .filter(deckUser -> deckUser.getRate() != null)
                     .mapToDouble(DeckUserEntity::getRate)
                     .average()
                     .getAsDouble() * 10) / 10.0);
             value.setVotes(deckUsers.stream()
-                    .filter(deckUser -> isDeckRatingExcludingAuthor(deck, deckUser))
+                    .filter(deckUser -> deckUser.getRate() != null)
                     .mapToInt(e -> 1)
                     .sum());
         } else {
@@ -331,10 +331,6 @@ public class DeckFactory {
                 }
             }
         }
-    }
-
-    private static boolean isDeckRatingExcludingAuthor(DeckEntity deck, DeckUserEntity deckUser) {
-        return deckUser.getRate() != null && (deck.getUser() == null || !deck.getUser().equals(deckUser.getId().getUser()));
     }
 
     private Long getViewsLastMonth(String deckId, List<DeckViewEntity> views) {

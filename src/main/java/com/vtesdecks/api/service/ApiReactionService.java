@@ -6,6 +6,7 @@ import com.vtesdecks.enums.ReactionType;
 import com.vtesdecks.jpa.entity.CommentEntity;
 import com.vtesdecks.jpa.entity.ReactionEntity;
 import com.vtesdecks.jpa.repositories.CommentRepository;
+import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.ReactionRepository;
 import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.api.ApiReactionSummary;
@@ -13,6 +14,8 @@ import com.vtesdecks.service.DeckService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,6 +29,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ApiReactionService {
     private final ReactionRepository reactionRepository;
+    private final DeckRepository deckRepository;
     private final CommentRepository commentRepository;
     private final DeckService deckService;
     private final MessageProducer messageProducer;
@@ -38,6 +42,9 @@ public class ApiReactionService {
         if (reaction.getTargetType() != ReactionTargetType.DECK) {
             log.warn("Reaction {} is not valid for decks (user {})", reaction, userId);
             return false;
+        }
+        if (deckRepository.existsByIdAndUser(deckId, userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot react to your own deck");
         }
         DeckSummary deck = deckService.getSummary(deckId);
         if (deck == null) {
