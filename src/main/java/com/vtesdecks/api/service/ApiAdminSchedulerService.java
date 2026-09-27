@@ -33,8 +33,8 @@ public class ApiAdminSchedulerService {
             new ApiAdminScheduler("reactions-clean", "Clean orphan reactions"),
             new ApiAdminScheduler("notifications-clean", "Clean notifications"),
             new ApiAdminScheduler("email-actions-clean", "Clean expired email action tokens"),
-            new ApiAdminScheduler("scrap-decks", "Import tournament decks"),
-            new ApiAdminScheduler("scrap-decks-eternal-vigilance", "Import Eternal Vigilance decks"),
+            new ApiAdminScheduler("twda-decks", "Import tournament decks"),
+            new ApiAdminScheduler("twda-eternal-vigilance", "Import Eternal Vigilance decks"),
             new ApiAdminScheduler("drive-thru-cards", "Synchronize DriveThruCards"),
             new ApiAdminScheduler("game-pod", "Synchronize Game Pod"),
             new ApiAdminScheduler("card-game-geek", "Synchronize Card Game Geek"),
@@ -77,8 +77,8 @@ public class ApiAdminSchedulerService {
             case "reactions-clean" -> cleanUpScheduler.reactionsCleanScheduler();
             case "notifications-clean" -> cleanUpScheduler.notificationsCleanScheduler();
             case "email-actions-clean" -> cleanUpScheduler.emailActionsCleanScheduler();
-            case "scrap-decks" -> tournamentDeckScheduler.scrappingDecks();
-            case "scrap-decks-eternal-vigilance" -> tournamentEternalVigilanceDeckScheduler.scrappingDecks();
+            case "twda-decks" -> tournamentDeckScheduler.scrappingDecks();
+            case "twda-eternal-vigilance" -> tournamentEternalVigilanceDeckScheduler.scrappingDecks();
             case "drive-thru-cards" -> driveThruCardsScheduler.scrapCards();
             case "game-pod" -> gamePodScheduler.scrapCards();
             case "card-game-geek" -> cardGameGeekScheduler.scrapCards();

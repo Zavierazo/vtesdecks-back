@@ -30,6 +30,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -58,6 +61,12 @@ public class TournamentDeckScheduler {
     private static final int MAX_RETRIES = 4;
     //Half of the archive comments start with a redundant "Description:" label
     private static final Pattern DESCRIPTION_LABEL = Pattern.compile("^\\s*description\\s*:\\s*", Pattern.CASE_INSENSITIVE);
+    private static final DateTimeFormatter TOURNAMENT_DATE_FORMAT = new DateTimeFormatterBuilder()
+            .appendPattern("yyyy-MM-dd[ HH:mm:ss]")
+            .parseDefaulting(ChronoField.HOUR_OF_DAY, 0)
+            .parseDefaulting(ChronoField.MINUTE_OF_HOUR, 0)
+            .parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)
+            .toFormatter();
 
     private final DeckRepository deckRepository;
     private final DeckCardRepository deckCardRepository;
@@ -103,8 +112,28 @@ public class TournamentDeckScheduler {
         String id = "tournament-" + source.getId();
         TwdaEvent event = source.getEvent();
         if (event == null || event.getDate() == null) {
-            log.warn("Deck {} has no event date, skipping", id);
-            return;
+            //Temporal fix for the archive: some decks have no event date. Pending Lionel fixes the archive
+            if (event != null && source.getPlayer() != null) {
+                try {
+                    event.setDate(LocalDateTime.parse(source.getPlayer(), TOURNAMENT_DATE_FORMAT).toLocalDate());
+                    String comment = source.getComment();
+                    int newLineIdx = comment != null ? comment.indexOf("\n") : -1;
+                    if (newLineIdx > 0) {
+                        source.setPlayer(comment.substring(0, newLineIdx));
+                        source.setComment(comment.substring(newLineIdx + 1));
+                    } else {
+                        source.setPlayer(comment);
+                        source.setComment(null);
+                    }
+                    log.warn("Deck {} has no event date, using player field as date: {}", id, event.getDate());
+                } catch (Exception e) {
+                    log.warn("Deck {} has no event date, skipping", id, e);
+                    return;
+                }
+            } else {
+                log.warn("Deck {} has no event date, skipping", id);
+                return;
+            }
         }
         DeckEntity actual = deckRepository.findById(id).orElse(null);
 
@@ -115,14 +144,14 @@ public class TournamentDeckScheduler {
         deck.setTournament(event.getName());
         //The archive reports 0 players when the attendance is unknown
         deck.setPlayers(event.getPlayersCount() != null && event.getPlayersCount() > 0 ? event.getPlayersCount() : null);
-        deck.setRounds(event.getRounds() != null && event.getRounds() > 0 ? event.getRounds() : null);
+        deck.setRounds(event.getRounds() != null && event.getRounds() > 0 ? Math.min(3, event.getRounds()) : null);
         deck.setPlace(StringUtils.trimToNull(event.getPlace()));
         deck.setCountry(event.getCountry() != null ? StringUtils.trimToNull(event.getCountry().getName()) : null);
         deck.setYear(event.getDate().getYear());
         deck.setAuthor(source.getPlayer());
         deck.setUrl(StringUtils.isNotBlank(event.getUrl()) ? event.getUrl() : null);
         deck.setViews(actual != null ? actual.getViews() : 0);
-        deck.setVerified(actual != null ? actual.getVerified() : false);
+        deck.setVerified(actual != null && actual.getVerified());
         String name = source.getName();
         if (StringUtils.isBlank(name) && actual != null && StringUtils.isNotBlank(actual.getName())) {
             //The archive has no name for this deck: keep the existing one instead of autogenerating it
@@ -348,15 +377,15 @@ public class TournamentDeckScheduler {
             }
         }
         //A deck stable for a month is promoted to verified, locking it against future scans
-        if (!insert && !changed && isUnmodifiedForAMonth(actual, dbCards)) {
+        if (!insert && !changed && isUnmodifiedForTwoMonth(actual, dbCards)) {
             deck.setVerified(true);
             deckRepository.saveAndFlush(deck);
             log.info("Auto-verified deck {} unmodified for a month", deck.getId());
         }
     }
 
-    private boolean isUnmodifiedForAMonth(DeckEntity actual, List<DeckCardEntity> dbCards) {
-        LocalDateTime threshold = LocalDateTime.now().minusMonths(1);
+    private boolean isUnmodifiedForTwoMonth(DeckEntity actual, List<DeckCardEntity> dbCards) {
+        LocalDateTime threshold = LocalDateTime.now().minusMonths(2);
         if (actual.getModificationDate() == null || !actual.getModificationDate().isBefore(threshold)) {
             return false;
         }
