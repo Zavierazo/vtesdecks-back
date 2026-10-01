@@ -44,6 +44,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -78,6 +80,7 @@ public class ApiDeckBuilderService {
     private final DeckKeyCardsService deckKeyCardsService;
     private final DeckArchetypeMapper deckArchetypeMapper;
     private final AchievementService achievementService;
+    private final DeckValidation deckValidation;
 
 
     public ApiDeckBuilder getDeck(String deckId) {
@@ -161,6 +164,17 @@ public class ApiDeckBuilderService {
         } else if (deck.getType() == DeckType.TOURNAMENT) {
             //Mark admin-edited tournament decks as verified so schedulers don't overwrite them
             deck.setVerified(true);
+        }
+        if (deck.getType() == DeckType.COMMUNITY && apiDeckBuilder.isPublished()) {
+            try {
+                if (!deckValidation.isValid(apiDeckBuilder.getName(), apiDeckBuilder.getExtra(), apiDeckBuilder.getCards())) {
+                    log.warn("Publication validation failed for builder deck {} owned by user {}; warning-only, save allowed",
+                            deck.getId(), deck.getUser());
+                }
+            } catch (Exception e) {
+                log.warn("Publication validation unavailable for builder deck {} owned by user {}; warning-only, save allowed",
+                        deck.getId(), deck.getUser(), e);
+            }
         }
         if (apiDeckBuilder.getCustomTags() != null) {
             deck.setCustomTags(List.copyOf(apiDeckBuilder.getCustomTags()));
@@ -252,6 +266,53 @@ public class ApiDeckBuilderService {
                         .tagLabel(row.getTagLabel())
                         .build())
                 .toList();
+    }
+
+    private DeckEntity ownedActiveCommunityDeck(String id) {
+        Integer user = ApiUtils.extractUserId();
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+        DeckEntity deck = deckRepository.findById(id).orElse(null);
+        if (deck == null || !Objects.equals(deck.getUser(), user) || Boolean.TRUE.equals(deck.getDeleted())
+                || deck.getType() != DeckType.COMMUNITY) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return deck;
+    }
+
+    private List<ApiCard> getValidationCards(String id) {
+        return deckCardRepository.findByIdDeckId(id).stream().map(row -> {
+            ApiCard card = new ApiCard();
+            card.setId(row.getId().getCardId());
+            card.setNumber(row.getNumber());
+            return card;
+        }).toList();
+    }
+
+    public boolean canPublish(String id) {
+        DeckEntity deck = ownedActiveCommunityDeck(id);
+        return deckValidation.isValid(deck.getName(), deck.getExtra(), getValidationCards(id));
+    }
+
+    public boolean visibility(String id, boolean published) {
+        DeckEntity deck = ownedActiveCommunityDeck(id);
+        if (Boolean.valueOf(published).equals(deck.getPublished())) {
+            return true;
+        }
+        if (published && !deckValidation.isValid(deck.getName(), deck.getExtra(), getValidationCards(id))) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Invalid public deck");
+        }
+        deck.setPublished(published);
+        deckRepository.saveAndFlush(deck);
+        messageProducer.publishDeckSync(id);
+        if (published) {
+            apiUserNotificationService.deckUpdateNotifications(deck);
+        } else {
+            apiUserNotificationService.deckDeleteNotifications(id);
+        }
+        achievementService.activity(ApiUtils.extractUserId());
+        return true;
     }
 
     public boolean deleteDeck(String deckId, boolean permanent) {

@@ -80,10 +80,22 @@ public class ApiDeckBuilderController {
 
     }
 
+    @RequestMapping(method = RequestMethod.GET, value = "/{id}/publishable", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public boolean canPublish(@PathVariable String id) {
+        return deckBuilderService.canPublish(id);
+    }
+
+    @RequestMapping(method = RequestMethod.PUT, value = "/{id}/visibility", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public boolean visibility(@PathVariable String id, @RequestBody boolean published) {
+        return deckBuilderService.visibility(id, published);
+    }
+
     @RequestMapping(method = RequestMethod.PATCH, value = "/{id}")
     public ResponseEntity<Boolean> updateCollectionTracker(@PathVariable String id, @RequestParam Boolean collectionTracker) {
         log.info("Deck builder user {} collection tracker {} to {}", ApiUtils.extractUserId(), id, collectionTracker);
-        return new ResponseEntity<>(deckBuilderService.updateCollectionTracker(id, collectionTracker), HttpStatus.OK);
+        return ResponseEntity.ok(deckBuilderService.updateCollectionTracker(id, collectionTracker));
     }
 
 
@@ -95,7 +107,7 @@ public class ApiDeckBuilderController {
         if (deck == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {
-            return new ResponseEntity<>(deckBuilderService.deleteDeck(id, permanent), HttpStatus.OK);
+            return ResponseEntity.ok(deckBuilderService.deleteDeck(id, permanent));
         }
     }
 
