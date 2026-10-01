@@ -37,6 +37,7 @@ import com.vtesdecks.service.DeckCardHistoryService;
 import com.vtesdecks.service.DeckKeyCardsService;
 import com.vtesdecks.service.DeckService;
 import com.vtesdecks.util.CosineSimilarityUtils;
+import com.vtesdecks.util.CustomDeckTags;
 import com.vtesdecks.util.VtesUtils;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
@@ -89,6 +90,7 @@ public class ApiDeckBuilderService {
         deckBuilder.setId(deck.getId());
         deckBuilder.setName(deck.getName());
         deckBuilder.setDescription(deck.getDescription());
+        deckBuilder.setCustomTags(deck.getCustomTags() == null ? List.of() : deck.getCustomTags());
         deckBuilder.setPublished(deck.getPublished());
         deckBuilder.setCollection(deck.getCollection());
         deckBuilder.setCards(new ArrayList<>());
@@ -133,6 +135,7 @@ public class ApiDeckBuilderService {
 
     @Transactional
     public ApiDeckBuilder storeDeck(ApiDeckBuilder apiDeckBuilder) {
+        CustomDeckTags.validate(apiDeckBuilder.getCustomTags());
         Integer userId = ApiUtils.extractUserId();
         DeckEntity deck = null;
         if (apiDeckBuilder.getId() != null) {
@@ -158,6 +161,9 @@ public class ApiDeckBuilderService {
         } else if (deck.getType() == DeckType.TOURNAMENT) {
             //Mark admin-edited tournament decks as verified so schedulers don't overwrite them
             deck.setVerified(true);
+        }
+        if (apiDeckBuilder.getCustomTags() != null) {
+            deck.setCustomTags(List.copyOf(apiDeckBuilder.getCustomTags()));
         }
         deck.setName(apiDeckBuilder.getName());
         deck.setDescription(apiDeckBuilder.getDescription());

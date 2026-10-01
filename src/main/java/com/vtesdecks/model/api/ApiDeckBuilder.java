@@ -10,6 +10,7 @@ public class ApiDeckBuilder {
     private String id;
     private String name;
     private String description;
+    private List<String> customTags;
     private boolean published;
     private boolean collection;
     private List<ApiCard> cards;

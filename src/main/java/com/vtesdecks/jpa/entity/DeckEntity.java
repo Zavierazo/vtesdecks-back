@@ -3,6 +3,7 @@ package com.vtesdecks.jpa.entity;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.converter.JsonNodeConverter;
+import com.vtesdecks.jpa.entity.converter.StringListConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -19,6 +20,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "deck")
@@ -70,6 +72,11 @@ public class DeckEntity {
 
     @Column(name = "description", columnDefinition = "text")
     private String description;
+
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "custom_tags", columnDefinition = "json")
+    @Builder.Default
+    private List<String> customTags = List.of();
 
     @Column(name = "`set`")
     private String set;

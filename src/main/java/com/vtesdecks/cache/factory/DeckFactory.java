@@ -130,6 +130,7 @@ public class DeckFactory {
         value.setUrl(deck.getUrl());
         value.setSource(deck.getSource());
         value.setDescription(deck.getDescription());
+        value.setCustomTags(deck.getCustomTags() == null ? List.of() : List.copyOf(deck.getCustomTags()));
         value.setHasVideo(deck.getDescription() != null && deck.getDescription().contains("[[youtube:"));
         value.setDetailed(value.isHasVideo() || (deck.getDescription() != null && deck.getDescription().length() >= DETAILED_DESCRIPTION_MIN_LENGTH));
         value.setSet(deck.getSet());

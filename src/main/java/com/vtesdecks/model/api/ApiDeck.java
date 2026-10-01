@@ -32,6 +32,7 @@ public class ApiDeck {
     private String url;
     private String source;
     private String description;
+    private List<String> customTags;
     private String set;
     private String limitedFormat;
     private JsonNode extra;

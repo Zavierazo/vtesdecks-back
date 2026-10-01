@@ -53,6 +53,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 @ExtendWith(MockitoExtension.class)
 public class ApiUserControllerTest {
@@ -95,6 +96,16 @@ public class ApiUserControllerTest {
     @AfterEach
     public void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void customDeckTagsEndpointUsesTheUserController() throws Exception {
+        when(deckService.getUserDeckTags()).thenReturn(List.of("stealth", "league"));
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
+        mvc.perform(get("/api/1.0/user/decks/tags"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[\"stealth\",\"league\"]"));
+        verify(deckService).getUserDeckTags();
     }
 
     @Test

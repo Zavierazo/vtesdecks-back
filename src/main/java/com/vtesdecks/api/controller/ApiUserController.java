@@ -63,6 +63,12 @@ public class ApiUserController {
     @Autowired
     private AchievementService achievementService;
 
+    @GetMapping(value = "/decks/tags", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public List<String> deckTags() {
+        return deckService.getUserDeckTags();
+    }
+
     @GetMapping(value = "/achievements", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public List<ApiAchievementFamily> achievements() {

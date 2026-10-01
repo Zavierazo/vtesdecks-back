@@ -16,9 +16,13 @@ import org.springframework.data.annotation.Transient;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
-/** Resident search and listing data; never retains a full deck or card lists. */
+/**
+ * Resident search and listing data; never retains a full deck or card lists.
+ */
 @Data
 public class DeckSummary {
     public static final Attribute<DeckSummary, String> ID_ATTRIBUTE = QueryFactory.attribute(DeckSummary.class, String.class, "id", DeckSummary::getId);
@@ -82,7 +86,14 @@ public class DeckSummary {
     public static final Attribute<DeckSummary, Integer> EVENT_ABSOLUTE_ATTRIBUTE = QueryFactory.attribute(DeckSummary.class, Integer.class, "event_absolute", (DeckSummary deck) -> deck.getStats().getEvent());
     public static final Attribute<DeckSummary, String> TAG_MULTI_ATTRIBUTE = new MultiValueNullableAttribute<DeckSummary, String>(true) {
         public Iterable<String> getNullableValues(DeckSummary deck, QueryOptions queryOptions) {
-            return deck.getTags();
+            Set<String> tags = new HashSet<>();
+            if (deck.getTags() != null) {
+                tags.addAll(deck.getTags());
+            }
+            if (deck.getCustomTags() != null) {
+                tags.addAll(deck.getCustomTags());
+            }
+            return tags;
         }
     };
     public static final Attribute<DeckSummary, Integer> FAVORITE_MULTI_ATTRIBUTE = new MultiValueNullableAttribute<DeckSummary, Integer>(true) {
@@ -129,6 +140,7 @@ public class DeckSummary {
     private Set<String> disciplines;
     private SummaryStats stats;
     private Set<String> tags;
+    private List<String> customTags = List.of();
     private Double l2Norm;
     private Integer deckArchetypeId;
     private String path;
@@ -171,6 +183,7 @@ public class DeckSummary {
         summary.setDisciplines(deck.getDisciplines());
         summary.setStats(SummaryStats.from(deck.getStats()));
         summary.setTags(deck.getTags());
+        summary.setCustomTags(deck.getCustomTags() == null ? List.of() : List.copyOf(deck.getCustomTags()));
         summary.setL2Norm(deck.getL2Norm());
         summary.setDeckArchetypeId(deck.getDeckArchetypeId());
         summary.setPath(deck.getPath());

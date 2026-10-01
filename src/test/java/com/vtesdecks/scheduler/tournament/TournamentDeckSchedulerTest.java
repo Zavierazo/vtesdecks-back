@@ -268,13 +268,15 @@ public class TournamentDeckSchedulerTest {
     }
 
     @Test
-    public void shouldAutoVerifyDeckUnmodifiedForAMonth() {
+    public void shouldAutoVerifyDeckUnmodifiedForMoreThanTwoMonths() {
+        // Stay strictly beyond the two-month threshold, independent of clock precision.
+        LocalDateTime modificationDate = LocalDateTime.now().minusMonths(2).minusDays(1);
         DeckEntity actual = existingDeck(false);
-        actual.setModificationDate(LocalDateTime.now().minusMonths(2));
+        actual.setModificationDate(modificationDate);
         when(deckRepository.findById("tournament-2023event")).thenReturn(Optional.of(actual));
         when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(
-                deckCard(CRYPT_ID, 12, LocalDateTime.now().minusMonths(2)),
-                deckCard(LIBRARY_ID, 60, LocalDateTime.now().minusMonths(2))));
+                deckCard(CRYPT_ID, 12, modificationDate),
+                deckCard(LIBRARY_ID, 60, modificationDate)));
 
         scheduler.parseDeck(twdaDeck());
 

@@ -4,7 +4,10 @@ import com.googlecode.cqengine.IndexedCollection;
 import com.vtesdecks.cache.indexable.DeckCard;
 import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.deck.DeckType;
+import com.vtesdecks.cache.indexable.deck.DeckUser;
 import com.vtesdecks.cache.indexable.deck.Stats;
+import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +23,8 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class DeckIndexTest {
     private DeckIndex index;
@@ -105,6 +110,47 @@ class DeckIndexTest {
         assertEquals(List.of("deck-1", "deck-3", "deck-2"), ids(query));
         decks.remove(replacement);
         assertEquals(List.of("deck-3", "deck-2"), ids(query));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void customTagsCombineWithGeneratedTagsAndRefreshWithTheIndex() {
+        IndexedCollection<DeckSummary> decks = (IndexedCollection<DeckSummary>) ReflectionTestUtils.getField(index, "decks");
+        DeckSummary tagged = deck(2);
+        tagged.setTags(Set.of("stealth"));
+        tagged.setCustomTags(List.of("league", "spoiler"));
+        decks.update(List.of(index.get(tagged.getId())), List.of(tagged));
+        assertEquals(List.of("deck-2"), ids(DeckQuery.builder().tags(List.of("stealth", "league")).build()));
+        assertEquals(List.of(), ids(DeckQuery.builder().tags(List.of("stealth", "missing")).build()));
+        assertEquals(Set.of("stealth"), index.get(tagged.getId()).getTags());
+        DeckSummary cleared = deck(2);
+        decks.update(List.of(tagged), List.of(cleared));
+        assertEquals(List.of(), ids(DeckQuery.builder().tags(List.of("league")).build()));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void usernameSearchPreservesViewerAccessToPrivateDecks() {
+        UserRepository users = mock(UserRepository.class);
+        UserEntity owner = new UserEntity();
+        owner.setId(7);
+        when(users.findByUsername("owner")).thenReturn(owner);
+        ReflectionTestUtils.setField(index, "userRepository", users);
+        IndexedCollection<DeckSummary> decks = (IndexedCollection<DeckSummary>) ReflectionTestUtils.getField(index, "decks");
+        for (int number : List.of(2, 4)) {
+            DeckSummary owned = deck(number);
+            owned.setUser(DeckUser.builder().id(7).username("owner").build());
+            owned.setCustomTags(List.of("league"));
+            owned.setFavoriteUsers(Set.of(8));
+            decks.update(List.of(index.get(owned.getId())), List.of(owned));
+        }
+        assertEquals(List.of("deck-2"), ids(DeckQuery.builder().username("owner").tags(List.of("league")).build()));
+        assertEquals(List.of("deck-2"), ids(DeckQuery.builder().username("owner").userId(9).tags(List.of("league")).build()));
+        for (Integer viewer : List.of(7, 8)) {
+            assertEquals(List.of("deck-4", "deck-2"), ids(DeckQuery.builder().username("owner").userId(viewer).tags(List.of("league")).build()));
+        }
+        assertEquals(List.of("deck-4", "deck-2"), ids(DeckQuery.builder().type(DeckType.USER).userId(7).build()));
+        assertEquals(List.of(), ids(DeckQuery.builder().username("missing").userId(7).build()));
     }
 
     private List<String> ids(DeckQuery query) {

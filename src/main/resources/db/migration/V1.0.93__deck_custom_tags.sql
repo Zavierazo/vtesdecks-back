@@ -1,0 +1,1 @@
+ALTER TABLE deck ADD COLUMN custom_tags JSON NULL;
