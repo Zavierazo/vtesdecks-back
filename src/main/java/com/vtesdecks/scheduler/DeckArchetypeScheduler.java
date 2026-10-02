@@ -7,19 +7,19 @@ import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.repositories.DeckArchetypeRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.messaging.MessageProducer;
+import com.vtesdecks.model.ArchetypeCardRequirement;
 import com.vtesdecks.service.DeckService;
 import com.vtesdecks.util.CosineSimilarityUtils;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -38,15 +38,7 @@ public class DeckArchetypeScheduler {
     public void deckArchetypeScheduler() {
         log.info("Starting Deck Archetype scheduler...");
         try {
-            List<DeckArchetypeEntity> deckArchetypeList = deckArchetypeRepository.findAll();
-            Map<Integer, List<DeckSummary>> archetypeDeckMap = getArchetypeDeckMap(deckArchetypeList);
-            Map<Integer, List<Map<Integer, Integer>>> archetypeVectorMap = getArchetypeVectorMap(archetypeDeckMap);
-            for (DeckEntity deckEntity : deckRepository.findAll()) {
-                DeckSummary deck = deckService.getSummary(deckEntity.getId());
-                if (deck != null) {
-                    findBestArchetypeDeck(deckEntity, deck, null, archetypeVectorMap, archetypeDeckMap);
-                }
-            }
+            reclassifyDecks();
             log.info("Deck Archetype scheduler completed successfully.");
         } catch (Exception e) {
             log.error("Error during Deck Archetype scheduler", e);
@@ -54,40 +46,36 @@ public class DeckArchetypeScheduler {
     }
 
     public void updateDeckArchetype(Integer archetypeId) {
-        log.info("Starting Deck Archetype for archetypeId {}...", archetypeId);
-        try {
-            List<DeckArchetypeEntity> deckArchetypeList = deckArchetypeRepository.findAll();
-            Map<Integer, List<DeckSummary>> archetypeDeckMap = getArchetypeDeckMap(deckArchetypeList);
-            Map<Integer, List<Map<Integer, Integer>>> archetypeVectorMap = getArchetypeVectorMap(archetypeDeckMap);
-            for (DeckEntity deckEntity : deckRepository.findAll()) {
-                DeckSummary deck = deckService.getSummary(deckEntity.getId());
-                if (deck != null) {
-                    findBestArchetypeDeck(deckEntity, deck, archetypeId, archetypeVectorMap, archetypeDeckMap);
-                }
+        log.info("Reclassifying decks after updating archetype {}", archetypeId);
+        reclassifyDecks();
+    }
+
+    private void reclassifyDecks() {
+        List<DeckArchetypeEntity> archetypes = deckArchetypeRepository.findAll();
+        Map<Integer, List<DeckSummary>> decks = getArchetypeDeckMap(archetypes);
+        Map<Integer, List<Map<Integer, Integer>>> vectors = getArchetypeVectorMap(decks);
+        Map<Integer, List<ArchetypeCardRequirement>> requirements = new HashMap<>();
+        for (DeckArchetypeEntity archetype : archetypes) {
+            requirements.put(archetype.getId(), archetype.getCardRequirements());
+        }
+        for (DeckEntity entity : deckRepository.findAll()) {
+            DeckSummary deck = deckService.getSummary(entity.getId());
+            if (deck != null) {
+                findBestArchetypeDeck(entity, deck, requirements, vectors, decks);
             }
-            log.info("Deck Archetype for archetype {} completed successfully.", archetypeId);
-        } catch (Exception e) {
-            log.error("Error during Deck Archetype for archetype {}", archetypeId, e);
         }
     }
 
-    private void findBestArchetypeDeck(DeckEntity deckEntity, DeckSummary deck, Integer archetypeId, Map<Integer, List<Map<Integer, Integer>>> archetypeVectorMap, Map<Integer, List<DeckSummary>> archetypeDeckMap) {
+    private void findBestArchetypeDeck(DeckEntity deckEntity, DeckSummary deck, Map<Integer, List<ArchetypeCardRequirement>> requirements, Map<Integer, List<Map<Integer, Integer>>> archetypeVectorMap, Map<Integer, List<DeckSummary>> archetypeDeckMap) {
         Map<Integer, Integer> deckVector = deckCardIndex.getCardCounts(deck.getId());
         double bestSimilarity = -1.0;
         Integer bestArchetypeId = null;
-        // If archetypeId is provided, check it first to potentially skip processing
-        if (archetypeId != null) {
-            List<Map<Integer, Integer>> archetypeVectors = archetypeVectorMap.get(archetypeId);
-            if (archetypeVectors != null) {
-                double similarity = bestSimilarity(archetypeDeckMap.get(archetypeId), archetypeVectors, deck, deckVector);
-                if (similarity < MIN_SIMILARITY) {
-                    return;
-                }
-            }
-        }
-
         for (Map.Entry<Integer, List<Map<Integer, Integer>>> archetypeVectorEntry : archetypeVectorMap.entrySet()) {
             Integer id = archetypeVectorEntry.getKey();
+            var rules = requirements.get(id);
+            if (rules != null && rules.stream().anyMatch(rule -> deckVector.getOrDefault(rule.getCardId(), 0) < rule.getMinimumQuantity())) {
+                continue;
+            }
             double similarity = bestSimilarity(archetypeDeckMap.get(id), archetypeVectorEntry.getValue(), deck, deckVector);
             if (similarity >= MIN_SIMILARITY && similarity > bestSimilarity) {
                 bestSimilarity = similarity;
@@ -96,13 +84,13 @@ public class DeckArchetypeScheduler {
         }
         if (bestArchetypeId != null) {
             // If a best archetype is found, assign it if different from current
-            if (deck.getDeckArchetypeId() == null || !deck.getDeckArchetypeId().equals(bestArchetypeId)) {
+            if (deckEntity.getDeckArchetypeId() == null || !deckEntity.getDeckArchetypeId().equals(bestArchetypeId)) {
                 saveDeck(deckEntity, bestArchetypeId);
                 log.info("Assigned deck {} to archetype {} with similarity {}", deck.getId(), bestArchetypeId, bestSimilarity);
             }
         } else {
             // If no archetype matched, remove existing archetype assignment
-            if (deck.getDeckArchetypeId() != null) {
+            if (deckEntity.getDeckArchetypeId() != null) {
                 saveDeck(deckEntity, null);
                 log.info("Removed archetype assignment from deck {}", deck.getId());
             }

@@ -2,8 +2,10 @@ package com.vtesdecks.service;
 
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.vtesdecks.api.mapper.DeckArchetypeMapper;
+import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.DeckArchetypeIndex;
 import com.vtesdecks.cache.DeckCardIndex;
+import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.cache.redis.entity.DeckArchetype;
@@ -11,6 +13,7 @@ import com.vtesdecks.cache.redis.repositories.DeckArchetypeRedisRepository;
 import com.vtesdecks.jpa.entity.DeckArchetypeEntity;
 import com.vtesdecks.jpa.repositories.DeckArchetypeRepository;
 import com.vtesdecks.messaging.MessageProducer;
+import com.vtesdecks.model.ArchetypeCardRequirement;
 import com.vtesdecks.model.ArchetypeMetaMetrics;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
@@ -19,10 +22,6 @@ import com.vtesdecks.model.api.ApiDeckArchetype;
 import com.vtesdecks.model.api.ApiSearchArchetype;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import com.vtesdecks.util.CosineSimilarityUtils;
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.tuple.Pair;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -36,6 +35,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.StreamSupport;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +55,25 @@ public class DeckArchetypeService {
     private final DeckArchetypeRedisRepository redisRepository;
     private final DeckArchetypeScheduler deckArchetypeScheduler;
     private final MessageProducer messageProducer;
+    private final CryptCache cryptCache;
+    private final LibraryCache libraryCache;
+
+    private void validateRequirements(List<ArchetypeCardRequirement> requirements) {
+        if (requirements == null) {
+            return;
+        }
+        Set<Integer> ids = new HashSet<>();
+        for (var requirement : requirements) {
+            if (requirement == null || requirement.getCardId() == null
+                    || requirement.getMinimumQuantity() == null || requirement.getMinimumQuantity() < 1
+                    || !ids.add(requirement.getCardId())
+                    || (cryptCache.get(requirement.getCardId()) == null && libraryCache.get(requirement.getCardId()) == null)) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Each requirement needs a unique valid card and a positive integer minimum quantity");
+            }
+        }
+    }
+
 
     public List<ApiDeckArchetype> getAll(boolean showDisabled, MetaType metaType, String currencyCode) {
         List<DeckArchetype> deckArchetypeList = StreamSupport.stream(redisRepository.findAll().spliterator(), false).toList();
@@ -125,8 +149,13 @@ public class DeckArchetypeService {
         });
     }
 
+    @Transactional
     public Optional<ApiDeckArchetype> create(ApiDeckArchetype api, String currencyCode) {
+        validateRequirements(api.getCardRequirements());
         DeckArchetypeEntity entity = mapper.map(api);
+        if (entity.getCardRequirements() == null) {
+            entity.setCardRequirements(List.of());
+        }
         DeckArchetypeEntity saved = repository.save(entity);
         deckArchetypeScheduler.updateDeckArchetype(saved.getId());
         deckArchetypeIndex.refreshIndex(saved.getId());
@@ -135,10 +164,19 @@ public class DeckArchetypeService {
         return getById(saved.getId(), MetaType.TOURNAMENT, currencyCode);
     }
 
+    @Transactional
     public Optional<ApiDeckArchetype> update(Integer id, ApiDeckArchetype api, String currencyCode) {
         Optional<DeckArchetypeEntity> maybe = repository.findById(id);
-        if (maybe.isEmpty()) return Optional.empty();
+        if (maybe.isEmpty()) {
+            return Optional.empty();
+        }
         DeckArchetypeEntity entity = maybe.get();
+        validateRequirements(api.getCardRequirements());
+        boolean requirementsChanged = api.getCardRequirements() != null
+                && !new HashSet<>(api.getCardRequirements()).equals(new HashSet<>(entity.getCardRequirements() == null ? List.of() : entity.getCardRequirements()));
+        if (api.getCardRequirements() != null) {
+            entity.setCardRequirements(List.copyOf(api.getCardRequirements()));
+        }
         String previousDeckId = entity.getDeckId();
         String previousSecondaryDeckId = entity.getSecondaryDeckId();
         entity.setName(api.getName());
@@ -149,7 +187,7 @@ public class DeckArchetypeService {
         entity.setSecondaryDeckId(api.getSecondaryDeckId());
         entity.setEnabled(api.getEnabled());
         DeckArchetypeEntity saved = repository.save(entity);
-        if (!Objects.equals(previousDeckId, saved.getDeckId()) || !Objects.equals(previousSecondaryDeckId, saved.getSecondaryDeckId())) {
+        if (requirementsChanged || !Objects.equals(previousDeckId, saved.getDeckId()) || !Objects.equals(previousSecondaryDeckId, saved.getSecondaryDeckId())) {
             deckArchetypeScheduler.updateDeckArchetype(saved.getId());
             publishDeckSync(previousDeckId);
             publishDeckSync(previousSecondaryDeckId);

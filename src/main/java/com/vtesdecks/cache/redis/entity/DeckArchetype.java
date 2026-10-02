@@ -1,6 +1,7 @@
 package com.vtesdecks.cache.redis.entity;
 
 import jakarta.persistence.Id;
+import com.vtesdecks.model.ArchetypeCardRequirement;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,6 +29,9 @@ public class DeckArchetype {
     @Indexed
     private String deckId;
     private String secondaryDeckId;
+
+    private List<ArchetypeCardRequirement> cardRequirements;
+
     private Boolean enabled;
     private Long deckCount;
     private Long tournamentCount;

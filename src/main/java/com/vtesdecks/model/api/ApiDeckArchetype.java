@@ -2,6 +2,7 @@ package com.vtesdecks.model.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.vtesdecks.model.ArchetypeTrend;
+import com.vtesdecks.model.ArchetypeCardRequirement;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,6 +26,9 @@ public class ApiDeckArchetype {
     private String description;
     private String deckId;
     private String secondaryDeckId;
+
+    private List<ArchetypeCardRequirement> cardRequirements;
+
     private Boolean enabled;
     private Long deckCount;
     private Long metaCount;

@@ -1,11 +1,16 @@
 package com.vtesdecks.jpa.entity;
 
+import com.vtesdecks.jpa.entity.converter.ArchetypeCardRequirementsConverter;
+import com.vtesdecks.model.ArchetypeCardRequirement;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,8 +18,6 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "deck_archetype")
@@ -46,6 +49,12 @@ public class DeckArchetypeEntity {
 
     @Column(name = "secondary_deck_id")
     private String secondaryDeckId;
+
+    @Convert(converter = ArchetypeCardRequirementsConverter.class)
+    @Column(name = "card_requirements", columnDefinition = "json")
+    @Builder.Default
+    private List<ArchetypeCardRequirement> cardRequirements = List.of();
+
 
     @Column(name = "enabled", nullable = false)
     @Builder.Default
