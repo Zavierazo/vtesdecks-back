@@ -19,6 +19,7 @@ import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
 import com.vtesdecks.model.MetaType;
 import com.vtesdecks.model.api.ApiDeckArchetype;
+import com.vtesdecks.model.api.ApiNearestArchetype;
 import com.vtesdecks.model.api.ApiSearchArchetype;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import com.vtesdecks.util.CosineSimilarityUtils;
@@ -270,6 +271,7 @@ public class DeckArchetypeService {
 
 
     public List<ApiDeckArchetype> getSuggestions() {
+        List<ArchetypeReference> references = getArchetypeReferences();
         Set<String> visitedDeckIds = new HashSet<>();
         List<ApiDeckArchetype> apiDeckArchetypes = new ArrayList<>();
         try (ResultSet<DeckSummary> deckResultSet = deckService.getDecks(DeckQuery.builder()
@@ -302,6 +304,7 @@ public class DeckArchetypeService {
                                 .name("Suggestion: " + candidateDeck.getName())
                                 .description("Auto-generated suggestion based on similar decks in the last year.")
                                 .deckId(candidateDeck.getId())
+                                .nearestArchetype(findNearestArchetype(candidateDeck, candidateVector, references))
                                 .enabled(true)
                                 .metaCount((long) similarTournamentDecks.size())
                                 .metaTotal(getMetaTotal(MetaType.TOURNAMENT))
@@ -311,6 +314,39 @@ public class DeckArchetypeService {
             }
         }
         return apiDeckArchetypes;
+    }
+
+    private record ArchetypeReference(Integer id, String name, DeckSummary deck, Map<Integer, Integer> vector) {
+    }
+
+    private List<ArchetypeReference> getArchetypeReferences() {
+        List<ArchetypeReference> references = new ArrayList<>();
+        // Use the same archetype pool and reference decks as classification, including disabled archetypes.
+        for (DeckArchetypeEntity archetype : repository.findAll().stream()
+                .filter(archetype -> archetype.getId() != null && archetype.getId() > 0)
+                .sorted(Comparator.comparing(DeckArchetypeEntity::getId)).toList()) {
+            for (String deckId : java.util.stream.Stream.of(archetype.getDeckId(), archetype.getSecondaryDeckId())
+                    .filter(Objects::nonNull).distinct().toList()) {
+                DeckSummary deck = deckService.getSummary(deckId);
+                if (deck != null) {
+                    references.add(new ArchetypeReference(archetype.getId(), archetype.getName(), deck,
+                            deckCardIndex.getCardCounts(deckId)));
+                }
+            }
+        }
+        return references;
+    }
+
+    private ApiNearestArchetype findNearestArchetype(DeckSummary candidate, Map<Integer, Integer> vector,
+                                                    List<ArchetypeReference> references) {
+        ApiNearestArchetype nearest = null;
+        for (ArchetypeReference reference : references) {
+            double similarity = CosineSimilarityUtils.cosineSimilarity(candidate, vector, reference.deck(), reference.vector());
+            if (nearest == null || similarity > nearest.similarity()) {
+                nearest = new ApiNearestArchetype(reference.id(), reference.name(), similarity);
+            }
+        }
+        return nearest;
     }
 
     private long deckCount(DeckQuery query) {

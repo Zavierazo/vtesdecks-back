@@ -28,6 +28,7 @@ public class ApiDeckArchetype {
     private String secondaryDeckId;
 
     private List<ArchetypeCardRequirement> cardRequirements;
+    private ApiNearestArchetype nearestArchetype;
 
     private Boolean enabled;
     private Long deckCount;
