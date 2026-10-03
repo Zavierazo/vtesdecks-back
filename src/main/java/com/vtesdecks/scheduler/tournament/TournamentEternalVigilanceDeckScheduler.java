@@ -158,11 +158,18 @@ public class TournamentEternalVigilanceDeckScheduler {
             return;
         }
 
+        String eventUrl = StringUtils.trimToNull(source.getEventUrl());
+        if (actual == null && eventUrl != null
+                && deckRepository.existsByTypeAndUrlIgnoreCaseAndDeletedFalse(DeckType.TOURNAMENT, eventUrl)) {
+            log.info("Skipping deck {}, tournament URL {} already imported under another id", id, eventUrl);
+            return;
+        }
+
         DeckEntity deck = actual != null ? actual.toBuilder().build() : DeckEntity.builder().build();
         deck.setId(id);
         deck.setType(DeckType.TOURNAMENT);
         deck.setSource(source.getForumPostUrl());
-        deck.setUrl(source.getEventUrl());
+        deck.setUrl(eventUrl);
         deck.setTournament(source.getName());
         deck.setPlayers(source.getPlayersCount());
         deck.setRounds(getRounds(source.getRoundsFormat()));
@@ -179,6 +186,9 @@ public class TournamentEternalVigilanceDeckScheduler {
         }
         if (deck.getCreationDate() == null) {
             log.warn("Deck {} has no date, skipping", id);
+            return;
+        }
+        if (actual == null && isDuplicateOfOtherDeck(deck)) {
             return;
         }
 
@@ -323,6 +333,20 @@ public class TournamentEternalVigilanceDeckScheduler {
         deckCard.getId().setCardId(cardId);
         deckCard.setNumber(number);
         deckCards.put(cardId, deckCard);
+    }
+
+    private boolean isDuplicateOfOtherDeck(DeckEntity deck) {
+        List<DeckEntity> existingDecks = deckRepository.findByTypeAndNameContainingIgnoreCase(DeckType.TOURNAMENT, deck.getName());
+        for (DeckEntity existingDeck : existingDecks) {
+            if (!existingDeck.getId().equals(deck.getId())
+                    && existingDeck.getTournament() != null && existingDeck.getTournament().equalsIgnoreCase(deck.getTournament())
+                    && existingDeck.getCreationDate().toLocalDate().equals(deck.getCreationDate().toLocalDate())
+                    && Boolean.FALSE.equals(existingDeck.getDeleted())) {
+                log.warn("Possible duplicate deck found: {} with id {}", deck.getName(), existingDeck.getId());
+                return true;
+            }
+        }
+        return false;
     }
 
     private void persist(DeckEntity actual, DeckEntity deck, Map<Integer, DeckCardEntity> deckCards) {
