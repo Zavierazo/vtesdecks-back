@@ -14,6 +14,10 @@ import com.vtesdecks.jpa.entity.DeckArchetypeEntity;
 import com.vtesdecks.jpa.repositories.DeckArchetypeRepository;
 import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.ArchetypeCardRequirement;
+import com.vtesdecks.model.ArchetypeAttributeRequirement;
+import com.vtesdecks.model.Clan;
+import com.vtesdecks.model.CardType;
+import com.vtesdecks.model.Discipline;
 import com.vtesdecks.model.ArchetypeMetaMetrics;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
@@ -75,6 +79,27 @@ public class DeckArchetypeService {
         }
     }
 
+
+    private void validateAttributeRequirements(List<ArchetypeAttributeRequirement> requirements) {
+        if (requirements == null) {
+            return;
+        }
+        Set<String> keys = new HashSet<>();
+        for (var rule : requirements) {
+            if (rule == null || rule.getType() == null || rule.getValue() == null
+                    || rule.getMinimumQuantity() == null || rule.getMinimumQuantity() < 1) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid attribute requirement");
+            }
+            boolean valid = switch (rule.getType()) {
+                case CRYPT_CLAN -> java.util.Arrays.stream(Clan.values()).anyMatch(value -> value.getName().equals(rule.getValue()));
+                case LIBRARY_TYPE -> java.util.Arrays.stream(CardType.values()).anyMatch(value -> value.getName().equals(rule.getValue()));
+                case CRYPT_DISCIPLINE, LIBRARY_DISCIPLINE -> java.util.Arrays.stream(Discipline.values()).anyMatch(value -> value.getName().equals(rule.getValue()));
+            };
+            if (!valid || !keys.add(rule.getType() + ":" + rule.getValue())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Each attribute requirement needs a unique valid type and value");
+            }
+        }
+    }
 
     public List<ApiDeckArchetype> getAll(boolean showDisabled, MetaType metaType, String currencyCode) {
         List<DeckArchetype> deckArchetypeList = StreamSupport.stream(redisRepository.findAll().spliterator(), false).toList();
@@ -153,9 +178,13 @@ public class DeckArchetypeService {
     @Transactional
     public Optional<ApiDeckArchetype> create(ApiDeckArchetype api, String currencyCode) {
         validateRequirements(api.getCardRequirements());
+        validateAttributeRequirements(api.getAttributeRequirements());
         DeckArchetypeEntity entity = mapper.map(api);
         if (entity.getCardRequirements() == null) {
             entity.setCardRequirements(List.of());
+        }
+        if (entity.getAttributeRequirements() == null) {
+            entity.setAttributeRequirements(List.of());
         }
         DeckArchetypeEntity saved = repository.save(entity);
         deckArchetypeScheduler.updateDeckArchetype(saved.getId());
@@ -173,10 +202,16 @@ public class DeckArchetypeService {
         }
         DeckArchetypeEntity entity = maybe.get();
         validateRequirements(api.getCardRequirements());
+        validateAttributeRequirements(api.getAttributeRequirements());
         boolean requirementsChanged = api.getCardRequirements() != null
                 && !new HashSet<>(api.getCardRequirements()).equals(new HashSet<>(entity.getCardRequirements() == null ? List.of() : entity.getCardRequirements()));
         if (api.getCardRequirements() != null) {
             entity.setCardRequirements(List.copyOf(api.getCardRequirements()));
+        }
+        boolean attributesChanged = api.getAttributeRequirements() != null
+                && !new HashSet<>(api.getAttributeRequirements()).equals(new HashSet<>(entity.getAttributeRequirements() == null ? List.of() : entity.getAttributeRequirements()));
+        if (api.getAttributeRequirements() != null) {
+            entity.setAttributeRequirements(List.copyOf(api.getAttributeRequirements()));
         }
         String previousDeckId = entity.getDeckId();
         String previousSecondaryDeckId = entity.getSecondaryDeckId();
@@ -188,7 +223,7 @@ public class DeckArchetypeService {
         entity.setSecondaryDeckId(api.getSecondaryDeckId());
         entity.setEnabled(api.getEnabled());
         DeckArchetypeEntity saved = repository.save(entity);
-        if (requirementsChanged || !Objects.equals(previousDeckId, saved.getDeckId()) || !Objects.equals(previousSecondaryDeckId, saved.getSecondaryDeckId())) {
+        if (requirementsChanged || attributesChanged || !Objects.equals(previousDeckId, saved.getDeckId()) || !Objects.equals(previousSecondaryDeckId, saved.getSecondaryDeckId())) {
             deckArchetypeScheduler.updateDeckArchetype(saved.getId());
             publishDeckSync(previousDeckId);
             publishDeckSync(previousSecondaryDeckId);

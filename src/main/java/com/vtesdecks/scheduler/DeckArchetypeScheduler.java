@@ -1,6 +1,10 @@
 package com.vtesdecks.scheduler;
 
 import com.vtesdecks.cache.DeckCardIndex;
+import com.vtesdecks.cache.CryptCache;
+import com.vtesdecks.cache.LibraryCache;
+import com.vtesdecks.model.ArchetypeAttributeRequirement;
+import com.vtesdecks.service.ArchetypeAttributeCounter;
 import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.jpa.entity.DeckArchetypeEntity;
 import com.vtesdecks.jpa.entity.DeckEntity;
@@ -26,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DeckArchetypeScheduler {
     private final DeckCardIndex deckCardIndex;
+    private final CryptCache cryptCache;
+    private final LibraryCache libraryCache;
 
     private static final double MIN_SIMILARITY = 0.5;
     private final DeckService deckService;
@@ -55,25 +61,33 @@ public class DeckArchetypeScheduler {
         Map<Integer, List<DeckSummary>> decks = getArchetypeDeckMap(archetypes);
         Map<Integer, List<Map<Integer, Integer>>> vectors = getArchetypeVectorMap(decks);
         Map<Integer, List<ArchetypeCardRequirement>> requirements = new HashMap<>();
+        Map<Integer, List<ArchetypeAttributeRequirement>> attributes = new HashMap<>();
         for (DeckArchetypeEntity archetype : archetypes) {
             requirements.put(archetype.getId(), archetype.getCardRequirements());
+            attributes.put(archetype.getId(), archetype.getAttributeRequirements());
         }
         for (DeckEntity entity : deckRepository.findAll()) {
             DeckSummary deck = deckService.getSummary(entity.getId());
             if (deck != null) {
-                findBestArchetypeDeck(entity, deck, requirements, vectors, decks);
+                findBestArchetypeDeck(entity, deck, requirements, attributes, vectors, decks);
             }
         }
     }
 
-    private void findBestArchetypeDeck(DeckEntity deckEntity, DeckSummary deck, Map<Integer, List<ArchetypeCardRequirement>> requirements, Map<Integer, List<Map<Integer, Integer>>> archetypeVectorMap, Map<Integer, List<DeckSummary>> archetypeDeckMap) {
+    private void findBestArchetypeDeck(DeckEntity deckEntity, DeckSummary deck, Map<Integer, List<ArchetypeCardRequirement>> requirements, Map<Integer, List<ArchetypeAttributeRequirement>> attributes, Map<Integer, List<Map<Integer, Integer>>> archetypeVectorMap, Map<Integer, List<DeckSummary>> archetypeDeckMap) {
         Map<Integer, Integer> deckVector = deckCardIndex.getCardCounts(deck.getId());
+        var attributeCounts = ArchetypeAttributeCounter.count(deckVector, cryptCache, libraryCache);
         double bestSimilarity = -1.0;
         Integer bestArchetypeId = null;
         for (Map.Entry<Integer, List<Map<Integer, Integer>>> archetypeVectorEntry : archetypeVectorMap.entrySet()) {
             Integer id = archetypeVectorEntry.getKey();
             var rules = requirements.get(id);
             if (rules != null && rules.stream().anyMatch(rule -> deckVector.getOrDefault(rule.getCardId(), 0) < rule.getMinimumQuantity())) {
+                continue;
+            }
+            var attributeRules = attributes.get(id);
+            if (attributeRules != null && attributeRules.stream().anyMatch(rule ->
+                    attributeCounts.getOrDefault(new ArchetypeAttributeCounter.Key(rule.getType(), rule.getValue()), 0L) < rule.getMinimumQuantity())) {
                 continue;
             }
             double similarity = bestSimilarity(archetypeDeckMap.get(id), archetypeVectorEntry.getValue(), deck, deckVector);

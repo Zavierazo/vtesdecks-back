@@ -25,6 +25,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DeckArchetypeSchedulerTest {
     @Mock DeckCardIndex deckCardIndex;
+    @Mock com.vtesdecks.cache.CryptCache cryptCache;
+    @Mock com.vtesdecks.cache.LibraryCache libraryCache;
     @Mock DeckService deckService;
     @Mock DeckRepository deckRepository;
     @Mock DeckArchetypeRepository deckArchetypeRepository;
@@ -101,6 +103,31 @@ class DeckArchetypeSchedulerTest {
         scheduler.updateDeckArchetype(1);
         verify(deckRepository, never()).saveAndFlush(any());
         verifyNoInteractions(messageProducer);
+    }
+
+    @Test void attributeRulesRejectMissingClanOrPoliticsAndAcceptAlternativeCards() {
+        var entity = setup(Map.of(200001, 2, 200002, 2, 100001, 6, 100002, 4), List.of(), 1);
+        var archetype = archetype(1, "reference", List.of(new ArchetypeCardRequirement(100001, 6)));
+        archetype.setAttributeRequirements(List.of(
+                new com.vtesdecks.model.ArchetypeAttributeRequirement(com.vtesdecks.model.ArchetypeAttributeRequirement.Type.CRYPT_CLAN, "Malkavian", 4),
+                new com.vtesdecks.model.ArchetypeAttributeRequirement(com.vtesdecks.model.ArchetypeAttributeRequirement.Type.LIBRARY_TYPE, "Political Action", 10)));
+        when(deckArchetypeRepository.findAll()).thenReturn(List.of(archetype));
+        scheduler.updateDeckArchetype(1);
+        assertNull(entity.getDeckArchetypeId());
+        for (int id : List.of(200001, 200002)) {
+            var crypt = mock(com.vtesdecks.cache.indexable.Crypt.class);
+            when(crypt.getClan()).thenReturn("Malkavian");
+            when(cryptCache.get(id)).thenReturn(crypt);
+        }
+        scheduler.updateDeckArchetype(1);
+        assertNull(entity.getDeckArchetypeId());
+        for (int id : List.of(100001, 100002)) {
+            var library = mock(com.vtesdecks.cache.indexable.Library.class);
+            when(library.getTypes()).thenReturn(java.util.Set.of("Political Action"));
+            when(libraryCache.get(id)).thenReturn(library);
+        }
+        scheduler.updateDeckArchetype(1);
+        assertEquals(1, entity.getDeckArchetypeId());
     }
 
     @Test void saveTriggeredFailurePropagates() {

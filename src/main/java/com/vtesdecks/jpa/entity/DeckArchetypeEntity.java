@@ -2,6 +2,7 @@ package com.vtesdecks.jpa.entity;
 
 import com.vtesdecks.jpa.entity.converter.ArchetypeCardRequirementsConverter;
 import com.vtesdecks.model.ArchetypeCardRequirement;
+import com.vtesdecks.model.ArchetypeAttributeRequirement;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -54,6 +55,12 @@ public class DeckArchetypeEntity {
     @Column(name = "card_requirements", columnDefinition = "json")
     @Builder.Default
     private List<ArchetypeCardRequirement> cardRequirements = List.of();
+
+    @Convert(converter = com.vtesdecks.jpa.entity.converter.ArchetypeAttributeRequirementsConverter.class)
+    @Column(name = "attribute_requirements", columnDefinition = "json")
+    @Builder.Default
+    private List<ArchetypeAttributeRequirement> attributeRequirements = List.of();
+
 
 
     @Column(name = "enabled", nullable = false)

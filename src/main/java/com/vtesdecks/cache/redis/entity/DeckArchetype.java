@@ -2,6 +2,7 @@ package com.vtesdecks.cache.redis.entity;
 
 import jakarta.persistence.Id;
 import com.vtesdecks.model.ArchetypeCardRequirement;
+import com.vtesdecks.model.ArchetypeAttributeRequirement;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,6 +32,7 @@ public class DeckArchetype {
     private String secondaryDeckId;
 
     private List<ArchetypeCardRequirement> cardRequirements;
+    private List<ArchetypeAttributeRequirement> attributeRequirements;
 
     private Boolean enabled;
     private Long deckCount;

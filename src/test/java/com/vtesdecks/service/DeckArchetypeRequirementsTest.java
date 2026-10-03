@@ -13,6 +13,8 @@ import com.vtesdecks.jpa.entity.converter.ArchetypeCardRequirementsConverter;
 import com.vtesdecks.jpa.repositories.DeckArchetypeRepository;
 import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.ArchetypeCardRequirement;
+import com.vtesdecks.model.ArchetypeAttributeRequirement;
+import static com.vtesdecks.model.ArchetypeAttributeRequirement.Type.*;
 import com.vtesdecks.model.api.ApiDeckArchetype;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import org.junit.jupiter.api.Test;
@@ -49,6 +51,53 @@ class DeckArchetypeRequirementsTest {
         when(repository.findById(1)).thenReturn(Optional.of(entity));
         when(repository.save(entity)).thenReturn(entity);
         return entity;
+    }
+
+    @Test void attributeUpdatesPreserveClearAndReclassify() {
+        var entity = existing();
+        var rules = List.of(new ArchetypeAttributeRequirement(CRYPT_CLAN, "Malkavian", 4));
+        entity.setAttributeRequirements(rules);
+        service.update(1, new ApiDeckArchetype(), "EUR");
+        assertEquals(rules, entity.getAttributeRequirements());
+        verifyNoInteractions(scheduler);
+        service.update(1, ApiDeckArchetype.builder().attributeRequirements(rules).build(), "EUR");
+        verifyNoInteractions(scheduler);
+        service.update(1, ApiDeckArchetype.builder().attributeRequirements(List.of()).build(), "EUR");
+        assertTrue(entity.getAttributeRequirements().isEmpty());
+        assertEquals(1, entity.getCardRequirements().size());
+        verify(scheduler).updateDeckArchetype(1);
+    }
+
+    @Test void invalidAttributesCannotBeSaved() {
+        var valid = new ArchetypeAttributeRequirement(CRYPT_CLAN, "Malkavian", 1);
+        for (var rules : List.of(
+                List.of(new ArchetypeAttributeRequirement(null, "Malkavian", 1)),
+                List.of(new ArchetypeAttributeRequirement(CRYPT_CLAN, "malkavian", 1)),
+                List.of(new ArchetypeAttributeRequirement(LIBRARY_TYPE, "Malkavian", 1)),
+                List.of(new ArchetypeAttributeRequirement(CRYPT_DISCIPLINE, "Unknown", 1)),
+                List.of(new ArchetypeAttributeRequirement(LIBRARY_DISCIPLINE, "Dominate", 0)),
+                List.of(new ArchetypeAttributeRequirement(CRYPT_CLAN, null, 1)),
+                List.of(new ArchetypeAttributeRequirement(CRYPT_CLAN, "Malkavian", null)),
+                List.of(valid, valid), Arrays.asList((ArchetypeAttributeRequirement) null))) {
+            assertThrows(ResponseStatusException.class, () -> service.create(ApiDeckArchetype.builder().attributeRequirements(rules).build(), "EUR"));
+        }
+        verifyNoInteractions(repository);
+    }
+
+    @Test void attributesRoundTripThroughJsonAndPersistence() throws Exception {
+        var rules = List.of(new ArchetypeAttributeRequirement(CRYPT_CLAN, "Malkavian", 4),
+                new ArchetypeAttributeRequirement(LIBRARY_TYPE, "Political Action", 1),
+                new ArchetypeAttributeRequirement(CRYPT_DISCIPLINE, "Dominate", 2),
+                new ArchetypeAttributeRequirement(LIBRARY_DISCIPLINE, "Dominate", 3));
+        var converter = new com.vtesdecks.jpa.entity.converter.ArchetypeAttributeRequirementsConverter();
+        assertEquals(rules, converter.convertToEntityAttribute(converter.convertToDatabaseColumn(rules)));
+        assertEquals(List.of(), converter.convertToEntityAttribute(null));
+        var json = new ObjectMapper();
+        var api = ApiDeckArchetype.builder().attributeRequirements(rules).build();
+        assertEquals(rules, json.readValue(json.writeValueAsString(api), ApiDeckArchetype.class).getAttributeRequirements());
+        existing();
+        service.update(1, api, "EUR");
+        verify(scheduler).updateDeckArchetype(1);
     }
 
     @Test void omittedRequirementsPreserveRulesAndDoNotReclassify() {

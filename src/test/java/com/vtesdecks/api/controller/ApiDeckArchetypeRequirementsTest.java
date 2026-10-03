@@ -47,6 +47,30 @@ class ApiDeckArchetypeRequirementsTest {
         verify(service).update(eq(1), argThat(api -> rules.equals(api.getCardRequirements())), any());
     }
 
+    @Test void putAcceptsAndReturnsAttributeRequirements() throws Exception {
+        var rules = List.of(new com.vtesdecks.model.ArchetypeAttributeRequirement(
+                com.vtesdecks.model.ArchetypeAttributeRequirement.Type.CRYPT_CLAN, "Malkavian", 4));
+        when(service.update(eq(1), any(), any())).thenReturn(Optional.of(ApiDeckArchetype.builder().id(1).attributeRequirements(rules).build()));
+        mvc.perform(put("/api/1.0/deck-archetype/1").contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"attributeRequirements":[{"type":"CRYPT_CLAN","value":"Malkavian","minimumQuantity":4}]}
+                        """))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.attributeRequirements[0].value").value("Malkavian"));
+        verify(service).update(eq(1), argThat(api -> rules.equals(api.getAttributeRequirements())), any());
+    }
+
+    @Test void unknownAttributeTypesAndNonIntegerQuantitiesAreRejected() throws Exception {
+        for (String rule : List.of(
+                "{\"type\":\"UNKNOWN\",\"value\":\"Malkavian\",\"minimumQuantity\":1}",
+                "{\"type\":\"CRYPT_CLAN\",\"value\":\"Malkavian\",\"minimumQuantity\":1.5}",
+                "{\"type\":\"CRYPT_CLAN\",\"value\":\"Malkavian\",\"minimumQuantity\":2147483648}")) {
+            mvc.perform(post("/api/1.0/deck-archetype").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"attributeRequirements\":[" + rule + "]}"))
+                    .andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(service);
+    }
+
     @Test void invalidRulesReturnBadRequest() throws Exception {
         when(service.create(any(), any())).thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid requirements"));
         mvc.perform(post("/api/1.0/deck-archetype").contentType(MediaType.APPLICATION_JSON).content("{\"cardRequirements\":[{\"cardId\":99,\"minimumQuantity\":0}]}"))
