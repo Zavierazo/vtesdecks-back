@@ -45,6 +45,11 @@ public class TournamentEternalVigilanceDeckSchedulerTest {
     }
 
     @Test
+    public void shouldSkipDuplicateTournamentResult() throws Exception {
+        assertImport(false, true, false, EVENT_URL, false);
+    }
+
+    @Test
     public void shouldUpdateExistingIdWithoutDuplicateUrlCheck() throws Exception {
         assertImport(false, true, EVENT_URL, true);
     }
@@ -83,6 +88,11 @@ public class TournamentEternalVigilanceDeckSchedulerTest {
 
     private DeckEntity assertImport(boolean duplicate, boolean existing, String eventUrl, boolean saved,
                                    DeckEntity... matchingDecks) throws Exception {
+        return assertImport(duplicate, false, existing, eventUrl, saved, matchingDecks);
+    }
+
+    private DeckEntity assertImport(boolean duplicate, boolean duplicateTournamentResult, boolean existing, String eventUrl,
+                                   boolean saved, DeckEntity... matchingDecks) throws Exception {
         DeckRepository decks = mock(DeckRepository.class);
         DeckCardRepository cards = mock(DeckCardRepository.class);
         TournamentEternalVigilanceDeckScheduler scheduler = new TournamentEternalVigilanceDeckScheduler(
@@ -93,6 +103,9 @@ public class TournamentEternalVigilanceDeckSchedulerTest {
                 : Optional.empty());
         when(decks.existsByTypeAndUrlIgnoreCaseAndDeletedFalse(DeckType.TOURNAMENT, EVENT_URL))
                 .thenReturn(duplicate);
+        when(decks.existsByTypeAndEventIdAndPositionAndIdNotAndDeletedFalse(
+                DeckType.TOURNAMENT, "12345", 1, "tournament-12345"))
+                .thenReturn(duplicateTournamentResult);
         when(decks.findByTypeAndNameContainingIgnoreCase(DeckType.TOURNAMENT, "Example deck"))
                 .thenReturn(List.of(matchingDecks));
         Connection connection = mock(Connection.class, RETURNS_SELF);
@@ -120,6 +133,9 @@ public class TournamentEternalVigilanceDeckSchedulerTest {
             var deckCaptor = org.mockito.ArgumentCaptor.forClass(DeckEntity.class);
             verify(decks).saveAndFlush(deckCaptor.capture());
             verify(cards, times(2)).saveAndFlush(any());
+            if (eventUrl == null || eventUrl.isBlank()) {
+                verify(decks, never()).existsByTypeAndEventIdAndPositionAndIdNotAndDeletedFalse(any(), any(), any(), any());
+            }
             return deckCaptor.getValue();
         } else {
             verify(decks, never()).saveAndFlush(any());
@@ -130,7 +146,7 @@ public class TournamentEternalVigilanceDeckSchedulerTest {
         } else {
             verify(decks).existsByTypeAndUrlIgnoreCaseAndDeletedFalse(DeckType.TOURNAMENT, EVENT_URL);
         }
-        if (existing || duplicate) {
+        if (existing || duplicate || duplicateTournamentResult) {
             verify(decks, never()).findByTypeAndNameContainingIgnoreCase(any(), any());
         } else {
             verify(decks).findByTypeAndNameContainingIgnoreCase(DeckType.TOURNAMENT, "Example deck");

@@ -153,6 +153,9 @@ public class TournamentDeckScheduler {
         deck.setEventId(TournamentEventId.fromUrl(deck.getUrl()));
         deck.setFinalVp(source.getScore() != null ? source.getScore().getFinalsVp() : null);
         deck.setPosition(1);
+        if (hasTournamentResultConflict(deck)) {
+            return;
+        }
         deck.setViews(actual != null ? actual.getViews() : 0);
         deck.setVerified(actual != null && actual.getVerified());
         String name = source.getName();
@@ -283,6 +286,18 @@ public class TournamentDeckScheduler {
             }
         }
         return false;
+    }
+
+    private boolean hasTournamentResultConflict(DeckEntity deck) {
+        if (StringUtils.isBlank(deck.getEventId()) || deck.getPosition() == null) {
+            return false;
+        }
+        boolean exists = deckRepository.existsByTypeAndEventIdAndPositionAndIdNotAndDeletedFalse(
+                DeckType.TOURNAMENT, deck.getEventId(), deck.getPosition(), deck.getId());
+        if (exists) {
+            log.warn("Skipping deck {}, event {} already has a deck in position {}", deck.getId(), deck.getEventId(), deck.getPosition());
+        }
+        return exists;
     }
 
     private void reportVerifiedDifferences(DeckEntity actual, DeckEntity deck, Map<Integer, DeckCardEntity> deckCards) {

@@ -172,6 +172,9 @@ public class TournamentEternalVigilanceDeckScheduler {
         deck.setUrl(eventUrl);
         deck.setEventId(TournamentEventId.fromUrl(eventUrl));
         deck.setPosition(1);
+        if (hasTournamentResultConflict(deck)) {
+            return;
+        }
         deck.setTournament(source.getName());
         deck.setPlayers(source.getPlayersCount());
         deck.setRounds(getRounds(source.getRoundsFormat()));
@@ -349,6 +352,18 @@ public class TournamentEternalVigilanceDeckScheduler {
             }
         }
         return false;
+    }
+
+    private boolean hasTournamentResultConflict(DeckEntity deck) {
+        if (StringUtils.isBlank(deck.getEventId()) || deck.getPosition() == null) {
+            return false;
+        }
+        boolean exists = deckRepository.existsByTypeAndEventIdAndPositionAndIdNotAndDeletedFalse(
+                DeckType.TOURNAMENT, deck.getEventId(), deck.getPosition(), deck.getId());
+        if (exists) {
+            log.warn("Skipping deck {}, event {} already has a deck in position {}", deck.getId(), deck.getEventId(), deck.getPosition());
+        }
+        return exists;
     }
 
     private void persist(DeckEntity actual, DeckEntity deck, Map<Integer, DeckCardEntity> deckCards) {

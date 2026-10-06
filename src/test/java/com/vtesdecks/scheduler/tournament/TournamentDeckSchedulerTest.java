@@ -110,6 +110,28 @@ public class TournamentDeckSchedulerTest {
     }
 
     @Test
+    public void shouldSkipDuplicateTournamentResult() {
+        when(deckRepository.existsByTypeAndEventIdAndPositionAndIdNotAndDeletedFalse(
+                DeckType.TOURNAMENT, "12345", 1, "tournament-2023event")).thenReturn(true);
+
+        scheduler.parseDeck(twdaDeck());
+
+        verify(deckRepository, never()).saveAndFlush(any());
+        verify(deckCardRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    public void shouldImportDeckWithoutEventIdWithoutCheckingTournamentResult() {
+        TwdaDeck source = twdaDeck();
+        source.getEvent().setUrl("https://example.com/events/12345");
+
+        scheduler.parseDeck(source);
+
+        verify(deckRepository).saveAndFlush(any());
+        verify(deckRepository, never()).existsByTypeAndEventIdAndPositionAndIdNotAndDeletedFalse(any(), any(), any(), any());
+    }
+
+    @Test
     public void shouldUpdateCardsOfExistingUnverifiedDeck() {
         DeckEntity actual = existingDeck(false);
         when(deckRepository.findById("tournament-2023event")).thenReturn(Optional.of(actual));
