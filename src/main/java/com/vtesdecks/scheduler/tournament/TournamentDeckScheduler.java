@@ -150,6 +150,9 @@ public class TournamentDeckScheduler {
         deck.setYear(event.getDate().getYear());
         deck.setAuthor(source.getPlayer());
         deck.setUrl(StringUtils.isNotBlank(event.getUrl()) ? event.getUrl() : null);
+        deck.setEventId(TournamentEventId.fromUrl(deck.getUrl()));
+        deck.setFinalVp(source.getScore() != null ? source.getScore().getFinalsVp() : null);
+        deck.setPosition(1);
         deck.setViews(actual != null ? actual.getViews() : 0);
         deck.setVerified(actual != null && actual.getVerified());
         String name = source.getName();

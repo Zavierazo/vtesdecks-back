@@ -13,6 +13,7 @@ import lombok.EqualsAndHashCode;
 import org.springframework.data.redis.core.RedisHash;
 import org.springframework.data.redis.core.TimeToLive;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -30,6 +31,7 @@ public class Deck extends DeckSummary {
     private String url;
     private String source;
     private String description;
+    private BigDecimal finalVp;
     private List<Card> crypt = new ArrayList<>();
     private List<Card> library = new ArrayList<>();
     @JsonIgnore

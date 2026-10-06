@@ -46,6 +46,8 @@ public class DeckSummary {
     public static final Attribute<DeckSummary, Integer> DISCIPLINE_NUMBER_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, Integer.class, "disciplineNumber", (DeckSummary deck) -> deck.getDisciplines().size());
     public static final Attribute<DeckSummary, String> AUTHOR_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, String.class, "author", (DeckSummary deck) -> deck.getAuthor() != null ? deck.getAuthor().toLowerCase() : null);
     public static final Attribute<DeckSummary, String> TOURNAMENT_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, String.class, "tournament", (DeckSummary deck) -> StringUtils.lowerCase(deck.getTournament()));
+    public static final Attribute<DeckSummary, String> EVENT_ID_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, String.class, "event_id", DeckSummary::getEventId);
+    public static final Attribute<DeckSummary, Integer> POSITION_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, Integer.class, "position", DeckSummary::getPosition);
     public static final Attribute<DeckSummary, Integer> ROUNDS_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, Integer.class, "rounds", DeckSummary::getRounds);
     public static final Attribute<DeckSummary, String> PLACE_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, String.class, "place", (DeckSummary deck) -> StringUtils.lowerCase(deck.getPlace()));
     public static final Attribute<DeckSummary, String> COUNTRY_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, String.class, "country", (DeckSummary deck) -> StringUtils.lowerCase(deck.getCountry()));
@@ -118,6 +120,8 @@ public class DeckSummary {
     private Long comments;
     private ReactionType reaction;
     private String tournament;
+    private String eventId;
+    private Integer position;
     private Integer players;
     private Integer rounds;
     private String place;
@@ -161,6 +165,8 @@ public class DeckSummary {
         summary.setComments(deck.getComments());
         summary.setReaction(deck.getReaction());
         summary.setTournament(deck.getTournament());
+        summary.setEventId(deck.getEventId());
+        summary.setPosition(deck.getPosition());
         summary.setPlayers(deck.getPlayers());
         summary.setRounds(deck.getRounds());
         summary.setPlace(deck.getPlace());

@@ -170,6 +170,8 @@ public class TournamentEternalVigilanceDeckScheduler {
         deck.setType(DeckType.TOURNAMENT);
         deck.setSource(source.getForumPostUrl());
         deck.setUrl(eventUrl);
+        deck.setEventId(TournamentEventId.fromUrl(eventUrl));
+        deck.setPosition(1);
         deck.setTournament(source.getName());
         deck.setPlayers(source.getPlayersCount());
         deck.setRounds(getRounds(source.getRoundsFormat()));

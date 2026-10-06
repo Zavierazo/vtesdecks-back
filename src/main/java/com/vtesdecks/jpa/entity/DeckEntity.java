@@ -64,6 +64,15 @@ public class DeckEntity {
     @Column(name = "url")
     private String url;
 
+    @Column(name = "event_id")
+    private String eventId;
+
+    @Column(name = "final_vp", precision = 3, scale = 1)
+    private BigDecimal finalVp;
+
+    @Column(name = "`position`")
+    private Integer position;
+
     @Column(name = "source")
     private String source;
 

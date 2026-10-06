@@ -21,6 +21,7 @@ public class TwdaDeck {
     private String comment;
     private String author;
     private String player;
+    private TwdaScore score;
     private TwdaEvent event;
     private List<TwdaCard> cards = new ArrayList<>();
 }

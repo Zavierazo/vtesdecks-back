@@ -111,6 +111,8 @@ public class DeckIndex {
         decks.addIndex(HashIndex.onAttribute(DeckSummary.USER_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.AUTHOR_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.ROUNDS_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.EVENT_ID_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.POSITION_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.CLAN_MULTI_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.DISCIPLINE_MULTI_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.GROUP_MULTI_ATTRIBUTE));
@@ -468,6 +470,12 @@ public class DeckIndex {
         }
         if (StringUtils.isNotBlank(deckQuery.getTournament())) {
             query = and(query, contains(DeckSummary.TOURNAMENT_ATTRIBUTE, StringUtils.lowerCase(deckQuery.getTournament())));
+        }
+        if (StringUtils.isNotBlank(deckQuery.getEventId())) {
+            query = and(query, equal(DeckSummary.EVENT_ID_ATTRIBUTE, deckQuery.getEventId()));
+        }
+        if (deckQuery.getPosition() != null) {
+            query = and(query, equal(DeckSummary.POSITION_ATTRIBUTE, deckQuery.getPosition()));
         }
         if (StringUtils.isNotBlank(deckQuery.getPlace())) {
             String place = StringUtils.lowerCase(deckQuery.getPlace());

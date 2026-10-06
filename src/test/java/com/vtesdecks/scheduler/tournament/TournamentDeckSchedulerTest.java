@@ -15,6 +15,7 @@ import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.model.twda.TwdaCard;
 import com.vtesdecks.model.twda.TwdaDeck;
 import com.vtesdecks.model.twda.TwdaEvent;
+import com.vtesdecks.model.twda.TwdaScore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,12 +30,14 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -90,7 +93,10 @@ public class TournamentDeckSchedulerTest {
         assertEquals("Spain", deck.getCountry());
         assertEquals(2023, deck.getYear());
         assertEquals("John Doe", deck.getAuthor());
-        assertEquals("https://example.org/event", deck.getUrl());
+        assertEquals("https://www.vekn.net/event-calendar/event/12345", deck.getUrl());
+        assertEquals("12345", deck.getEventId());
+        assertEquals(new BigDecimal("1.5"), deck.getFinalVp());
+        assertEquals(1, deck.getPosition());
         assertEquals("My Deck", deck.getName());
         assertEquals("First line\nSecond line", deck.getDescription());
         assertEquals(DATE.atStartOfDay(), deck.getCreationDate());
@@ -353,6 +359,7 @@ public class TournamentDeckSchedulerTest {
         assertEquals("United States", modern.getEvent().getCountry().getName());
         assertEquals("Alex Romano", modern.getPlayer());
         assertEquals("Daylily", modern.getName());
+        assertEquals(new BigDecimal("2.0"), modern.getScore().getFinalsVp());
         assertEquals(12, modern.getCards().stream()
                 .filter(card -> "Crypt".equals(card.getKind())).mapToInt(TwdaCard::getCount).sum());
         assertEquals(90, modern.getCards().stream()
@@ -366,6 +373,22 @@ public class TournamentDeckSchedulerTest {
         assertEquals(2, deckCaptor.getValue().getRounds());
         assertEquals("Newark (OH), USA", deckCaptor.getValue().getPlace());
         assertEquals("United States", deckCaptor.getValue().getCountry());
+        assertEquals("10043", deckCaptor.getValue().getEventId());
+        assertEquals(new BigDecimal("2.0"), deckCaptor.getValue().getFinalVp());
+        assertEquals(1, deckCaptor.getValue().getPosition());
+    }
+
+    @Test
+    public void shouldKeepFinalVpNullWhenTwdaHasNoScore() {
+        TwdaDeck source = twdaDeck();
+        source.setScore(null);
+
+        scheduler.parseDeck(source);
+
+        ArgumentCaptor<DeckEntity> deckCaptor = ArgumentCaptor.forClass(DeckEntity.class);
+        verify(deckRepository).saveAndFlush(deckCaptor.capture());
+        assertNull(deckCaptor.getValue().getFinalVp());
+        assertEquals(1, deckCaptor.getValue().getPosition());
     }
 
     private TwdaDeck twdaDeck() {
@@ -381,8 +404,11 @@ public class TournamentDeckSchedulerTest {
         country.setName("Spain");
         country.setCode("ES");
         event.setCountry(country);
-        event.setUrl("https://example.org/event");
+        event.setUrl("https://www.vekn.net/event-calendar/event/12345");
         deck.setEvent(event);
+        TwdaScore score = new TwdaScore();
+        score.setFinalsVp(new BigDecimal("1.5"));
+        deck.setScore(score);
         deck.setPlayer("John Doe");
         deck.setName("My Deck");
         deck.setComment("Description: First line\nSecond line");
@@ -435,7 +461,10 @@ public class TournamentDeckSchedulerTest {
                 .country("Spain")
                 .year(2023)
                 .author("John Doe")
-                .url("https://example.org/event")
+                .url("https://www.vekn.net/event-calendar/event/12345")
+                .eventId("12345")
+                .finalVp(new BigDecimal("1.5"))
+                .position(1)
                 .name("My Deck")
                 .description("First line\nSecond line")
                 .views(5L)

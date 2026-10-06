@@ -121,6 +121,9 @@ public class DeckFactory {
         value.setComments(commentRepository.countByPageIdentifierAndDeletedFalse("deck_" + deck.getId()));
         value.setReaction(computeFeaturedReaction(deck.getId()));
         value.setTournament(deck.getTournament());
+        value.setEventId(deck.getEventId());
+        value.setFinalVp(deck.getFinalVp());
+        value.setPosition(deck.getPosition());
         value.setPlayers(deck.getPlayers());
         value.setRounds(deck.getRounds());
         value.setPlace(deck.getPlace());

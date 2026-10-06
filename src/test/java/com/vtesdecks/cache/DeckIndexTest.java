@@ -71,6 +71,12 @@ class DeckIndexTest {
     }
 
     @Test
+    void filtersByEventIdAndPositionTogether() {
+        assertEquals(List.of("deck-2"), ids(DeckQuery.builder().eventId("event-2").position(2).build()));
+        assertEquals(List.of(), ids(DeckQuery.builder().eventId("event-2").position(3).build()));
+    }
+
+    @Test
     void preservesCreationDateAndCardQuantityFilters() {
         assertEquals(List.of("deck-3", "deck-2"), ids(DeckQuery.builder()
                 .creationDate(LocalDate.of(2022, 1, 1)).build()));
@@ -166,6 +172,8 @@ class DeckIndexTest {
         deck.setType(DeckType.COMMUNITY);
         deck.setPublished(number != 4);
         deck.setTournament("Event " + number);
+        deck.setEventId("event-" + number);
+        deck.setPosition(number);
         deck.setPlace("City " + number);
         deck.setCountry("Country " + number);
         deck.setLimitedFormat("Format " + number);

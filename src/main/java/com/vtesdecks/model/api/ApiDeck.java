@@ -6,6 +6,7 @@ import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.enums.ReactionType;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -22,6 +23,9 @@ public class ApiDeck {
     private Integer bookmarks;
     private Long comments;
     private String tournament;
+    private String eventId;
+    private BigDecimal finalVp;
+    private Integer position;
     private Integer players;
     private Integer rounds;
     private String place;

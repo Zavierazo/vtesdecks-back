@@ -28,6 +28,9 @@ public final class DeckCacheFixtures {
         deck.setDescription("Full description with accents: café 日本語");
         deck.setUrl("https://example.com/deck");
         deck.setSource("fixture");
+        deck.setEventId("fixture-event");
+        deck.setFinalVp(new BigDecimal("2.5"));
+        deck.setPosition(2);
         deck.setType(DeckType.COMMUNITY);
         deck.setPublished(true);
         deck.setCreationDate(LocalDateTime.of(2026, 1, 1, 12, 0));

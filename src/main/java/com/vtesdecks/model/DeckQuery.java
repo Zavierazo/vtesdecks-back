@@ -36,6 +36,8 @@ public class DeckQuery {
     private List<String> notDisciplines;
     private String disciplineMode;
     private String tournament;
+    private String eventId;
+    private Integer position;
     private String place;
     private List<Integer> rounds;
     private Map<Integer, Integer> cards;

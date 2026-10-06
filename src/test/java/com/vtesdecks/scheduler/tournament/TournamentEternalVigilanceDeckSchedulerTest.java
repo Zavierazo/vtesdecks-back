@@ -36,6 +36,15 @@ public class TournamentEternalVigilanceDeckSchedulerTest {
     }
 
     @Test
+    public void shouldStoreEventIdAndWinningPosition() throws Exception {
+        DeckEntity deck = assertImport(false, false, EVENT_URL, true);
+
+        assertEquals("12345", deck.getEventId());
+        assertEquals(1, deck.getPosition());
+        assertNull(deck.getFinalVp());
+    }
+
+    @Test
     public void shouldUpdateExistingIdWithoutDuplicateUrlCheck() throws Exception {
         assertImport(false, true, EVENT_URL, true);
     }
@@ -72,8 +81,8 @@ public class TournamentEternalVigilanceDeckSchedulerTest {
                 .tournament("EXAMPLE TOURNAMENT").creationDate(LocalDateTime.of(2026, 9, 1, 18, 30)).build();
     }
 
-    private void assertImport(boolean duplicate, boolean existing, String eventUrl, boolean saved,
-                              DeckEntity... matchingDecks) throws Exception {
+    private DeckEntity assertImport(boolean duplicate, boolean existing, String eventUrl, boolean saved,
+                                   DeckEntity... matchingDecks) throws Exception {
         DeckRepository decks = mock(DeckRepository.class);
         DeckCardRepository cards = mock(DeckCardRepository.class);
         TournamentEternalVigilanceDeckScheduler scheduler = new TournamentEternalVigilanceDeckScheduler(
@@ -108,8 +117,10 @@ public class TournamentEternalVigilanceDeckSchedulerTest {
             ReflectionTestUtils.invokeMethod(scheduler, "parseDeck", "12345", "2026/09/12345.yaml");
         }
         if (saved) {
-            verify(decks).saveAndFlush(any(DeckEntity.class));
+            var deckCaptor = org.mockito.ArgumentCaptor.forClass(DeckEntity.class);
+            verify(decks).saveAndFlush(deckCaptor.capture());
             verify(cards, times(2)).saveAndFlush(any());
+            return deckCaptor.getValue();
         } else {
             verify(decks, never()).saveAndFlush(any());
             verifyNoInteractions(cards);
@@ -124,6 +135,7 @@ public class TournamentEternalVigilanceDeckSchedulerTest {
         } else {
             verify(decks).findByTypeAndNameContainingIgnoreCase(DeckType.TOURNAMENT, "Example deck");
         }
+        return null;
     }
 
     @Test

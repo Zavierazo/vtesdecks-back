@@ -117,6 +117,8 @@ public class ApiDeckController {
                                           @RequestParam(name = "notDisciplines", required = false) List<String> notDisciplines,
                                           @RequestParam(name = "disciplineMode", required = false) String disciplineMode,
                                           @RequestParam(name = "tournament", required = false) String tournament,
+                                          @RequestParam(name = "eventId", required = false) String eventId,
+                                          @RequestParam(name = "position", required = false) Integer position,
                                           @RequestParam(name = "place", required = false) String place,
                                           @RequestParam(name = "rounds", required = false) List<Integer> rounds,
                                           @RequestParam(name = "cards", required = false) List<String> cards,
@@ -178,6 +180,8 @@ public class ApiDeckController {
                 .notDisciplines(notDisciplines)
                 .disciplineMode(disciplineMode)
                 .tournament(tournament)
+                .eventId(eventId)
+                .position(position)
                 .place(place)
                 .rounds(rounds)
                 .starVampire(starVampire)

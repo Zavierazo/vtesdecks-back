@@ -99,6 +99,9 @@ class ApiDeckSummaryMapperTest {
         assertNull(actual.getStats().getLibraryClans());
         assertNull(actual.getCrypt());
         assertNull(actual.getLibrary());
+        assertEquals("fixture-event", actual.getEventId());
+        assertNull(actual.getFinalVp());
+        assertEquals(2, actual.getPosition());
     }
 
     @Test
@@ -129,6 +132,7 @@ class ApiDeckSummaryMapperTest {
         assertEquals(1, anonymous.getWarnings().size());
         assertEquals(1, anonymous.getErratas().size());
         assertEquals(2, anonymous.getBookmarks());
+        assertEquals(new BigDecimal("2.5"), anonymous.getFinalVp());
     }
 
     @Test
