@@ -1,6 +1,9 @@
 package com.vtesdecks.api.service;
 
 import com.vtesdecks.cache.DeckArchetypeIndex;
+import com.vtesdecks.cache.DeckIndex;
+import com.vtesdecks.cache.CryptCache;
+import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.scheduler.AchievementScheduler;
 import com.vtesdecks.scheduler.ArchonUserScheduler;
 import com.vtesdecks.scheduler.CleanUpScheduler;
@@ -51,6 +54,12 @@ class ApiAdminSchedulerServiceTest {
     @Mock
     private ProxyCardOptionScheduler proxyCardOptionScheduler;
     @Mock
+    private DeckIndex deckIndex;
+    @Mock
+    private CryptCache cryptCache;
+    @Mock
+    private LibraryCache libraryCache;
+    @Mock
     private MarketScheduler marketScheduler;
     @Mock
     private DeckArchetypeScheduler deckArchetypeScheduler;
@@ -67,7 +76,7 @@ class ApiAdminSchedulerServiceTest {
 
     @Test
     void exposesEveryMigratedManualScheduler() {
-        assertEquals(22, service.getAll().size());
+        assertEquals(25, service.getAll().size());
         assertTrue(service.getAll().stream().anyMatch(item ->
                 item.key().equals("collection-clean") && item.description().equals("Clean collections")));
         assertTrue(service.getAll().stream().anyMatch(item ->
@@ -78,6 +87,12 @@ class ApiAdminSchedulerServiceTest {
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("reactions-clean")));
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("notifications-clean")));
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("email-actions-clean")));
+        assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("deck-index")
+                && item.description().equals("Refresh deck index")));
+        assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("crypt-index")
+                && item.description().equals("Refresh crypt index")));
+        assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("library-index")
+                && item.description().equals("Refresh library index")));
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("twda-archon-decks")
                 && item.description().equals("Import Archon finalist decks")));
     }
@@ -108,6 +123,17 @@ class ApiAdminSchedulerServiceTest {
     }
 
     @Test
+    void refreshesCardAndDeckIndexes() {
+        assertTrue(service.run("deck-index", 42));
+        assertTrue(service.run("crypt-index", 42));
+        assertTrue(service.run("library-index", 42));
+
+        verify(deckIndex).refreshIndex();
+        verify(cryptCache).refreshIndex();
+        verify(libraryCache).refreshIndex();
+    }
+
+    @Test
     void runsNewCleanupSchedulers() {
         assertTrue(service.run("comments-clean", 42));
         assertTrue(service.run("reactions-clean", 42));
@@ -126,6 +152,6 @@ class ApiAdminSchedulerServiceTest {
                 tournamentArchonDeckScheduler,
                 driveThruCardsScheduler, gamePodScheduler, vtesdleTodayScheduler, cardGameGeekScheduler,
                 proxyCardOptionScheduler, marketScheduler, deckArchetypeScheduler, deckArchetypeIndex,
-                userMonthScheduler, achievementScheduler, patreonReminderScheduler);
+                deckIndex, cryptCache, libraryCache, userMonthScheduler, achievementScheduler, patreonReminderScheduler);
     }
 }

@@ -1,6 +1,9 @@
 package com.vtesdecks.api.service;
 
 import com.vtesdecks.cache.DeckArchetypeIndex;
+import com.vtesdecks.cache.DeckIndex;
+import com.vtesdecks.cache.CryptCache;
+import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.model.api.ApiAdminScheduler;
 import com.vtesdecks.scheduler.AchievementScheduler;
 import com.vtesdecks.scheduler.ArchonUserScheduler;
@@ -45,6 +48,9 @@ public class ApiAdminSchedulerService {
             new ApiAdminScheduler("market", "Synchronize market prices"),
             new ApiAdminScheduler("vtesdle-today", "Select today's Vtesdle card"),
             new ApiAdminScheduler("proxy-card-options", "Refresh proxy card options"),
+            new ApiAdminScheduler("deck-index", "Refresh deck index"),
+            new ApiAdminScheduler("crypt-index", "Refresh crypt index"),
+            new ApiAdminScheduler("library-index", "Refresh library index"),
             new ApiAdminScheduler("deck-archetypes", "Refresh deck archetypes"),
             new ApiAdminScheduler("deck-archetype-index", "Rebuild deck archetype index"),
             new ApiAdminScheduler("user-month", "Calculate users of the month"),
@@ -62,6 +68,9 @@ public class ApiAdminSchedulerService {
     private final VtesdleTodayScheduler vtesdleTodayScheduler;
     private final CardGameGeekScheduler cardGameGeekScheduler;
     private final ProxyCardOptionScheduler proxyCardOptionScheduler;
+    private final DeckIndex deckIndex;
+    private final CryptCache cryptCache;
+    private final LibraryCache libraryCache;
     private final MarketScheduler marketScheduler;
     private final DeckArchetypeScheduler deckArchetypeScheduler;
     private final DeckArchetypeIndex deckArchetypeIndex;
@@ -93,6 +102,9 @@ public class ApiAdminSchedulerService {
             case "market" -> marketScheduler.scrapCards();
             case "vtesdle-today" -> vtesdleTodayScheduler.selectTodayVtesdle();
             case "proxy-card-options" -> proxyCardOptionScheduler.proxyCardOptionScheduler();
+            case "deck-index" -> deckIndex.refreshIndex();
+            case "crypt-index" -> cryptCache.refreshIndex();
+            case "library-index" -> libraryCache.refreshIndex();
             case "deck-archetypes" -> deckArchetypeScheduler.deckArchetypeScheduler();
             case "deck-archetype-index" -> deckArchetypeIndex.refreshIndex();
             case "user-month" -> userMonthScheduler.selectUsersOfMonth();
