@@ -26,6 +26,7 @@ public class ApiDeck {
     private String eventId;
     private BigDecimal finalVp;
     private Integer position;
+    private Integer finalSeat;
     private Integer players;
     private Integer rounds;
     private String place;

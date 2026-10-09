@@ -3,6 +3,7 @@ package com.vtesdecks.scheduler.tournament;
 import org.junit.jupiter.api.Test;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckEntity;
+import com.vtesdecks.jpa.entity.TournamentSchedulerOwner;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import org.jsoup.Connection;
@@ -99,7 +100,8 @@ public class TournamentEternalVigilanceDeckSchedulerTest {
                 decks, cards, null, null, mock(PlatformTransactionManager.class));
         scheduler.setUp();
         when(decks.findById("tournament-12345")).thenReturn(existing
-                ? Optional.of(DeckEntity.builder().id("tournament-12345").name("Old name").build())
+                ? Optional.of(DeckEntity.builder().id("tournament-12345").name("Old name")
+                .type(DeckType.TOURNAMENT).schedulerOwner(TournamentSchedulerOwner.ETERNAL_VIGILANCE).build())
                 : Optional.empty());
         when(decks.existsByTypeAndUrlIgnoreCaseAndDeletedFalse(DeckType.TOURNAMENT, EVENT_URL))
                 .thenReturn(duplicate);

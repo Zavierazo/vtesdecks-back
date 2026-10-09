@@ -11,6 +11,7 @@ import com.vtesdecks.util.CosineSimilarityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -18,15 +19,26 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DeckArchetypeSuggestionsTest {
-    @Mock DeckCardIndex deckCardIndex;
-    @Mock DeckArchetypeRepository repository;
-    @Mock DeckService deckService;
-    @InjectMocks DeckArchetypeService service;
+    @Mock
+    DeckCardIndex deckCardIndex;
+    @Mock
+    DeckArchetypeRepository repository;
+    @Mock
+    DeckService deckService;
+    @InjectMocks
+    DeckArchetypeService service;
 
     @BeforeEach
     void candidates() {
@@ -81,6 +93,24 @@ class DeckArchetypeSuggestionsTest {
         assertEquals("Closer", nearest.name());
         assertEquals(1.0, nearest.similarity(), 0.00001);
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void usesWinnerAsReferenceAndFinalistsForSimilarity() {
+        when(repository.findAll()).thenReturn(List.of());
+
+        service.getSuggestions();
+
+        ArgumentCaptor<DeckQuery> queryCaptor = ArgumentCaptor.forClass(DeckQuery.class);
+        verify(deckService, atLeast(2)).getDecks(queryCaptor.capture());
+        DeckQuery referenceQuery = queryCaptor.getAllValues().stream()
+                .filter(query -> Integer.valueOf(1).equals(query.getMinPosition())
+                        && Integer.valueOf(1).equals(query.getMaxPosition()))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(1, referenceQuery.getMinPosition());
+        assertEquals(1, referenceQuery.getMaxPosition());
     }
 
     @Test

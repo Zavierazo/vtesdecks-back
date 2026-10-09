@@ -13,11 +13,14 @@ import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckCardEntity;
 import com.vtesdecks.jpa.entity.DeckEntity;
+import com.vtesdecks.jpa.entity.TournamentSchedulerOwner;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.model.eternalvigilance.EternalVigilanceCard;
 import com.vtesdecks.model.eternalvigilance.EternalVigilanceDeck;
 import com.vtesdecks.model.eternalvigilance.EternalVigilanceLibrarySection;
+import com.vtesdecks.scheduler.tournament.helpers.TournamentEventId;
+import com.vtesdecks.scheduler.tournament.helpers.TournamentImportPolicy;
 import com.vtesdecks.util.VtesUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +42,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,16 +49,14 @@ import java.util.regex.Pattern;
  * Imports tournament winning decks published in the
  * <a href="https://github.com/gurchon-hall/eternal-vigilance">eternal-vigilance</a> repository.
  * <p>
- * Decks are only imported when they do not already come from the TWDA import
- * ({@link TournamentDeckScheduler}, which keeps the {@code vekn.fr/decks/twd.htm} source ids) and
- * are not manually verified, so curated/verified data is never overwritten.
+ * Imports new decks and updates its own unverified decks. TWDA, Archon, unknown-owner and
+ * verified decks are protected by the shared tournament import policy.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class TournamentEternalVigilanceDeckScheduler {
 
-    private static final String LEGACY_SOURCE_PREFIX = "http://www.vekn.fr/decks/twd.htm#";
     /**
      * Matches deck files stored as {@code YYYY/MM/<event_id>.yaml}.
      */
@@ -87,11 +87,11 @@ public class TournamentEternalVigilanceDeckScheduler {
     private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory())
             .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
             .findAndRegisterModules();
-    private TransactionTemplate transactionTemplate;
+    private TournamentImportPolicy importPolicy;
 
     @PostConstruct
     void setUp() {
-        transactionTemplate = new TransactionTemplate(transactionManager);
+        importPolicy = new TournamentImportPolicy(deckRepository, new TransactionTemplate(transactionManager));
     }
 
     //Import eternal-vigilance tournament decks once a day at 07:00
@@ -137,20 +137,9 @@ public class TournamentEternalVigilanceDeckScheduler {
 
     private void parseDeck(String eventId, String path) throws Exception {
         String id = "tournament-" + eventId;
-        Optional<DeckEntity> optionalDeck = deckRepository.findById(id);
-        DeckEntity actual = optionalDeck.orElse(null);
-        //Never override decks coming from the legacy twd.htm scrap nor manually verified decks
-        if (actual != null) {
-            if (actual.getSource() != null && actual.getSource().startsWith(LEGACY_SOURCE_PREFIX)) {
-                log.debug("Skipping deck {}, already scrapped from {}", id, LEGACY_SOURCE_PREFIX);
-                return;
-            }
-            if (Boolean.TRUE.equals(actual.getVerified())) {
-                log.debug("Skipping deck {}, manually verified", id);
-                return;
-            }
+        if (importPolicy.shouldSkipFetch(id, TournamentSchedulerOwner.ETERNAL_VIGILANCE)) {
+            return;
         }
-
         String rawUrl = "https://raw.githubusercontent.com/" + repo + "/" + branch + "/" + path;
         EternalVigilanceDeck source = yamlMapper.readValue(fetch(rawUrl), EternalVigilanceDeck.class);
         if (source.getDeck() == null) {
@@ -158,6 +147,13 @@ public class TournamentEternalVigilanceDeckScheduler {
             return;
         }
 
+        String eventUrl = StringUtils.trimToNull(source.getEventUrl());
+        importPolicy.execute(id, TournamentEventId.fromUrl(eventUrl), 1, TournamentSchedulerOwner.ETERNAL_VIGILANCE,
+                (actual, action) -> importDeck(id, source, actual));
+    }
+
+    private void importDeck(String incomingId, EternalVigilanceDeck source, DeckEntity actual) {
+        String id = actual != null ? actual.getId() : incomingId;
         String eventUrl = StringUtils.trimToNull(source.getEventUrl());
         if (actual == null && eventUrl != null
                 && deckRepository.existsByTypeAndUrlIgnoreCaseAndDeletedFalse(DeckType.TOURNAMENT, eventUrl)) {
@@ -168,6 +164,7 @@ public class TournamentEternalVigilanceDeckScheduler {
         DeckEntity deck = actual != null ? actual.toBuilder().build() : DeckEntity.builder().build();
         deck.setId(id);
         deck.setType(DeckType.TOURNAMENT);
+        deck.setSchedulerOwner(TournamentSchedulerOwner.ETERNAL_VIGILANCE);
         deck.setSource(source.getForumPostUrl());
         deck.setUrl(eventUrl);
         deck.setEventId(TournamentEventId.fromUrl(eventUrl));
@@ -219,8 +216,7 @@ public class TournamentEternalVigilanceDeckScheduler {
         if (!isValidDeck(deck, deckCards)) {
             return;
         }
-        //Each deck is persisted in its own transaction so a failure only rolls back that deck
-        transactionTemplate.executeWithoutResult(status -> persist(actual, deck, deckCards));
+        persist(actual, deck, deckCards);
     }
 
     /**

@@ -13,6 +13,8 @@ import com.vtesdecks.cache.indexable.DeckCard;
 import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.CollectionTracker;
+import com.vtesdecks.cache.redis.entity.DeckArchetype;
+import com.vtesdecks.cache.redis.repositories.DeckArchetypeRedisRepository;
 import com.vtesdecks.configuration.WebConfiguration;
 import com.vtesdecks.model.api.ApiDeck;
 import com.vtesdecks.service.CurrencyExchangeService;
@@ -26,6 +28,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -86,6 +89,11 @@ class ApiDeckSummaryMapperTest {
     @Test
     void summaryMatchesFullModelSummaryIncludingAdventAndFilteredQuantities() {
         var filter = Map.of(200001, 1, 100001, 1, 100002, 1);
+        full.setDeckArchetypeId(7);
+        DeckArchetypeRedisRepository archetypes = mock(DeckArchetypeRedisRepository.class);
+        when(archetypes.findById(7)).thenReturn(Optional.of(DeckArchetype.builder()
+                .id(7).name("Ventrue Lawfirm").icon("ventrue").type("Political").build()));
+        ReflectionTestUtils.setField(mapper, "deckArchetypeRedisRepository", archetypes);
         ApiDeck expected = mapper.mapSummary(full, 42, filter, "USD");
         ApiDeck actual = mapper.mapSummary(DeckSummary.from(full), 42, filter, "USD");
         assertEquals(json.valueToTree(expected), json.valueToTree(actual));
@@ -100,8 +108,10 @@ class ApiDeckSummaryMapperTest {
         assertNull(actual.getCrypt());
         assertNull(actual.getLibrary());
         assertEquals("fixture-event", actual.getEventId());
-        assertNull(actual.getFinalVp());
+        assertEquals(new BigDecimal("2.5"), actual.getFinalVp());
         assertEquals(2, actual.getPosition());
+        assertEquals(4, actual.getFinalSeat());
+        assertEquals("Ventrue Lawfirm", actual.getArchetype().getName());
     }
 
     @Test
@@ -133,6 +143,7 @@ class ApiDeckSummaryMapperTest {
         assertEquals(1, anonymous.getErratas().size());
         assertEquals(2, anonymous.getBookmarks());
         assertEquals(new BigDecimal("2.5"), anonymous.getFinalVp());
+        assertEquals(4, anonymous.getFinalSeat());
     }
 
     @Test

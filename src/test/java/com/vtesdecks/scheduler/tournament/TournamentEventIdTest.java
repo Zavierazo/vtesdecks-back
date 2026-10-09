@@ -1,5 +1,6 @@
 package com.vtesdecks.scheduler.tournament;
 
+import com.vtesdecks.scheduler.tournament.helpers.TournamentEventId;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

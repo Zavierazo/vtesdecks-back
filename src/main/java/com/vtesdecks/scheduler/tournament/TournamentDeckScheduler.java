@@ -9,11 +9,15 @@ import com.vtesdecks.cache.indexable.Card;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckCardEntity;
 import com.vtesdecks.jpa.entity.DeckEntity;
+import com.vtesdecks.jpa.entity.TournamentSchedulerOwner;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.model.twda.TwdaCard;
 import com.vtesdecks.model.twda.TwdaDeck;
 import com.vtesdecks.model.twda.TwdaEvent;
+import com.vtesdecks.scheduler.tournament.helpers.TournamentDeckName;
+import com.vtesdecks.scheduler.tournament.helpers.TournamentEventId;
+import com.vtesdecks.scheduler.tournament.helpers.TournamentImportPolicy;
 import com.vtesdecks.util.VtesUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +53,7 @@ import java.util.regex.Pattern;
  * Manually verified decks are still scanned, but never modified: any difference against the
  * archive is only logged as a warning.
  * <p>
- * While scanning, decks whose deck and deck_card rows have not been modified for a month are
+ * While scanning, decks whose deck and deck_card rows have not been modified for two months are
  * automatically promoted to verified.
  */
 @Slf4j
@@ -80,11 +84,11 @@ public class TournamentDeckScheduler {
     private final ObjectMapper jsonMapper = new ObjectMapper()
             .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
             .findAndRegisterModules();
-    private TransactionTemplate transactionTemplate;
+    private TournamentImportPolicy importPolicy;
 
     @PostConstruct
     void setUp() {
-        transactionTemplate = new TransactionTemplate(transactionManager);
+        importPolicy = new TournamentImportPolicy(deckRepository, new TransactionTemplate(transactionManager));
     }
 
     //Update tournament decks once a day at 06:30
@@ -135,11 +139,18 @@ public class TournamentDeckScheduler {
                 return;
             }
         }
-        DeckEntity actual = deckRepository.findById(id).orElse(null);
+        importPolicy.execute(id, TournamentEventId.fromUrl(event.getUrl()), 1, TournamentSchedulerOwner.TWDA,
+                (actual, action) -> importDeck(source, actual));
+    }
+
+    private void importDeck(TwdaDeck source, DeckEntity actual) {
+        String id = actual != null ? actual.getId() : "tournament-" + source.getId();
+        TwdaEvent event = source.getEvent();
 
         DeckEntity deck = actual != null ? actual.toBuilder().build() : DeckEntity.builder().build();
         deck.setId(id);
         deck.setType(DeckType.TOURNAMENT);
+        deck.setSchedulerOwner(TournamentSchedulerOwner.TWDA);
         deck.setSource(SOURCE_PREFIX + source.getId());
         deck.setTournament(event.getName());
         //The archive reports 0 players when the attendance is unknown
@@ -151,15 +162,18 @@ public class TournamentDeckScheduler {
         deck.setAuthor(source.getPlayer());
         deck.setUrl(StringUtils.isNotBlank(event.getUrl()) ? event.getUrl() : null);
         deck.setEventId(TournamentEventId.fromUrl(deck.getUrl()));
-        deck.setFinalVp(source.getScore() != null ? source.getScore().getFinalsVp() : null);
+        if (actual == null || actual.getFinalVp() == null) {
+            deck.setFinalVp(source.getScore() != null ? source.getScore().getFinalsVp() : null);
+        }
         deck.setPosition(1);
         if (hasTournamentResultConflict(deck)) {
             return;
         }
         deck.setViews(actual != null ? actual.getViews() : 0);
         deck.setVerified(actual != null && actual.getVerified());
-        String name = source.getName();
-        if (StringUtils.isBlank(name) && actual != null && StringUtils.isNotBlank(actual.getName())) {
+        boolean invalidSourceName = TournamentDeckName.isInvalid(source.getName());
+        String name = TournamentDeckName.validName(source.getName());
+        if (StringUtils.isBlank(name) && !invalidSourceName && actual != null && StringUtils.isNotBlank(actual.getName())) {
             //The archive has no name for this deck: keep the existing one instead of autogenerating it
             name = actual.getName();
         }
@@ -198,8 +212,7 @@ public class TournamentDeckScheduler {
             reportVerifiedDifferences(actual, deck, deckCards);
             return;
         }
-        //Each deck is persisted in its own transaction so a failure only rolls back that deck
-        transactionTemplate.executeWithoutResult(status -> persist(actual, deck, deckCards));
+        persist(actual, deck, deckCards);
     }
 
     private String getFallbackName(TwdaDeck source) {
@@ -394,11 +407,11 @@ public class TournamentDeckScheduler {
                 changed = true;
             }
         }
-        //A deck stable for a month is promoted to verified, locking it against future scans
+        //A TWDA-owned deck stable for two months is promoted to verified, locking future scans.
         if (!insert && !changed && isUnmodifiedForTwoMonth(actual, dbCards)) {
             deck.setVerified(true);
             deckRepository.saveAndFlush(deck);
-            log.info("Auto-verified deck {} unmodified for a month", deck.getId());
+            log.info("Auto-verified deck {} unmodified for two months", deck.getId());
         }
     }
 

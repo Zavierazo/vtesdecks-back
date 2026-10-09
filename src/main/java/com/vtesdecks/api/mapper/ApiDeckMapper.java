@@ -93,6 +93,10 @@ public abstract class ApiDeckMapper {
             }
         }
         convertPriceCurrency(api.getStats(), currencyCode);
+        applyArchetype(api, deck);
+    }
+
+    private void applyArchetype(ApiDeck api, DeckSummary deck) {
         if (deck.getDeckArchetypeId() != null && deck.getDeckArchetypeId() != 0) {
             deckArchetypeRedisRepository.findById(deck.getDeckArchetypeId()).ifPresent(archetype ->
                     api.setArchetype(ApiDeckArchetype.builder()
@@ -139,6 +143,7 @@ public abstract class ApiDeckMapper {
                     }).toList());
         }
         convertPriceCurrency(api.getStats(), currencyCode);
+        applyArchetype(api, deck);
     }
 
     private void afterMappingUser(ApiDeck api, Integer userId, DeckSummary deck) {

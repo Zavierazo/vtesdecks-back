@@ -9,6 +9,8 @@ import java.util.List;
 
 public interface DeckRepository extends JpaRepository<DeckEntity, String> {
 
+    List<DeckEntity> findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType type, String eventId, Integer position);
+
     boolean existsByIdAndUser(String id, Integer user);
 
     List<DeckEntity> findByTypeAndNameContainingIgnoreCase(DeckType type, String name);

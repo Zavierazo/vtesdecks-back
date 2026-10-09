@@ -2,6 +2,7 @@ package com.vtesdecks.api.service;
 
 import com.vtesdecks.cache.DeckArchetypeIndex;
 import com.vtesdecks.scheduler.AchievementScheduler;
+import com.vtesdecks.scheduler.ArchonUserScheduler;
 import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import com.vtesdecks.scheduler.PatreonReminderScheduler;
@@ -13,6 +14,7 @@ import com.vtesdecks.scheduler.shops.DriveThruCardsScheduler;
 import com.vtesdecks.scheduler.shops.GamePodScheduler;
 import com.vtesdecks.scheduler.shops.MarketScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentDeckScheduler;
+import com.vtesdecks.scheduler.tournament.TournamentArchonDeckScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentEternalVigilanceDeckScheduler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +36,10 @@ class ApiAdminSchedulerServiceTest {
     private TournamentDeckScheduler tournamentDeckScheduler;
     @Mock
     private TournamentEternalVigilanceDeckScheduler tournamentEternalVigilanceDeckScheduler;
+    @Mock
+    private TournamentArchonDeckScheduler tournamentArchonDeckScheduler;
+    @Mock
+    private ArchonUserScheduler archonUserScheduler;
     @Mock
     private DriveThruCardsScheduler driveThruCardsScheduler;
     @Mock
@@ -61,7 +67,7 @@ class ApiAdminSchedulerServiceTest {
 
     @Test
     void exposesEveryMigratedManualScheduler() {
-        assertEquals(20, service.getAll().size());
+        assertEquals(22, service.getAll().size());
         assertTrue(service.getAll().stream().anyMatch(item ->
                 item.key().equals("collection-clean") && item.description().equals("Clean collections")));
         assertTrue(service.getAll().stream().anyMatch(item ->
@@ -72,12 +78,27 @@ class ApiAdminSchedulerServiceTest {
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("reactions-clean")));
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("notifications-clean")));
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("email-actions-clean")));
+        assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("twda-archon-decks")
+                && item.description().equals("Import Archon finalist decks")));
     }
 
     @Test
     void runsKnownScheduler() {
         assertTrue(service.run("achievements", 42));
         verify(achievementScheduler).reconcile();
+    }
+
+    @Test
+    void runsArchonScheduler() {
+        assertTrue(service.run("twda-archon-decks", 42));
+        verify(tournamentArchonDeckScheduler).scrappingDecks();
+    }
+
+    @Test
+    void runsArchonMemberScheduler() {
+        assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("archon-users")));
+        assertTrue(service.run("archon-users", 42));
+        verify(archonUserScheduler).scrappingUsers();
     }
 
     @Test
@@ -102,6 +123,7 @@ class ApiAdminSchedulerServiceTest {
     void rejectsUnknownScheduler() {
         assertFalse(service.run("unknown", 42));
         verifyNoInteractions(cleanUpScheduler, tournamentDeckScheduler, tournamentEternalVigilanceDeckScheduler,
+                tournamentArchonDeckScheduler,
                 driveThruCardsScheduler, gamePodScheduler, vtesdleTodayScheduler, cardGameGeekScheduler,
                 proxyCardOptionScheduler, marketScheduler, deckArchetypeScheduler, deckArchetypeIndex,
                 userMonthScheduler, achievementScheduler, patreonReminderScheduler);

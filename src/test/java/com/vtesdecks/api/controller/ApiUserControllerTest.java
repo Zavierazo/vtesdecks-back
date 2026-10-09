@@ -279,6 +279,25 @@ public class ApiUserControllerTest {
         assertEquals(List.of(2, 3), query.getRounds());
     }
 
+    @Test
+    public void shouldMapPositionRangeParameters() throws Exception {
+        ApiDeckController deckController = new ApiDeckController();
+        ReflectionTestUtils.setField(deckController, "deckService", deckService);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(deckController).build();
+        when(deckService.getDecks(any(DeckQuery.class), isNull(), isNull(), any(), anyInt(), anyInt()))
+                .thenReturn(new ApiDecks());
+
+        mockMvc.perform(get("/api/1.0/decks")
+                        .param("minPosition", "1")
+                        .param("maxPosition", "5"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<DeckQuery> captor = ArgumentCaptor.forClass(DeckQuery.class);
+        verify(deckService).getDecks(captor.capture(), isNull(), isNull(), any(), anyInt(), anyInt());
+        assertEquals(1, captor.getValue().getMinPosition());
+        assertEquals(5, captor.getValue().getMaxPosition());
+    }
+
     private DeckSummary event(String id, String place, String country, Integer rounds) {
         DeckSummary deck = deck(id, Set.of("Brujah"), Set.of("Celerity"), "Event " + id);
         deck.setPlace(place);

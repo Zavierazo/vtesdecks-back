@@ -121,7 +121,9 @@ public class DeckSummary {
     private ReactionType reaction;
     private String tournament;
     private String eventId;
+    private BigDecimal finalVp;
     private Integer position;
+    private Integer finalSeat;
     private Integer players;
     private Integer rounds;
     private String place;
@@ -166,7 +168,9 @@ public class DeckSummary {
         summary.setReaction(deck.getReaction());
         summary.setTournament(deck.getTournament());
         summary.setEventId(deck.getEventId());
+        summary.setFinalVp(deck.getFinalVp());
         summary.setPosition(deck.getPosition());
+        summary.setFinalSeat(deck.getFinalSeat());
         summary.setPlayers(deck.getPlayers());
         summary.setRounds(deck.getRounds());
         summary.setPlace(deck.getPlace());

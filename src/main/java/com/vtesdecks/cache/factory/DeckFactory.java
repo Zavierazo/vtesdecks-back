@@ -124,6 +124,7 @@ public class DeckFactory {
         value.setEventId(deck.getEventId());
         value.setFinalVp(deck.getFinalVp());
         value.setPosition(deck.getPosition());
+        value.setFinalSeat(deck.getFinalSeat());
         value.setPlayers(deck.getPlayers());
         value.setRounds(deck.getRounds());
         value.setPlace(deck.getPlace());

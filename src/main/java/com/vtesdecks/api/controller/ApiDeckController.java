@@ -118,7 +118,8 @@ public class ApiDeckController {
                                           @RequestParam(name = "disciplineMode", required = false) String disciplineMode,
                                           @RequestParam(name = "tournament", required = false) String tournament,
                                           @RequestParam(name = "eventId", required = false) String eventId,
-                                          @RequestParam(name = "position", required = false) Integer position,
+                                          @RequestParam(name = "minPosition", required = false) Integer minPosition,
+                                          @RequestParam(name = "maxPosition", required = false) Integer maxPosition,
                                           @RequestParam(name = "place", required = false) String place,
                                           @RequestParam(name = "rounds", required = false) List<Integer> rounds,
                                           @RequestParam(name = "cards", required = false) List<String> cards,
@@ -181,7 +182,8 @@ public class ApiDeckController {
                 .disciplineMode(disciplineMode)
                 .tournament(tournament)
                 .eventId(eventId)
-                .position(position)
+                .minPosition(minPosition)
+                .maxPosition(maxPosition)
                 .place(place)
                 .rounds(rounds)
                 .starVampire(starVampire)

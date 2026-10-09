@@ -13,20 +13,27 @@ import com.vtesdecks.cache.redis.repositories.DeckArchetypeRedisRepository;
 import com.vtesdecks.jpa.entity.DeckArchetypeEntity;
 import com.vtesdecks.jpa.repositories.DeckArchetypeRepository;
 import com.vtesdecks.messaging.MessageProducer;
-import com.vtesdecks.model.ArchetypeCardRequirement;
 import com.vtesdecks.model.ArchetypeAttributeRequirement;
-import com.vtesdecks.model.Clan;
-import com.vtesdecks.model.CardType;
-import com.vtesdecks.model.Discipline;
+import com.vtesdecks.model.ArchetypeCardRequirement;
 import com.vtesdecks.model.ArchetypeMetaMetrics;
+import com.vtesdecks.model.CardType;
+import com.vtesdecks.model.Clan;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
+import com.vtesdecks.model.Discipline;
 import com.vtesdecks.model.MetaType;
 import com.vtesdecks.model.api.ApiDeckArchetype;
 import com.vtesdecks.model.api.ApiNearestArchetype;
 import com.vtesdecks.model.api.ApiSearchArchetype;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import com.vtesdecks.util.CosineSimilarityUtils;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -40,12 +47,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.StreamSupport;
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.tuple.Pair;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -91,9 +92,12 @@ public class DeckArchetypeService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid attribute requirement");
             }
             boolean valid = switch (rule.getType()) {
-                case CRYPT_CLAN -> java.util.Arrays.stream(Clan.values()).anyMatch(value -> value.getName().equals(rule.getValue()));
-                case LIBRARY_TYPE -> java.util.Arrays.stream(CardType.values()).anyMatch(value -> value.getName().equals(rule.getValue()));
-                case CRYPT_DISCIPLINE, LIBRARY_DISCIPLINE -> java.util.Arrays.stream(Discipline.values()).anyMatch(value -> value.getName().equals(rule.getValue()));
+                case CRYPT_CLAN ->
+                        java.util.Arrays.stream(Clan.values()).anyMatch(value -> value.getName().equals(rule.getValue()));
+                case LIBRARY_TYPE ->
+                        java.util.Arrays.stream(CardType.values()).anyMatch(value -> value.getName().equals(rule.getValue()));
+                case CRYPT_DISCIPLINE, LIBRARY_DISCIPLINE ->
+                        java.util.Arrays.stream(Discipline.values()).anyMatch(value -> value.getName().equals(rule.getValue()));
             };
             if (!valid || !keys.add(rule.getType() + ":" + rule.getValue())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Each attribute requirement needs a unique valid type and value");
@@ -314,6 +318,8 @@ public class DeckArchetypeService {
                 .order(DeckSort.PLAYERS)
                 .archetype(0)
                 .minPlayers(20)
+                .minPosition(1)
+                .maxPosition(1)
                 .creationDate(LocalDate.now().minusYears(3))
                 .build())) {
             for (DeckSummary candidateDeck : deckResultSet) {
@@ -373,7 +379,7 @@ public class DeckArchetypeService {
     }
 
     private ApiNearestArchetype findNearestArchetype(DeckSummary candidate, Map<Integer, Integer> vector,
-                                                    List<ArchetypeReference> references) {
+                                                     List<ArchetypeReference> references) {
         ApiNearestArchetype nearest = null;
         for (ArchetypeReference reference : references) {
             double similarity = CosineSimilarityUtils.cosineSimilarity(candidate, vector, reference.deck(), reference.vector());

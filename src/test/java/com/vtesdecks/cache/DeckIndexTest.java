@@ -19,6 +19,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -71,9 +72,13 @@ class DeckIndexTest {
     }
 
     @Test
-    void filtersByEventIdAndPositionTogether() {
-        assertEquals(List.of("deck-2"), ids(DeckQuery.builder().eventId("event-2").position(2).build()));
-        assertEquals(List.of(), ids(DeckQuery.builder().eventId("event-2").position(3).build()));
+    void filtersByEventIdAndInclusivePositionRangeTogether() {
+        assertEquals(List.of("deck-2"), ids(DeckQuery.builder()
+                .eventId("event-2").minPosition(2).maxPosition(2).build()));
+        assertEquals(List.of("deck-3", "deck-2"), ids(DeckQuery.builder()
+                .minPosition(2).maxPosition(3).build()));
+        assertEquals(List.of(), ids(DeckQuery.builder()
+                .eventId("event-2").minPosition(3).maxPosition(3).build()));
     }
 
     @Test
@@ -82,6 +87,27 @@ class DeckIndexTest {
                 .creationDate(LocalDate.of(2022, 1, 1)).build()));
         assertEquals(List.of("deck-3", "deck-2"), ids(DeckQuery.builder()
                 .cards(List.of("200001=2")).build()));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void groupsTournamentDecksFromTheSameDateByEventAndPosition() {
+        IndexedCollection<DeckSummary> decks = (IndexedCollection<DeckSummary>) ReflectionTestUtils.getField(index, "decks");
+        LocalDateTime oldest = LocalDate.of(2019, 1, 1).atStartOfDay();
+        LocalDateTime newest = LocalDate.of(2030, 1, 1).atStartOfDay();
+        decks.add(eventDeck("old-b-2", "event-b", 2, oldest));
+        decks.add(eventDeck("old-a-2", "event-a", 2, oldest));
+        decks.add(eventDeck("old-b-1", "event-b", 1, oldest));
+        decks.add(eventDeck("old-a-1", "event-a", 1, oldest));
+        decks.add(eventDeck("new-b-2", "event-b", 2, newest));
+        decks.add(eventDeck("new-a-2", "event-a", 2, newest));
+        decks.add(eventDeck("new-b-1", "event-b", 1, newest));
+        decks.add(eventDeck("new-a-1", "event-a", 1, newest));
+
+        assertEquals(List.of("old-a-1", "old-a-2", "old-b-1", "old-b-2"),
+                ids(DeckQuery.builder().order(DeckSort.OLDEST).build()).subList(0, 4));
+        assertEquals(List.of("new-a-1", "new-a-2", "new-b-1", "new-b-2"),
+                ids(DeckQuery.builder().order(DeckSort.NEWEST).build()).subList(0, 4));
     }
 
     @ParameterizedTest
@@ -199,6 +225,17 @@ class DeckIndexTest {
             ReflectionTestUtils.setField(stats, field, number);
         }
         deck.setStats(stats);
+        return deck;
+    }
+
+    private DeckSummary eventDeck(String id, String eventId, int position, LocalDateTime creationDate) {
+        DeckSummary deck = deck(1);
+        deck.setId(id);
+        deck.setType(DeckType.TOURNAMENT);
+        deck.setEventId(eventId);
+        deck.setPosition(position);
+        deck.setCreationDate(creationDate);
+        deck.setModifyDate(creationDate);
         return deck;
     }
 }

@@ -112,7 +112,7 @@ public class DeckIndex {
         decks.addIndex(HashIndex.onAttribute(DeckSummary.AUTHOR_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.ROUNDS_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.EVENT_ID_ATTRIBUTE));
-        decks.addIndex(HashIndex.onAttribute(DeckSummary.POSITION_ATTRIBUTE));
+        decks.addIndex(NavigableIndex.onAttribute(DeckSummary.POSITION_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.CLAN_MULTI_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.DISCIPLINE_MULTI_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.GROUP_MULTI_ATTRIBUTE));
@@ -172,7 +172,9 @@ public class DeckIndex {
         }
     }
 
-    /** Only detail/export requests enter this path. Full decks live in Redis, never in this index. */
+    /**
+     * Only detail/export requests enter this path. Full decks live in Redis, never in this index.
+     */
     public Deck getFull(String deckId) {
         var lock = locks.get(deckId);
         lock.lock();
@@ -293,7 +295,9 @@ public class DeckIndex {
                 queryOptions = queryOptions(orderBy(descending(DeckSummary.MODIFY_DATE_ATTRIBUTE)), threshold, deduplication);
                 break;
             case OLDEST:
-                queryOptions = queryOptions(orderBy(ascending(DeckSummary.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                queryOptions = queryOptions(orderBy(ascending(DeckSummary.CREATION_DATE_ATTRIBUTE),
+                        ascending(DeckSummary.EVENT_ID_ATTRIBUTE),
+                        ascending(DeckSummary.POSITION_ATTRIBUTE)), threshold, deduplication);
                 break;
             case POPULAR:
                 queryOptions = queryOptions(orderBy(descending(DeckSummary.VIEWS_LAST_MONTH_ATTRIBUTE),
@@ -317,7 +321,9 @@ public class DeckIndex {
                 break;
             case NEWEST:
             default:
-                queryOptions = queryOptions(orderBy(descending(DeckSummary.CREATION_DATE_ATTRIBUTE)), threshold, deduplication);
+                queryOptions = queryOptions(orderBy(descending(DeckSummary.CREATION_DATE_ATTRIBUTE),
+                        ascending(DeckSummary.EVENT_ID_ATTRIBUTE),
+                        ascending(DeckSummary.POSITION_ATTRIBUTE)), threshold, deduplication);
         }
         Query<DeckSummary> published = equal(DeckSummary.PUBLISHED_ATTRIBUTE, true);
         if (deckQuery.isAllDecks()) {
@@ -474,8 +480,11 @@ public class DeckIndex {
         if (StringUtils.isNotBlank(deckQuery.getEventId())) {
             query = and(query, equal(DeckSummary.EVENT_ID_ATTRIBUTE, deckQuery.getEventId()));
         }
-        if (deckQuery.getPosition() != null) {
-            query = and(query, equal(DeckSummary.POSITION_ATTRIBUTE, deckQuery.getPosition()));
+        if (deckQuery.getMinPosition() != null) {
+            query = and(query, greaterThanOrEqualTo(DeckSummary.POSITION_ATTRIBUTE, deckQuery.getMinPosition()));
+        }
+        if (deckQuery.getMaxPosition() != null) {
+            query = and(query, lessThanOrEqualTo(DeckSummary.POSITION_ATTRIBUTE, deckQuery.getMaxPosition()));
         }
         if (StringUtils.isNotBlank(deckQuery.getPlace())) {
             String place = StringUtils.lowerCase(deckQuery.getPlace());

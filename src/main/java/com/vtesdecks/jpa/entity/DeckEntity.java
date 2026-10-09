@@ -73,8 +73,15 @@ public class DeckEntity {
     @Column(name = "`position`")
     private Integer position;
 
+    @Column(name = "final_seat")
+    private Integer finalSeat;
+
     @Column(name = "source")
     private String source;
+
+    @Column(name = "scheduler_owner")
+    @Enumerated(EnumType.STRING)
+    private TournamentSchedulerOwner schedulerOwner;
 
     @Column(name = "name", nullable = false)
     private String name;

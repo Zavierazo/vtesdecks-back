@@ -37,7 +37,8 @@ public class DeckQuery {
     private String disciplineMode;
     private String tournament;
     private String eventId;
-    private Integer position;
+    private Integer minPosition;
+    private Integer maxPosition;
     private String place;
     private List<Integer> rounds;
     private Map<Integer, Integer> cards;

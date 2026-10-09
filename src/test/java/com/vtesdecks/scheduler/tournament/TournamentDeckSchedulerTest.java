@@ -10,12 +10,14 @@ import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckCardEntity;
 import com.vtesdecks.jpa.entity.DeckEntity;
+import com.vtesdecks.jpa.entity.TournamentSchedulerOwner;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.model.twda.TwdaCard;
 import com.vtesdecks.model.twda.TwdaDeck;
 import com.vtesdecks.model.twda.TwdaEvent;
 import com.vtesdecks.model.twda.TwdaScore;
+import com.vtesdecks.scheduler.tournament.helpers.TournamentDeckName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,16 +30,18 @@ import org.mockito.quality.Strictness;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -85,6 +89,7 @@ public class TournamentDeckSchedulerTest {
         DeckEntity deck = deckCaptor.getValue();
         assertEquals("tournament-2023event", deck.getId());
         assertEquals(DeckType.TOURNAMENT, deck.getType());
+        assertEquals(TournamentSchedulerOwner.TWDA, deck.getSchedulerOwner());
         assertEquals("http://www.vekn.fr/decks/twd.htm#2023event", deck.getSource());
         assertEquals("My Event 2023", deck.getTournament());
         assertEquals(20, deck.getPlayers());
@@ -147,6 +152,25 @@ public class TournamentDeckSchedulerTest {
         assertEquals(LIBRARY_ID, cardCaptor.getValue().getId().getCardId());
         assertEquals(60, cardCaptor.getValue().getNumber());
         verify(deckCardRepository).deleteById(deckCard(OTHER_LIBRARY_ID, 1).getId());
+    }
+
+    @Test
+    public void shouldPreserveFinalResultImportedFromArchon() {
+        DeckEntity actual = existingDeck(false);
+        actual.setPlayers(10);
+        actual.setFinalVp(new BigDecimal("2.0"));
+        actual.setFinalSeat(4);
+        when(deckRepository.findById("tournament-2023event")).thenReturn(Optional.of(actual));
+        when(deckCardRepository.findByIdDeckId("tournament-2023event")).thenReturn(List.of(
+                deckCard(CRYPT_ID, 12),
+                deckCard(LIBRARY_ID, 60)));
+
+        scheduler.parseDeck(twdaDeck());
+
+        ArgumentCaptor<DeckEntity> deckCaptor = ArgumentCaptor.forClass(DeckEntity.class);
+        verify(deckRepository).saveAndFlush(deckCaptor.capture());
+        assertEquals(new BigDecimal("2.0"), deckCaptor.getValue().getFinalVp());
+        assertEquals(4, deckCaptor.getValue().getFinalSeat());
     }
 
     @Test
@@ -237,6 +261,24 @@ public class TournamentDeckSchedulerTest {
         ArgumentCaptor<DeckEntity> deckCaptor = ArgumentCaptor.forClass(DeckEntity.class);
         verify(deckRepository).saveAndFlush(deckCaptor.capture());
         assertEquals("John Doe, My Event 2023, 2023", deckCaptor.getValue().getName());
+    }
+
+    @Test
+    public void shouldFallbackDeckNameWhenArchiveContainsASeparator() {
+        TwdaDeck source = twdaDeck();
+        source.setName("================");
+
+        scheduler.parseDeck(source);
+
+        ArgumentCaptor<DeckEntity> deckCaptor = ArgumentCaptor.forClass(DeckEntity.class);
+        verify(deckRepository).saveAndFlush(deckCaptor.capture());
+        assertEquals("John Doe, My Event 2023, 2023", deckCaptor.getValue().getName());
+    }
+
+    @Test
+    public void shouldOnlyTreatTenOrMoreEqualsAsASeparator() {
+        assertFalse(TournamentDeckName.isInvalid("========="));
+        assertTrue(TournamentDeckName.isInvalid("=========="));
     }
 
     @Test
@@ -413,6 +455,65 @@ public class TournamentDeckSchedulerTest {
         assertEquals(1, deckCaptor.getValue().getPosition());
     }
 
+    @Test
+    void takesOverArchonDeckWithDifferentIdAndPreservesNonImportDataAndFinalResults() {
+        DeckEntity actual = existingDeck(false).toBuilder().id("tournament-12345")
+                .schedulerOwner(TournamentSchedulerOwner.ARCHON)
+                .source("https://archon.vekn.net/tournaments/uuid")
+                .finalVp(new BigDecimal("2.5")).finalSeat(4).views(125L)
+                .customTags(List.of("keep")).published(false)
+                .modificationDate(LocalDateTime.now().minusMonths(3)).build();
+        when(deckRepository.findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType.TOURNAMENT, "12345", 1))
+                .thenReturn(List.of(actual));
+
+        scheduler.parseDeck(twdaDeck());
+
+        ArgumentCaptor<DeckEntity> captor = ArgumentCaptor.forClass(DeckEntity.class);
+        verify(deckRepository).saveAndFlush(captor.capture());
+        DeckEntity saved = captor.getValue();
+        assertEquals(actual.getId(), saved.getId());
+        assertEquals(TournamentSchedulerOwner.TWDA, saved.getSchedulerOwner());
+        assertEquals("http://www.vekn.fr/decks/twd.htm#2023event", saved.getSource());
+        assertEquals(actual.getFinalVp(), saved.getFinalVp());
+        assertEquals(4, saved.getFinalSeat());
+        assertEquals(125L, saved.getViews());
+        assertEquals(actual.getCustomTags(), saved.getCustomTags());
+        assertEquals(actual.getPublished(), saved.getPublished());
+        assertEquals(actual.getCreationDate(), saved.getCreationDate());
+        assertFalse(saved.getVerified());
+        ArgumentCaptor<DeckCardEntity> cards = ArgumentCaptor.forClass(DeckCardEntity.class);
+        verify(deckCardRepository, times(2)).saveAndFlush(cards.capture());
+        assertTrue(cards.getAllValues().stream().allMatch(card -> actual.getId().equals(card.getId().getDeckId())));
+    }
+
+    @Test
+    void ownershipChangeAlonePreventsImmediateAutoVerification() {
+        DeckEntity actual = existingDeck(false).toBuilder().schedulerOwner(TournamentSchedulerOwner.ARCHON)
+                .modificationDate(LocalDateTime.now().minusMonths(3)).build();
+        when(deckRepository.findById(actual.getId())).thenReturn(Optional.of(actual));
+        when(deckCardRepository.findByIdDeckId(actual.getId())).thenReturn(List.of(
+                deckCard(CRYPT_ID, 12, LocalDateTime.now().minusMonths(3)),
+                deckCard(LIBRARY_ID, 60, LocalDateTime.now().minusMonths(3))));
+        scheduler.parseDeck(twdaDeck());
+        ArgumentCaptor<DeckEntity> captor = ArgumentCaptor.forClass(DeckEntity.class);
+        verify(deckRepository).saveAndFlush(captor.capture());
+        assertEquals(TournamentSchedulerOwner.TWDA, captor.getValue().getSchedulerOwner());
+        assertFalse(captor.getValue().getVerified());
+    }
+
+    @Test
+    void invalidTakeoverLeavesExistingOwnerAndDataUnchanged() {
+        DeckEntity actual = existingDeck(false).toBuilder().schedulerOwner(TournamentSchedulerOwner.ARCHON).build();
+        DeckEntity before = actual.toBuilder().build();
+        when(deckRepository.findById(actual.getId())).thenReturn(Optional.of(actual));
+        TwdaDeck invalid = twdaDeck();
+        invalid.setCards(List.of());
+        scheduler.parseDeck(invalid);
+        assertEquals(before, actual);
+        verify(deckRepository, never()).saveAndFlush(any());
+        verify(deckCardRepository, never()).saveAndFlush(any());
+    }
+
     private TwdaDeck twdaDeck() {
         TwdaDeck deck = new TwdaDeck();
         deck.setId("2023event");
@@ -476,6 +577,7 @@ public class TournamentDeckSchedulerTest {
                 .id("tournament-2023event")
                 .type(DeckType.TOURNAMENT)
                 .source("http://www.vekn.fr/decks/twd.htm#2023event")
+                .schedulerOwner(TournamentSchedulerOwner.TWDA)
                 .tournament("My Event 2023")
                 .players(20)
                 .rounds(3)

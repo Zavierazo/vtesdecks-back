@@ -31,6 +31,7 @@ public final class DeckCacheFixtures {
         deck.setEventId("fixture-event");
         deck.setFinalVp(new BigDecimal("2.5"));
         deck.setPosition(2);
+        deck.setFinalSeat(4);
         deck.setType(DeckType.COMMUNITY);
         deck.setPublished(true);
         deck.setCreationDate(LocalDateTime.of(2026, 1, 1, 12, 0));
