@@ -36,7 +36,7 @@
         <postgresql.version>42.7.12</postgresql.version>
         <log4j2.version>2.25.5</log4j2.version>
         <bouncycastle.version>1.84</bouncycastle.version>
-        <async-http-client.version>2.16.0</async-http-client.version>
+        <async-http-client.version>2.16.1</async-http-client.version>
         <flyway.version>11.20.3</flyway.version>
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <org.projectlombok.version>1.18.38</org.projectlombok.version>
