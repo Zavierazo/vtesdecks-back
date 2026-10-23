@@ -25,7 +25,6 @@ import org.springframework.util.CollectionUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.function.IntSupplier;
@@ -106,12 +105,7 @@ public class CleanUpScheduler {
             }
             //Update deck views
             for (Map.Entry<String, Integer> deckViewEntry : deckViews.entrySet()) {
-                Optional<DeckEntity> optionalDeck = deckRepository.findById(deckViewEntry.getKey());
-                if (optionalDeck.isPresent()) {
-                    DeckEntity deck = optionalDeck.get();
-                    deck.setViews(deck.getViews() + deckViewEntry.getValue());
-                    deckRepository.saveAndFlush(deck);
-                }
+                deckRepository.incrementViews(deckViewEntry.getKey(), deckViewEntry.getValue());
             }
             //Remove old views
             deckViewRepository.deleteAll(views);

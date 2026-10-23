@@ -1,6 +1,9 @@
 package com.vtesdecks.scheduler;
 
 import com.vtesdecks.jpa.entity.CollectionEntity;
+import com.vtesdecks.jpa.entity.DeckViewEntity;
+import com.vtesdecks.jpa.repositories.DeckRepository;
+import com.vtesdecks.jpa.repositories.DeckViewRepository;
 import com.vtesdecks.jpa.repositories.CollectionBinderRepository;
 import com.vtesdecks.jpa.repositories.CollectionCardHistoryRepository;
 import com.vtesdecks.jpa.repositories.CollectionCardRepository;
@@ -27,6 +30,10 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CleanUpSchedulerTest {
     @Mock
+    private DeckRepository deckRepository;
+    @Mock
+    private DeckViewRepository deckViewRepository;
+    @Mock
     private CollectionRepository collectionRepository;
     @Mock
     private CollectionCardRepository collectionCardRepository;
@@ -38,6 +45,36 @@ class CleanUpSchedulerTest {
     private DatabaseCleanupService databaseCleanupService;
     @InjectMocks
     private CleanUpScheduler scheduler;
+
+    @Test
+    void consolidatesViewsWithoutSavingDeckEntities() {
+        DeckViewEntity first = new DeckViewEntity();
+        first.setId(new DeckViewEntity.DeckViewId("first", "preconstructed-noites_brasileiras"));
+        DeckViewEntity second = new DeckViewEntity();
+        second.setId(new DeckViewEntity.DeckViewId("second", "preconstructed-noites_brasileiras"));
+        List<DeckViewEntity> views = List.of(first, second);
+        when(deckViewRepository.findOld()).thenReturn(views);
+
+        scheduler.deckViewCleanScheduler();
+
+        InOrder order = inOrder(deckRepository, deckViewRepository);
+        order.verify(deckViewRepository).findOld();
+        order.verify(deckRepository).incrementViews("preconstructed-noites_brasileiras", 2);
+        order.verify(deckViewRepository).deleteAll(views);
+        order.verify(deckViewRepository).flush();
+        verifyNoMoreInteractions(deckRepository, deckViewRepository);
+    }
+
+    @Test
+    void doesNotUpdateDecksWhenNoViewsHaveExpired() {
+        when(deckViewRepository.findOld()).thenReturn(List.of());
+
+        scheduler.deckViewCleanScheduler();
+
+        verifyNoInteractions(deckRepository);
+        verify(deckViewRepository).findOld();
+        verifyNoMoreInteractions(deckViewRepository);
+    }
 
     @Test
     void removesRelatedDataInTriggerAndForeignKeySafeOrderForEachExpiredCollection() {

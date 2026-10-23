@@ -3,11 +3,18 @@ package com.vtesdecks.jpa.repositories;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
 public interface DeckRepository extends JpaRepository<DeckEntity, String> {
+
+    // Preserve the timestamp explicitly because MySQL also has ON UPDATE CURRENT_TIMESTAMP.
+    @Modifying
+    @Query(value = "UPDATE deck SET views = views + :views, modification_date = modification_date WHERE id = :id", nativeQuery = true)
+    int incrementViews(@Param("id") String id, @Param("views") int views);
 
     List<DeckEntity> findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType type, String eventId, Integer position);
 
