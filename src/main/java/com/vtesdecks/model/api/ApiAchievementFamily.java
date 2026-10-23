@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 @Data
@@ -19,5 +19,5 @@ public class ApiAchievementFamily {
     private Integer nextThreshold;
     private Integer repeatCount;
     private List<ApiAchievementTier> tiers;
-    private List<LocalDateTime> earnedDates;
+    private List<ZonedDateTime> earnedDates;
 }

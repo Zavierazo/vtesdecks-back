@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Data
 @Builder
@@ -15,6 +15,6 @@ public class ApiAchievementTier {
     private String id;
     private Integer threshold;
     private Boolean earned;
-    private LocalDateTime earnedDate;
+    private ZonedDateTime earnedDate;
     private Boolean historical;
 }

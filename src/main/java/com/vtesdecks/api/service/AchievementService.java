@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -165,7 +166,7 @@ public class AchievementService {
                         .id(d.family + "_" + threshold)
                         .threshold(threshold)
                         .earned(award != null)
-                        .earnedDate(award == null ? null : award.getEarnedDate())
+                        .earnedDate(award == null ? null : apiEarnedDate(award))
                         .historical(award == null ? null : award.getHistorical())
                         .build();
             }).filter(tier -> includeProgress || tier.getEarned())
@@ -182,12 +183,21 @@ public class AchievementService {
                     .repeatCount(repeatCount == 0 ? null : repeatCount)
                     .tiers(tiers)
                     .earnedDates(familyAwards.stream()
-                            .map(UserAchievementEntity::getEarnedDate)
+                            .map(this::apiEarnedDate)
                             .filter(Objects::nonNull)
                             .toList())
                     .build());
         }
         return result;
+    }
+
+    private ZonedDateTime apiEarnedDate(UserAchievementEntity award) {
+        if (award.getEarnedDate() == null) {
+            return null;
+        }
+        // The profile formats award months in UTC. An offset-less midnight would
+        // be interpreted in the browser's zone and can fall in the previous month.
+        return award.getEarnedDate().atZone(ZoneOffset.UTC);
     }
 
     private Map<String, Integer> progress(UserEntity user) {
@@ -321,8 +331,11 @@ public class AchievementService {
         jdbc.query("SELECT month_date, `rank` FROM user_month WHERE user_id=? AND `rank`<=3", rs -> {
             int rank = rs.getInt("rank");
             String family = rank == 1 ? "monthly_gold" : rank == 2 ? "monthly_silver" : "monthly_bronze";
-            String key = rs.getDate("month_date").toLocalDate().toString();
-            if (award(userId, family + "_1", family, 1, key, historical, rs.getTimestamp("month_date").toLocalDateTime()) && notify) {
+            LocalDate rankingMonth = rs.getObject("month_date", LocalDate.class);
+            // The achievement belongs to the ranked month, not the month when the job runs.
+            String key = rankingMonth.toString();
+            LocalDateTime earnedDate = rankingMonth.atStartOfDay();
+            if (award(userId, family + "_1", family, 1, key, historical, earnedDate) && notify) {
                 notificationService.addAchievementNotification(userId, family, 1);
             }
         }, userId);
