@@ -93,6 +93,22 @@ This is a lightweight liveness check; it does not check the database or external
 
 ## Troubleshooting
 
+### Builder archetype classification
+
+`POST /api/1.0/user/decks/builder/archetype` requires authentication and accepts an
+`ApiDeckBuilder` JSON body. It classifies the supplied `cards` without loading or
+saving the submitted deck ID. HTTP 200 returns the best archetype's `id`, `name`,
+`icon` and `type`; HTTP 204 means no archetype matched, including an empty draft.
+Invalid card entries, unknown active cards and duplicate IDs return HTTP 400.
+Zero-quantity considering cards are ignored.
+
+`DeckArchetypeMatcher` is shared with scheduled classification: every card and
+attribute requirement must pass, the best similarity across both reference decks
+must reach 0.5, and the strongest qualifying archetype wins. Equal scores prefer
+the lowest archetype ID. This identifies an archetype, not deck legality; challenge
+validation must also retain the existing deck-building checks and require the
+returned archetype ID to equal the challenge's target.
+
 ### Anonymous proxy PDFs
 
 `POST /api/1.0/proxy` caps PDF output at 20 MiB while writing (HTTP 413).

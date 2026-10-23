@@ -9,10 +9,11 @@ import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.ArchetypeCardRequirement;
 import com.vtesdecks.service.DeckService;
+import com.vtesdecks.service.DeckArchetypeMatcher;
 import com.vtesdecks.util.CosineSimilarityUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -31,7 +32,12 @@ class DeckArchetypeSchedulerTest {
     @Mock DeckRepository deckRepository;
     @Mock DeckArchetypeRepository deckArchetypeRepository;
     @Mock MessageProducer messageProducer;
-    @InjectMocks DeckArchetypeScheduler scheduler;
+    private DeckArchetypeScheduler scheduler;
+
+    @BeforeEach void init() {
+        var matcher = new DeckArchetypeMatcher(deckArchetypeRepository, deckService, deckCardIndex, cryptCache, libraryCache);
+        scheduler = new DeckArchetypeScheduler(deckCardIndex, matcher, deckService, deckRepository, messageProducer);
+    }
 
     private DeckEntity setup(Map<Integer, Integer> cards, List<ArchetypeCardRequirement> rules, Integer assigned) {
         DeckEntity entity = DeckEntity.builder().id("candidate").deckArchetypeId(assigned).build();
@@ -133,5 +139,38 @@ class DeckArchetypeSchedulerTest {
     @Test void saveTriggeredFailurePropagates() {
         when(deckArchetypeRepository.findAll()).thenThrow(new RuntimeException("database failure"));
         assertThrows(RuntimeException.class, () -> scheduler.updateDeckArchetype(1));
+    }
+
+    @Test void selectsStrongestMatchRatherThanFirstQualifyingArchetype() {
+        var entity = setup(Map.of(100001, 10), List.of(), 1);
+        when(deckArchetypeRepository.findAll()).thenReturn(List.of(
+                archetype(1, "reference", List.of()), archetype(2, "other", List.of())));
+        summary("other", Map.of(100001, 10));
+        scheduler.updateDeckArchetype(1);
+        assertEquals(2, entity.getDeckArchetypeId());
+    }
+
+    @Test void secondaryReferenceCanWinClassification() {
+        var entity = setup(Map.of(100099, 10), List.of(), null);
+        var archetype = archetype(1, "reference", List.of());
+        archetype.setSecondaryDeckId("secondary");
+        when(deckArchetypeRepository.findAll()).thenReturn(List.of(archetype));
+        summary("secondary", Map.of(100099, 10));
+        scheduler.updateDeckArchetype(1);
+        assertEquals(1, entity.getDeckArchetypeId());
+    }
+
+    @Test void equalScoresUseLowestIdRegardlessOfRepositoryOrder() {
+        var entity = setup(Map.of(100001, 10), List.of(), null);
+        when(deckArchetypeRepository.findAll()).thenReturn(List.of(
+                archetype(7, "reference", List.of()), archetype(2, "reference", List.of())));
+        scheduler.updateDeckArchetype(1);
+        assertEquals(2, entity.getDeckArchetypeId());
+    }
+
+    @Test void emptyDraftDoesNotMatchAnArchetype() {
+        var entity = setup(Map.of(), List.of(), 1);
+        scheduler.updateDeckArchetype(1);
+        assertNull(entity.getDeckArchetypeId());
     }
 }

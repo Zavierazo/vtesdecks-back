@@ -29,11 +29,13 @@ import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.ImportType;
 import com.vtesdecks.model.api.ApiCard;
+import com.vtesdecks.model.api.ApiDeckArchetype;
 import com.vtesdecks.model.api.ApiDeckBuilder;
 import com.vtesdecks.model.api.ApiDeckBuilderHistory;
 import com.vtesdecks.model.api.ApiDeckSuggestedCards;
 import com.vtesdecks.model.krcg.DeckCard;
 import com.vtesdecks.service.DeckCardHistoryService;
+import com.vtesdecks.service.DeckArchetypeMatcher;
 import com.vtesdecks.service.DeckKeyCardsService;
 import com.vtesdecks.service.DeckService;
 import com.vtesdecks.util.CosineSimilarityUtils;
@@ -51,6 +53,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -81,6 +84,7 @@ public class ApiDeckBuilderService {
     private final DeckArchetypeMapper deckArchetypeMapper;
     private final AchievementService achievementService;
     private final DeckValidation deckValidation;
+    private final DeckArchetypeMatcher archetypeMatcher;
 
 
     public ApiDeckBuilder getDeck(String deckId) {
@@ -405,6 +409,40 @@ public class ApiDeckBuilderService {
         //Enqueue indexation of new deck
         messageProducer.publishDeckSync(deck.getId());
         return true;
+    }
+
+    public ApiDeckArchetype getArchetype(ApiDeckBuilder builder) {
+        if (builder == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Deck builder is required");
+        }
+        var seen = new HashSet<Integer>();
+        if (builder.getCards() != null) {
+            for (ApiCard card : builder.getCards()) {
+                if (card == null || card.getId() == null || card.getNumber() == null || card.getNumber() < 0
+                        || !seen.add(card.getId())) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cards need unique IDs and nonnegative quantities");
+                }
+                if (card.getNumber() == 0) {
+                    continue;
+                }
+                boolean known = VtesUtils.isCrypt(card.getId())
+                        ? cryptCache.get(card.getId()) != null : libraryCache.get(card.getId()) != null;
+                if (!known) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown card: " + card.getId());
+                }
+            }
+        }
+        Deck deck = buildTemporalDeck(builder.getCards());
+        Map<Integer, Integer> vector = CosineSimilarityUtils.getVector(deck);
+        if (vector.isEmpty()) {
+            return null;
+        }
+        var archetype = archetypeMatcher.findBestMatch(deck, vector, archetypeMatcher.loadReferences());
+        if (archetype == null) {
+            return null;
+        }
+        return ApiDeckArchetype.builder().id(archetype.getId()).name(archetype.getName())
+                .icon(archetype.getIcon()).type(archetype.getType()).build();
     }
 
     public ApiDeckSuggestedCards getSuggestedCards(List<ApiCard> cards) {

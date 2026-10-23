@@ -5,6 +5,7 @@ import com.vtesdecks.api.service.DeckTextImportService;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.model.ImportType;
 import com.vtesdecks.model.api.ApiDeckBuilder;
+import com.vtesdecks.model.api.ApiDeckArchetype;
 import com.vtesdecks.model.api.ApiDeckBuilderHistory;
 import com.vtesdecks.model.api.ApiDeckSuggestedCards;
 import lombok.extern.slf4j.Slf4j;
@@ -132,6 +133,16 @@ public class ApiDeckBuilderController {
             log.warn("Unauthorized history access: {}", e.getMessage());
             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/archetype", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<ApiDeckArchetype> archetype(@RequestBody ApiDeckBuilder deckBuilder) {
+        ApiDeckArchetype archetype = deckBuilderService.getArchetype(deckBuilder);
+        if (archetype == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(archetype);
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/suggested-cards", consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE})

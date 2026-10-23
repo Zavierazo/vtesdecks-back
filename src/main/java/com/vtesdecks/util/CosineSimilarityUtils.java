@@ -16,7 +16,7 @@ public class CosineSimilarityUtils {
         for (Map.Entry<Integer, Integer> entry : vecA.entrySet()) {
             int id = entry.getKey();
             if (vecB.containsKey(id)) {
-                dot += entry.getValue() * vecB.get(id);
+                dot += (double) entry.getValue() * vecB.get(id);
             }
         }
 
@@ -48,7 +48,7 @@ public class CosineSimilarityUtils {
     public static double computeL2Norm(Map<Integer, Integer> vector) {
         return Math.sqrt(
                 vector.values().stream()
-                        .mapToDouble(count -> count * count)
+                        .mapToDouble(count -> (double) count * count)
                         .sum()
         );
     }
