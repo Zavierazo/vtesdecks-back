@@ -218,6 +218,9 @@ public class AfterStartupService {
             case 201695:
                 crypt.setName("Dónal O'Connor (G6)");
                 break;
+            case 201788:
+                crypt.setName("Aisling Sturbridge (G6)");
+                break;
         }
     }
 
