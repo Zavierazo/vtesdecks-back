@@ -3,6 +3,7 @@ package com.vtesdecks.jpa.entity;
 public enum TournamentSchedulerOwner {
     TWDA(3),
     ARCHON(2),
+    // Retained for persisted decks from the retired importer; active sources may take ownership.
     ETERNAL_VIGILANCE(1);
 
     private final int priority;

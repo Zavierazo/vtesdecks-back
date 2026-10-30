@@ -82,7 +82,7 @@ public class TournamentArchonDeckScheduler {
         importPolicy = new TournamentImportPolicy(deckRepository, new TransactionTemplate(transactionManager));
     }
 
-    // Import Archon finalist decks once a day after the TWDA and Eternal Vigilance jobs.
+    // Import Archon finalist decks once a day after the TWDA job.
     @Scheduled(cron = "${jobs.scrappingArchonDecksCron:0 30 7 * * *}")
     public void scrappingDecks() {
         if (StringUtils.isBlank(clientId) || StringUtils.isBlank(clientSecret)) {

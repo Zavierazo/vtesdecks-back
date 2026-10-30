@@ -157,20 +157,6 @@ class TournamentImportPolicyTest {
         verify(transactionManager, never()).commit(any());
     }
 
-    @Test
-    void prefetchRejectionAvoidsDownloadingProtectedDecksButDoesNotAuthorizeWrites() {
-        for (TournamentSchedulerOwner owner : TournamentSchedulerOwner.values()) {
-            when(repository.findById("incoming")).thenReturn(Optional.of(existing(owner)));
-            assertEquals(owner != TournamentSchedulerOwner.ETERNAL_VIGILANCE,
-                    policy.shouldSkipFetch("incoming", TournamentSchedulerOwner.ETERNAL_VIGILANCE));
-        }
-        // Import decisions are based on the current owner when execute is called.
-        when(repository.findById("incoming"))
-                .thenReturn(Optional.of(existing(TournamentSchedulerOwner.TWDA)));
-        policy.execute("incoming", "123", 1, TournamentSchedulerOwner.ETERNAL_VIGILANCE, importer);
-        verifyNoInteractions(importer);
-    }
-
     private DeckEntity existing(TournamentSchedulerOwner owner) {
         return DeckEntity.builder().id("incoming").type(DeckType.TOURNAMENT)
                 .eventId("123").position(1).schedulerOwner(owner).build();

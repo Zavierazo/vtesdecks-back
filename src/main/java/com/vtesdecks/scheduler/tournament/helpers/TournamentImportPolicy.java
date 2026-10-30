@@ -25,14 +25,6 @@ public class TournamentImportPolicy {
         IMPORT, ENRICH_FINAL_RESULT, REPORT_VERIFIED
     }
 
-    /** Cheap rejection only; allowed imports must still resolve their identity in execute. */
-    public boolean shouldSkipFetch(String id, TournamentSchedulerOwner incoming) {
-        return deckRepository.findById(id)
-                .map(actual -> actual.getType() != DeckType.TOURNAMENT || Boolean.TRUE.equals(actual.getDeleted())
-                        || actionFor(actual, incoming) == null)
-                .orElse(false);
-    }
-
     public void execute(String id, String eventId, Integer position, TournamentSchedulerOwner incoming,
                         BiConsumer<DeckEntity, Action> importer) {
         transactionTemplate.executeWithoutResult(status -> {

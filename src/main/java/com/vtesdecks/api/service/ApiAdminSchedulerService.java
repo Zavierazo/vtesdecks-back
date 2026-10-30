@@ -19,7 +19,6 @@ import com.vtesdecks.scheduler.shops.GamePodScheduler;
 import com.vtesdecks.scheduler.shops.MarketScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentDeckScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentArchonDeckScheduler;
-import com.vtesdecks.scheduler.tournament.TournamentEternalVigilanceDeckScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,7 +38,6 @@ public class ApiAdminSchedulerService {
             new ApiAdminScheduler("notifications-clean", "Clean notifications"),
             new ApiAdminScheduler("email-actions-clean", "Clean expired email action tokens"),
             new ApiAdminScheduler("twda-decks", "Import tournament decks"),
-            new ApiAdminScheduler("twda-eternal-vigilance", "Import Eternal Vigilance decks"),
             new ApiAdminScheduler("twda-archon-decks", "Import Archon finalist decks"),
             new ApiAdminScheduler("archon-users", "Synchronize Archon members"),
             new ApiAdminScheduler("drive-thru-cards", "Synchronize DriveThruCards"),
@@ -60,7 +58,6 @@ public class ApiAdminSchedulerService {
 
     private final CleanUpScheduler cleanUpScheduler;
     private final TournamentDeckScheduler tournamentDeckScheduler;
-    private final TournamentEternalVigilanceDeckScheduler tournamentEternalVigilanceDeckScheduler;
     private final TournamentArchonDeckScheduler tournamentArchonDeckScheduler;
     private final ArchonUserScheduler archonUserScheduler;
     private final DriveThruCardsScheduler driveThruCardsScheduler;
@@ -93,7 +90,6 @@ public class ApiAdminSchedulerService {
             case "notifications-clean" -> cleanUpScheduler.notificationsCleanScheduler();
             case "email-actions-clean" -> cleanUpScheduler.emailActionsCleanScheduler();
             case "twda-decks" -> tournamentDeckScheduler.scrappingDecks();
-            case "twda-eternal-vigilance" -> tournamentEternalVigilanceDeckScheduler.scrappingDecks();
             case "twda-archon-decks" -> tournamentArchonDeckScheduler.scrappingDecks();
             case "archon-users" -> archonUserScheduler.scrappingUsers();
             case "drive-thru-cards" -> driveThruCardsScheduler.scrapCards();

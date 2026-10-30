@@ -21,6 +21,8 @@ import com.vtesdecks.scheduler.tournament.helpers.TournamentDeckName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -455,11 +457,16 @@ public class TournamentDeckSchedulerTest {
         assertEquals(1, deckCaptor.getValue().getPosition());
     }
 
-    @Test
-    void takesOverArchonDeckWithDifferentIdAndPreservesNonImportDataAndFinalResults() {
+    @ParameterizedTest
+    @CsvSource({
+            "ARCHON,https://archon.vekn.net/tournaments/uuid",
+            "ETERNAL_VIGILANCE,https://www.vekn.net/forum/legacy-report"
+    })
+    void takesOverLowerPriorityDeckWithDifferentIdAndPreservesNonImportDataAndFinalResults(
+            TournamentSchedulerOwner owner, String source) {
         DeckEntity actual = existingDeck(false).toBuilder().id("tournament-12345")
-                .schedulerOwner(TournamentSchedulerOwner.ARCHON)
-                .source("https://archon.vekn.net/tournaments/uuid")
+                .schedulerOwner(owner)
+                .source(source)
                 .finalVp(new BigDecimal("2.5")).finalSeat(4).views(125L)
                 .customTags(List.of("keep")).published(false)
                 .modificationDate(LocalDateTime.now().minusMonths(3)).build();

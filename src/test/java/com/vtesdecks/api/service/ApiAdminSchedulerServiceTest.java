@@ -18,9 +18,10 @@ import com.vtesdecks.scheduler.shops.GamePodScheduler;
 import com.vtesdecks.scheduler.shops.MarketScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentDeckScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentArchonDeckScheduler;
-import com.vtesdecks.scheduler.tournament.TournamentEternalVigilanceDeckScheduler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -37,8 +38,6 @@ class ApiAdminSchedulerServiceTest {
     private CleanUpScheduler cleanUpScheduler;
     @Mock
     private TournamentDeckScheduler tournamentDeckScheduler;
-    @Mock
-    private TournamentEternalVigilanceDeckScheduler tournamentEternalVigilanceDeckScheduler;
     @Mock
     private TournamentArchonDeckScheduler tournamentArchonDeckScheduler;
     @Mock
@@ -76,7 +75,8 @@ class ApiAdminSchedulerServiceTest {
 
     @Test
     void exposesEveryMigratedManualScheduler() {
-        assertEquals(25, service.getAll().size());
+        assertEquals(24, service.getAll().size());
+        assertFalse(service.getAll().stream().anyMatch(item -> item.key().equals("twda-eternal-vigilance")));
         assertTrue(service.getAll().stream().anyMatch(item ->
                 item.key().equals("collection-clean") && item.description().equals("Clean collections")));
         assertTrue(service.getAll().stream().anyMatch(item ->
@@ -145,10 +145,11 @@ class ApiAdminSchedulerServiceTest {
         verify(cleanUpScheduler).emailActionsCleanScheduler();
     }
 
-    @Test
-    void rejectsUnknownScheduler() {
-        assertFalse(service.run("unknown", 42));
-        verifyNoInteractions(cleanUpScheduler, tournamentDeckScheduler, tournamentEternalVigilanceDeckScheduler,
+    @ParameterizedTest
+    @ValueSource(strings = {"unknown", "twda-eternal-vigilance"})
+    void rejectsUnknownOrRetiredScheduler(String key) {
+        assertFalse(service.run(key, 42));
+        verifyNoInteractions(cleanUpScheduler, tournamentDeckScheduler,
                 tournamentArchonDeckScheduler,
                 driveThruCardsScheduler, gamePodScheduler, vtesdleTodayScheduler, cardGameGeekScheduler,
                 proxyCardOptionScheduler, marketScheduler, deckArchetypeScheduler, deckArchetypeIndex,

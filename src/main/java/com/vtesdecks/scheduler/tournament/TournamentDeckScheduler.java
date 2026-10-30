@@ -284,8 +284,8 @@ public class TournamentDeckScheduler {
     }
 
     /**
-     * Guards against the same event being imported under another id by a different source (e.g.
-     * {@link TournamentEternalVigilanceDeckScheduler} keys decks by VEKN event id).
+     * Guards against the same event being imported under another id by a different source,
+     * including historical imports keyed by VEKN event id.
      */
     private boolean isDuplicateOfOtherDeck(DeckEntity deck) {
         List<DeckEntity> existingDecks = deckRepository.findByTypeAndNameContainingIgnoreCase(DeckType.TOURNAMENT, deck.getName());

@@ -97,11 +97,13 @@ class ApiAdminControllerTest {
     }
 
     @Test
-    void schedulerRunMapsKnownAndUnknownKeys() {
+    void schedulerRunMapsKnownUnknownAndRetiredKeys() {
         when(schedulerService.run("known", 42)).thenReturn(true);
         when(schedulerService.run("unknown", 42)).thenReturn(false);
+        when(schedulerService.run("twda-eternal-vigilance", 42)).thenReturn(false);
 
         assertEquals(204, controller.runScheduler("known").getStatusCode().value());
         assertEquals(404, controller.runScheduler("unknown").getStatusCode().value());
+        assertEquals(404, controller.runScheduler("twda-eternal-vigilance").getStatusCode().value());
     }
 }
