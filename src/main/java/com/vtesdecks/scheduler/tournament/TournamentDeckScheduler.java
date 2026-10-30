@@ -222,6 +222,12 @@ public class TournamentDeckScheduler {
             fillMissingVeknId(actual, players);
             return;
         }
+        if (actual == null) {
+            deck.setVeknId(players.findVeknId(deck.getAuthor()));
+        }
+        if (!importPolicy.canPersist(actual, deck)) {
+            return;
+        }
         persist(actual, deck, deckCards);
         fillMissingVeknId(deck, players);
     }

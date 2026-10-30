@@ -400,15 +400,21 @@ class TournamentArchonDeckSchedulerTest {
         assertEquals("Tournament player", captor.getValue().getAuthor());
     }
 
-    @Test
-    void leavesVeknIdEmptyWhenArchonDoesNotSupplyOne() {
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"  "})
+    void skipsNewDeckWithAWarningWhenArchonDoesNotSupplyVeknId(String veknId, CapturedOutput output) {
         ArchonTournament tournament = tournament();
 
-        scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(), Map.of());
+        scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(),
+                veknId == null ? Map.of() : Map.of("winner", veknId));
 
-        ArgumentCaptor<DeckEntity> captor = ArgumentCaptor.forClass(DeckEntity.class);
-        verify(deckRepository).saveAndFlush(captor.capture());
-        org.junit.jupiter.api.Assertions.assertNull(captor.getValue().getVeknId());
+        verify(deckRepository, never()).saveAndFlush(any());
+        verify(deckCardRepository, never()).save(any());
+        org.junit.jupiter.api.Assertions.assertTrue(output.getAll().contains("WARN"));
+        org.junit.jupiter.api.Assertions.assertTrue(output.getAll().contains("eventId and veknId are required"));
+        org.junit.jupiter.api.Assertions.assertTrue(output.getAll().contains("tournament-13370"));
+        org.junit.jupiter.api.Assertions.assertTrue(output.getAll().contains("https://archon.vekn.net/tournaments/"));
     }
 
     @ParameterizedTest
@@ -704,7 +710,7 @@ class TournamentArchonDeckSchedulerTest {
         ArchonDeck source = deck();
         source.setUserUid(finalist.userUid());
 
-        scheduler.parseDeck(tournament, finalist, source, Map.of());
+        scheduler.parseDeck(tournament, finalist, source, Map.of(finalist.userUid(), "0012345"));
 
         ArgumentCaptor<DeckEntity> captor = ArgumentCaptor.forClass(DeckEntity.class);
         verify(deckRepository).saveAndFlush(captor.capture());
@@ -849,7 +855,7 @@ class TournamentArchonDeckSchedulerTest {
                 tournament.getRounds().add(List.of(new ArchonTournament.RoundTable(), new ArchonTournament.RoundTable()));
             }
         }
-        scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(), Map.of());
+        scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(), Map.of("winner", "003120065"));
         ArgumentCaptor<DeckEntity> captor = ArgumentCaptor.forClass(DeckEntity.class);
         verify(deckRepository).saveAndFlush(captor.capture());
         assertEquals(expected, captor.getValue().getRounds());
@@ -902,6 +908,22 @@ class TournamentArchonDeckSchedulerTest {
                         Map.of(), null, StandardCharsets.UTF_8, null)).body(bytes.toByteArray()).build());
 
         scheduler.scrappingDecks();
+    }
+
+    @Test
+    void stillUpdatesAnExistingArchonDeckWithoutVeknId(CapturedOutput output) {
+        DeckEntity actual = DeckEntity.builder().id("tournament-13370").type(DeckType.TOURNAMENT)
+                .eventId("13370").position(1).schedulerOwner(TournamentSchedulerOwner.ARCHON).verified(false).views(0L).build();
+        when(deckRepository.findById(actual.getId())).thenReturn(Optional.of(actual));
+        ArchonTournament tournament = tournament();
+
+        scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(), Map.of());
+
+        ArgumentCaptor<DeckEntity> captor = ArgumentCaptor.forClass(DeckEntity.class);
+        verify(deckRepository).saveAndFlush(captor.capture());
+        org.junit.jupiter.api.Assertions.assertNull(captor.getValue().getVeknId());
+        assertEquals("Winner Deck", captor.getValue().getName());
+        assertFalse(output.getAll().contains("eventId and veknId are required"));
     }
 
     private ArchonTournament tournament() {

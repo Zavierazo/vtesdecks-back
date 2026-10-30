@@ -35,6 +35,17 @@ class TournamentImportPolicyTest {
     private TournamentImportPolicy policy;
     private BiConsumer<DeckEntity, Action> importer;
 
+    @ParameterizedTest
+    @CsvSource({"123,003120065,true", ",003120065,false", "'',003120065,false", "'  ',003120065,false",
+            "123,,false", "123,'',false", "123,'  ',false", ",,false"})
+    void requiresBothNonblankIdsOnlyForNewDecks(String eventId, String veknId, boolean allowed) {
+        DeckEntity deck = DeckEntity.builder().id("candidate").type(DeckType.TOURNAMENT)
+                .eventId(eventId).veknId(veknId).schedulerOwner(TournamentSchedulerOwner.TWDA).build();
+        assertEquals(allowed, policy.canPersist(null, deck));
+        assertTrue(policy.canPersist(deck, deck));
+        verifyNoInteractions(repository, cardRepository, transactionManager);
+    }
+
     @BeforeEach
     @SuppressWarnings("unchecked")
     void setUp() {

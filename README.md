@@ -108,6 +108,12 @@ Imports sharing a calendar day, deck ID, or event ID are coordinated before
 opening their transactions, so duplicate checks see previously committed results.
 Card changes are flushed at transaction commit rather than after each card.
 
+New tournament decks from either importer require nonblank `eventId` and `veknId`.
+TWDA resolves the player ID before inserting the deck. If either ID is missing,
+the importer skips the insertion and logs a warning with the source and tournament
+details for review. Existing decks can still be updated or enriched without both
+IDs; duplicate detection and verified-deck protection continue to apply.
+
 TWDA also fills missing VEKN IDs by looking up the deck's full author name in
 `archon_user`, ignoring letter case, accents, and surrounding whitespace. Player
 names and IDs are loaded once per run through a Spring Data projection and matched

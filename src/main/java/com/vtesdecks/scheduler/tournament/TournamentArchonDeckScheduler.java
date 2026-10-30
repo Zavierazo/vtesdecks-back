@@ -280,6 +280,9 @@ public class TournamentArchonDeckScheduler {
             }
             return;
         }
+        if (!importPolicy.canPersist(actual, deck)) {
+            return;
+        }
         persist(actual, deck, deckCards);
     }
 

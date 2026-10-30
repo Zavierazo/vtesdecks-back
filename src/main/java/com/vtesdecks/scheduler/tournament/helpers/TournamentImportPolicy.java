@@ -100,6 +100,17 @@ public class TournamentImportPolicy {
         });
     }
 
+    public boolean canPersist(DeckEntity actual, DeckEntity deck) {
+        if (actual != null || StringUtils.isNoneBlank(deck.getEventId(), deck.getVeknId())) {
+            return true;
+        }
+        log.warn("Skipping new {} tournament deck {}: eventId and veknId are required."
+                        + " eventId={}, veknId={}, tournament={}, author={}, date={}, source={}",
+                deck.getSchedulerOwner(), deck.getId(), deck.getEventId(), deck.getVeknId(),
+                deck.getTournament(), deck.getAuthor(), deck.getCreationDate(), deck.getSource());
+        return false;
+    }
+
     public boolean hasImportConflict(DeckEntity actual, DeckEntity deck, Collection<DeckCardEntity> cards) {
         return !findDuplicates(actual, deck, cards).isEmpty();
     }

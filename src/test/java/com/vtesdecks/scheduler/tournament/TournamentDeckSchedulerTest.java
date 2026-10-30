@@ -90,6 +90,7 @@ public class TournamentDeckSchedulerTest {
         when(deckCardRepository.findByIdDeckId(any())).thenReturn(Collections.emptyList());
         when(cryptCache.get(any())).thenReturn(new Crypt());
         when(libraryCache.get(any())).thenReturn(new Library());
+        when(players.findVeknId(any())).thenReturn("003120065");
     }
 
     @AfterEach
@@ -115,7 +116,7 @@ public class TournamentDeckSchedulerTest {
         assertEquals("Spain", deck.getCountry());
         assertEquals(2023, deck.getYear());
         assertEquals("John Doe", deck.getAuthor());
-        assertNull(deck.getVeknId());
+        assertEquals("003120065", deck.getVeknId());
         assertEquals("https://www.vekn.net/event-calendar/event/12345", deck.getUrl());
         assertEquals("12345", deck.getEventId());
         assertEquals(new BigDecimal("1.5"), deck.getFinalVp());
@@ -169,13 +170,13 @@ public class TournamentDeckSchedulerTest {
     }
 
     @Test
-    public void shouldImportDeckWithoutEventIdWithoutCheckingTournamentResult() {
+    public void shouldSkipNewDeckWithoutEventIdWithoutCheckingTournamentResult() {
         TwdaDeck source = twdaDeck();
         source.getEvent().setUrl("https://example.com/events/12345");
 
         scheduler.parseDeck(source, players);
 
-        verify(deckRepository).saveAndFlush(any());
+        verify(deckRepository, never()).saveAndFlush(any());
         verify(deckRepository, never()).findByTypeAndEventIdAndPositionAndDeletedFalse(any(), any(), any());
     }
 
@@ -350,6 +351,7 @@ public class TournamentDeckSchedulerTest {
     public void shouldSkipDuplicateOfDeckImportedUnderAnotherId() {
         DeckEntity other = existingDeck(false);
         other.setId("tournament-99999");
+        other.setVeknId("003120065");
         other.setEventId(null);
         other.setName("Incorrect archived title");
         when(deckRepository.findActiveTournamentDecksBetween(DATE.atStartOfDay(), DATE.plusDays(1).atStartOfDay()))
@@ -366,6 +368,7 @@ public class TournamentDeckSchedulerTest {
     public void shouldSkipExactCompositionAndAuthorDespiteDifferentEventMetadata() {
         DeckEntity other = existingDeck(false);
         other.setId("tournament-legacy");
+        other.setVeknId("003120065");
         other.setEventId("different-event");
         other.setTournament("Different event label");
         when(deckRepository.findActiveTournamentDecksBetween(DATE.atStartOfDay(), DATE.plusDays(1).atStartOfDay()))
@@ -641,18 +644,25 @@ public class TournamentDeckSchedulerTest {
     }
 
     @Test
-    void fillsMissingVeknIdForANewDeckAfterPersistingIt() {
+    void resolvesVeknIdBeforePersistingANewDeck() {
         when(players.findVeknId("John Doe")).thenReturn("003120065");
 
         scheduler.parseDeck(twdaDeck(), players);
 
-        var order = org.mockito.Mockito.inOrder(deckRepository);
-        order.verify(deckRepository).saveAndFlush(any());
-        order.verify(deckRepository).fillMissingVeknId("tournament-2023event", "003120065");
+        ArgumentCaptor<DeckEntity> captor = ArgumentCaptor.forClass(DeckEntity.class);
+        var order = org.mockito.Mockito.inOrder(players, deckRepository);
+        order.verify(players).findVeknId("John Doe");
+        order.verify(deckRepository).saveAndFlush(captor.capture());
+        assertEquals("003120065", captor.getValue().getVeknId());
+        assertEquals("12345", captor.getValue().getEventId());
+        verify(deckRepository, never()).fillMissingVeknId(any(), any());
     }
 
     @Test
     void leavesMissingOrAmbiguousPlayerNamesUnchangedWithoutWarnings(CapturedOutput output) {
+        DeckEntity actual = existingDeck(false);
+        when(deckRepository.findById(actual.getId())).thenReturn(Optional.of(actual));
+        when(deckCardRepository.findByIdDeckId(actual.getId())).thenReturn(List.of(deckCard(CRYPT_ID, 12), deckCard(LIBRARY_ID, 60)));
         when(players.findVeknId("John Doe"))
                 .thenReturn(null, null);
 
@@ -667,6 +677,8 @@ public class TournamentDeckSchedulerTest {
     void doesNotLookUpBlankAuthors() {
         TwdaDeck source = twdaDeck();
         source.setPlayer("  ");
+        DeckEntity actual = existingDeck(false).toBuilder().author("  ").build();
+        when(deckRepository.findById(actual.getId())).thenReturn(Optional.of(actual));
 
         scheduler.parseDeck(source, players);
 
@@ -732,6 +744,9 @@ public class TournamentDeckSchedulerTest {
 
     @Test
     void leavesAmbiguousContainsMatchesEmptyWithoutWarnings(CapturedOutput output) {
+        DeckEntity actual = existingDeck(false);
+        when(deckRepository.findById(actual.getId())).thenReturn(Optional.of(actual));
+        when(deckCardRepository.findByIdDeckId(actual.getId())).thenReturn(List.of(deckCard(CRYPT_ID, 12), deckCard(LIBRARY_ID, 60)));
         when(players.findVeknId("John Doe"))
                 .thenReturn((String) null);
 
@@ -739,6 +754,58 @@ public class TournamentDeckSchedulerTest {
 
         verify(deckRepository, never()).fillMissingVeknId(any(), any());
         assertFalse(output.getAll().contains("WARN"));
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "https://example.com/unknown-event"})
+    void skipsNewDeckWithoutEventIdAndLogsReviewDetails(String url, CapturedOutput output) {
+        TwdaDeck source = twdaDeck();
+        source.getEvent().setUrl(url);
+
+        scheduler.parseDeck(source, players);
+
+        verify(deckRepository, never()).saveAndFlush(any());
+        verify(deckCardRepository, never()).save(any());
+        verify(deckRepository, never()).fillMissingVeknId(any(), any());
+        assertTrue(output.getAll().contains("WARN"));
+        assertTrue(output.getAll().contains("eventId and veknId are required"));
+        assertTrue(output.getAll().contains("tournament-2023event"));
+        assertTrue(output.getAll().contains("John Doe"));
+        assertTrue(output.getAll().contains("http://www.vekn.fr/decks/twd.htm#2023event"));
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"  "})
+    void skipsNewDeckWithoutVeknIdAndLogsAWarning(String veknId, CapturedOutput output) {
+        when(players.findVeknId("John Doe")).thenReturn(veknId);
+
+        scheduler.parseDeck(twdaDeck(), players);
+
+        verify(deckRepository, never()).saveAndFlush(any());
+        verify(deckCardRepository, never()).save(any());
+        verify(deckRepository, never()).fillMissingVeknId(any(), any());
+        assertTrue(output.getAll().contains("WARN"));
+        assertTrue(output.getAll().contains("eventId and veknId are required"));
+    }
+
+    @Test
+    void stillUpdatesAnExistingDeckWithoutEitherId(CapturedOutput output) {
+        DeckEntity actual = existingDeck(false).toBuilder().eventId(null).url(null).players(10).build();
+        when(deckRepository.findById(actual.getId())).thenReturn(Optional.of(actual));
+        when(players.findVeknId("John Doe")).thenReturn(null);
+        TwdaDeck source = twdaDeck();
+        source.getEvent().setUrl(null);
+
+        scheduler.parseDeck(source, players);
+
+        ArgumentCaptor<DeckEntity> captor = ArgumentCaptor.forClass(DeckEntity.class);
+        verify(deckRepository).saveAndFlush(captor.capture());
+        assertNull(captor.getValue().getEventId());
+        assertNull(captor.getValue().getVeknId());
+        assertEquals(20, captor.getValue().getPlayers());
+        assertFalse(output.getAll().contains("eventId and veknId are required"));
     }
 
     private TwdaDeck twdaDeck() {
