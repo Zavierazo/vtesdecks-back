@@ -307,9 +307,9 @@ public class AfterStartupService {
                 continue;
             }
             boolean converted = false;
-            if (setInfo.getFirst().equals("V5") && (setInfo.getLast().contains("PH") || setInfo.getLast().contains("PL"))) {
-                converted |= convertSubSetToSet(finalSets, setInfo, "V5", "PH", "V5H", true);
-                converted |= convertSubSetToSet(finalSets, setInfo, "V5", "PL", "V5L", true);
+            if (setInfo.getFirst().equals("V5")) {
+                splitFifthEdition(finalSets, setInfo.getLast());
+                converted = true;
             } else if (setInfo.getFirst().equals("HttB") && BUNDLE_PATTERN.matcher(setInfo.getLast()).find()) {
                 converted |= convertSubSetToSet(finalSets, setInfo, "HttB", "A", "HttBR", false);
                 converted |= convertSubSetToSet(finalSets, setInfo, "HttB", "B", "HttBR", false);
@@ -345,6 +345,24 @@ public class AfterStartupService {
         boolean promoImageExists = proxyCardOption != null && proxyCardOption.getSets() != null && proxyCardOption.getSets().contains(VtesUtils.PROMO_SET);
         boolean pfaImageExists = proxyCardOption != null && proxyCardOption.getSets() != null && proxyCardOption.getSets().contains(VtesUtils.PFA_SET);
         return String.join(",", VtesUtils.applyPromoImageRule(new ArrayList<>(finalSets), promoImageExists, pfaImageExists));
+    }
+
+    private static void splitFifthEdition(Set<String> sets, String printing) {
+        List<String> original = new ArrayList<>();
+        for (String subset : printing.split("/")) {
+            if (subset.startsWith("SoNY") || subset.startsWith("NBr")) {
+                sets.add("V5SN:" + subset);
+            } else if (subset.startsWith("PH")) {
+                sets.add("V5H:" + subset.substring(2));
+            } else if (subset.startsWith("PL")) {
+                sets.add("V5L:" + subset.substring(2));
+            } else {
+                original.add(subset);
+            }
+        }
+        if (!original.isEmpty()) {
+            sets.add("V5:" + String.join("/", original));
+        }
     }
 
     private void loadProxyCardOptions() {
