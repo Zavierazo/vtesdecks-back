@@ -17,6 +17,7 @@ import com.vtesdecks.model.archon.ArchonDeck;
 import com.vtesdecks.model.archon.ArchonTournament;
 import com.vtesdecks.model.archon.ArchonUser;
 import com.vtesdecks.scheduler.tournament.helpers.TournamentDeckName;
+import com.vtesdecks.scheduler.tournament.helpers.TournamentImportExecutor;
 import com.vtesdecks.scheduler.tournament.helpers.TournamentImportPolicy;
 import com.vtesdecks.util.VtesUtils;
 import feign.Response;
@@ -39,7 +40,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -74,16 +74,21 @@ public class TournamentArchonDeckScheduler {
     private String clientId;
     @Value("${archon.clientSecret:}")
     private String clientSecret;
+    @Value("${jobs.tournamentImportWorkers:4}")
+    private int importWorkers = 4;
 
     private TournamentImportPolicy importPolicy;
 
     @PostConstruct
     void setUp() {
-        importPolicy = new TournamentImportPolicy(deckRepository, new TransactionTemplate(transactionManager));
+        importPolicy = new TournamentImportPolicy(deckRepository, deckCardRepository, new TransactionTemplate(transactionManager));
     }
 
-    // Import Archon finalist decks once a day after the TWDA job.
+    // Keep the daily pass after TWDA, with extra passes around weekend tournament finishes.
+    // Overnight passes belong to the previous evening, so Sunday finishes include Monday morning.
     @Scheduled(cron = "${jobs.scrappingArchonDecksCron:0 30 7 * * *}")
+    @Scheduled(cron = "${jobs.scrappingArchonDecksWeekendCron:0 30 18,20,22 * * FRI-SUN}")
+    @Scheduled(cron = "${jobs.scrappingArchonDecksOvernightCron:0 30 0,2 * * SAT,SUN,MON}")
     public void scrappingDecks() {
         if (StringUtils.isBlank(clientId) || StringUtils.isBlank(clientSecret)) {
             log.warn("Skipping Archon tournament deck import because ARCHON_CLIENT_ID or ARCHON_CLIENT_SECRET is not configured");
@@ -98,7 +103,7 @@ public class TournamentArchonDeckScheduler {
             List<ArchonTournament> eligible = new ArrayList<>();
             Set<String> finalistUids = new HashSet<>();
             for (ArchonTournament tournament : tournaments) {
-                if (!isFinishedFinal(tournament)) {
+                if (!isFinishedTournament(tournament)) {
                     continue;
                 }
                 String eventId = getEventId(tournament);
@@ -116,13 +121,13 @@ public class TournamentArchonDeckScheduler {
             }
             Map<String, String> veknIds = loadVeknIds(export, finalistUids);
             Map<String, List<ArchonDeck>> decksByTournament = loadTournamentDecks(export, eligible);
-            for (ArchonTournament tournament : eligible) {
+            TournamentImportExecutor.forEach(eligible, importWorkers, tournament -> {
                 try {
                     importTournament(tournament, decksByTournament.getOrDefault(tournament.getUid(), List.of()), veknIds);
                 } catch (Exception e) {
                     log.error("Unable to import Archon tournament {}", tournament.getUid(), e);
                 }
-            }
+            });
         } catch (Exception e) {
             log.error("Unable to import Archon finalist decks", e);
         } finally {
@@ -131,13 +136,11 @@ public class TournamentArchonDeckScheduler {
         log.info("Finished Archon finalist deck import");
     }
 
-    boolean isFinishedFinal(ArchonTournament tournament) {
+    boolean isFinishedTournament(ArchonTournament tournament) {
         return tournament != null
                 && "Finished".equals(tournament.getState())
-                && PUBLISHED_DECKLIST_MODES.contains(tournament.getDecklistsMode())
                 && StringUtils.isNotBlank(tournament.getWinner())
-                && tournament.getStart() != null
-                && !tournament.getStart().isBefore(LocalDateTime.now().minusYears(1));
+                && tournament.getStart() != null;
     }
 
     private void importTournament(ArchonTournament tournament, List<ArchonDeck> tournamentDecks, Map<String, String> veknIds) {
@@ -151,8 +154,8 @@ public class TournamentArchonDeckScheduler {
             }
             decksByUser.putIfAbsent(deck.getUserUid(), deck);
         }
-        for (Map.Entry<String, ArchonDeck> entry : decksByUser.entrySet()) {
-            parseDeck(tournament, finalistsByUser.get(entry.getKey()), entry.getValue(), veknIds);
+        for (Finalist finalist : finalists) {
+            parseDeck(tournament, finalist, decksByUser.get(finalist.userUid()), veknIds);
         }
     }
 
@@ -199,7 +202,7 @@ public class TournamentArchonDeckScheduler {
     void parseDeck(ArchonTournament tournament, Finalist finalist, ArchonDeck source, Map<String, String> veknIds) {
         String eventId = getEventId(tournament);
         if (eventId == null) {
-            log.warn("Skipping Archon deck {} because tournament {} has no event code", source.getUid(), tournament.getUid());
+            log.warn("Skipping Archon tournament {} because it has no event code", tournament.getUid());
             return;
         }
         if (tournament.getStart() == null) {
@@ -207,17 +210,20 @@ public class TournamentArchonDeckScheduler {
             return;
         }
         String id = deckId(eventId, finalist.position());
-        importPolicy.execute(id, eventId, finalist.position(), TournamentSchedulerOwner.ARCHON, (actual, action) -> {
-            if (action == TournamentImportPolicy.Action.ENRICH_FINAL_RESULT) {
-                updateTwdaFinalResult(actual, finalist);
+        String veknId = StringUtils.trimToNull(veknIds.get(finalist.userUid()));
+        importPolicy.execute(id, eventId, finalist.position(), TournamentSchedulerOwner.ARCHON, tournament.getStart().toLocalDate(), (actual, action) -> {
+            if (source == null || action == TournamentImportPolicy.Action.ENRICH_METADATA) {
+                if (actual != null) {
+                    enrichMetadata(actual, finalist, veknId);
+                }
             } else {
-                importDeck(tournament, finalist, source, veknIds, actual);
+                importDeck(tournament, finalist, source, veknId, actual);
             }
         });
     }
 
     private void importDeck(ArchonTournament tournament, Finalist finalist, ArchonDeck source,
-                            Map<String, String> veknIds, DeckEntity actual) {
+                            String veknId, DeckEntity actual) {
         String eventId = getEventId(tournament);
         String id = actual != null ? actual.getId() : deckId(eventId, finalist.position());
 
@@ -231,7 +237,7 @@ public class TournamentArchonDeckScheduler {
         deck.setPlace(place(tournament));
         deck.setCountry(countryName(tournament.getCountry()));
         deck.setYear(tournament.getStart().getYear());
-        String veknId = veknIds.get(finalist.userUid());
+        fillVeknId(deck, veknId);
         String author = veknId;
         if (StringUtils.isNotBlank(veknId)) {
             author = archonUserRepository.findById(veknId)
@@ -263,30 +269,49 @@ public class TournamentArchonDeckScheduler {
         } else {
             deck.setCreationDate(tournament.getStart().toLocalDate().atStartOfDay());
         }
-        if (hasTournamentResultConflict(deck)) {
-            return;
-        }
-
         Map<Integer, DeckCardEntity> deckCards = buildCards(id, source);
         if (!isValidDeck(deck, deckCards)) {
+            return;
+        }
+        List<DeckEntity> duplicates = importPolicy.findDuplicates(actual, deck, deckCards.values());
+        if (!duplicates.isEmpty()) {
+            if (actual == null && duplicates.size() == 1 && veknId != null && StringUtils.isBlank(duplicates.getFirst().getVeknId())) {
+                deckRepository.fillMissingVeknId(duplicates.getFirst().getId(), veknId);
+            }
             return;
         }
         persist(actual, deck, deckCards);
     }
 
-    private void updateTwdaFinalResult(DeckEntity deck, Finalist finalist) {
-        boolean updated = false;
-        if (finalist.vp() != null && !java.util.Objects.equals(deck.getFinalVp(), finalist.vp())) {
-            deck.setFinalVp(finalist.vp());
-            updated = true;
-        }
-        if (finalist.seat() != null && !java.util.Objects.equals(deck.getFinalSeat(), finalist.seat())) {
-            deck.setFinalSeat(finalist.seat());
-            updated = true;
+    private void enrichMetadata(DeckEntity deck, Finalist finalist, String veknId) {
+        boolean updated = fillVeknId(deck, veknId);
+        if (!Boolean.TRUE.equals(deck.getVerified())) {
+            if (finalist.vp() != null && !java.util.Objects.equals(deck.getFinalVp(), finalist.vp())) {
+                deck.setFinalVp(finalist.vp());
+                updated = true;
+            }
+            if (finalist.seat() != null && !java.util.Objects.equals(deck.getFinalSeat(), finalist.seat())) {
+                deck.setFinalSeat(finalist.seat());
+                updated = true;
+            }
         }
         if (updated) {
             deckRepository.saveAndFlush(deck);
         }
+    }
+
+    private boolean fillVeknId(DeckEntity deck, String veknId) {
+        if (veknId == null) {
+            return false;
+        }
+        if (StringUtils.isBlank(deck.getVeknId())) {
+            deck.setVeknId(veknId);
+            return true;
+        }
+        if (!veknId.equals(deck.getVeknId())) {
+            log.warn("Preserving VEKN ID {} for deck {}, Archon supplied {}", deck.getVeknId(), deck.getId(), veknId);
+        }
+        return false;
     }
 
     private Integer getRounds(ArchonTournament tournament) {
@@ -413,7 +438,9 @@ public class TournamentArchonDeckScheduler {
     }
 
     private Map<String, List<ArchonDeck>> loadTournamentDecks(Path export, List<ArchonTournament> tournaments) throws Exception {
-        Set<String> tournamentUids = tournaments.stream().map(ArchonTournament::getUid).collect(Collectors.toSet());
+        Set<String> tournamentUids = tournaments.stream()
+                .filter(tournament -> PUBLISHED_DECKLIST_MODES.contains(StringUtils.defaultString(tournament.getDecklistsMode())))
+                .map(ArchonTournament::getUid).collect(Collectors.toSet());
         Map<String, List<ArchonDeck>> decksByTournament = new HashMap<>();
         readExport(export, (type, data) -> {
             if (!"deck".equals(type)) {
@@ -495,27 +522,18 @@ public class TournamentArchonDeckScheduler {
         return false;
     }
 
-    private boolean hasTournamentResultConflict(DeckEntity deck) {
-        boolean exists = deckRepository.existsByTypeAndEventIdAndPositionAndIdNotAndDeletedFalse(
-                DeckType.TOURNAMENT, deck.getEventId(), deck.getPosition(), deck.getId());
-        if (exists) {
-            log.warn("Skipping Archon deck {}, event {} already has a deck in position {}", deck.getId(), deck.getEventId(), deck.getPosition());
-        }
-        return exists;
-    }
-
     private void persist(DeckEntity actual, DeckEntity deck, Map<Integer, DeckCardEntity> deckCards) {
         boolean insert = actual == null;
         if (insert || !actual.equals(deck) || !java.util.Objects.equals(actual.getCreationDate(), deck.getCreationDate())) {
             deckRepository.saveAndFlush(deck);
         }
-        List<DeckCardEntity> dbCards = deckCardRepository.findByIdDeckId(deck.getId());
+        List<DeckCardEntity> dbCards = insert ? List.of() : deckCardRepository.findByIdDeckId(deck.getId());
+        Map<Integer, DeckCardEntity> cardsById = dbCards.stream()
+                .collect(Collectors.toMap(card -> card.getId().getCardId(), card -> card));
         for (DeckCardEntity card : deckCards.values()) {
-            DeckCardEntity current = dbCards.stream()
-                    .filter(dbCard -> dbCard.getId().getCardId().equals(card.getId().getCardId()))
-                    .findFirst().orElse(null);
+            DeckCardEntity current = cardsById.get(card.getId().getCardId());
             if (current == null || !current.equals(card)) {
-                deckCardRepository.saveAndFlush(card);
+                deckCardRepository.save(card);
             }
         }
         for (DeckCardEntity card : dbCards) {

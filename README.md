@@ -77,6 +77,62 @@ Use an API testing tool or cURL to trigger the scheduler:
 curl -X POST http://localhost:8080/admin/scheduler/scrap_decks
 ```
 
+### Archon tournament deck schedule
+
+Archon finalist decks are imported daily at 07:30, with extra passes on Friday,
+Saturday and Sunday at 18:30, 20:30 and 22:30. Follow-up passes at 00:30 and 02:30
+on Saturday, Sunday and Monday pick up results published after midnight,
+including Sunday tournaments. All times use the application's scheduler time zone,
+as the other scheduled jobs do.
+
+Each pass downloads the Archon export and processes finished tournaments from all
+available years. Published decklists are imported, and existing tournament decks
+can receive missing VEKN IDs from event results even when no decklist is available.
+Existing VEKN IDs are preserved, and verified decks only receive missing VEKN IDs.
+An unfinished tournament is picked up by a later pass.
+
+Before creating a tournament deck, both importers also check for an exact match
+of all crypt and library card IDs and quantities, the normalized author, and a
+compatible finishing position on the same calendar day, ignoring the time.
+This check works even when tournament names and event IDs differ. Matching lists
+on different days are accepted as separate results unless their event identity
+already resolves to an existing result. Archon skips duplicate imports and only
+fills an empty VEKN ID when there is exactly one matching deck; its event ID,
+cards, and other metadata are preserved. Ambiguous matches are skipped without
+enrichment.
+
+Archon and TWDA each process their input with up to four workers. Set
+`jobs.tournamentImportWorkers` to change this limit, or use `1` for sequential
+processing. Each scheduler waits for its workers before reporting completion.
+Imports sharing a calendar day, deck ID, or event ID are coordinated before
+opening their transactions, so duplicate checks see previously committed results.
+Card changes are flushed at transaction commit rather than after each card.
+
+TWDA also fills missing VEKN IDs by looking up the deck's full author name in
+`archon_user`, ignoring letter case, accents, and surrounding whitespace. Player
+names and IDs are loaded once per run through a Spring Data projection and matched
+in Java, using the same immutable lookup across workers. If there is no
+exact match, it tries name containment in either direction using whole words
+and at least two words in each name (for example, `Pedro Coelho` and
+`Pedro Coelho Mendes Bueno Barbosa`). It also accepts the deck's words as prefixes
+of Archon name words in the same order, allowing intermediate names (for example,
+`Greg Williams` and `Gregory Alan Williams`). Each lookup must return
+exactly one player; missing or ambiguous names are left unchanged without
+logging warnings. Existing IDs are preserved. This enrichment is allowed for
+verified decks and unique duplicate matches, and updates only `vekn_id`, preserving
+the author, event ID, cards, ownership, and modification timestamp.
+
+The three schedules can be overridden independently:
+
+| Property | Default cron |
+| --- | --- |
+| `jobs.scrappingArchonDecksCron` | `0 30 7 * * *` |
+| `jobs.scrappingArchonDecksWeekendCron` | `0 30 18,20,22 * * FRI-SUN` |
+| `jobs.scrappingArchonDecksOvernightCron` | `0 30 0,2 * * SAT,SUN,MON` |
+
+Set a property to `-` to disable that schedule. To disable all automatic Archon
+deck imports, set all three properties to `-`.
+
 ## Additional Information
 
 The application will listen on port 8080 by default. You can change this by updating the server.port property in the

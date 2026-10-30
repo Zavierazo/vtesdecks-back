@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 public interface DeckRepository extends JpaRepository<DeckEntity, String> {
 
@@ -20,9 +21,15 @@ public interface DeckRepository extends JpaRepository<DeckEntity, String> {
 
     boolean existsByIdAndUser(String id, Integer user);
 
-    List<DeckEntity> findByTypeAndNameContainingIgnoreCase(DeckType type, String name);
+    @Query(value = "SELECT * FROM deck WHERE type = 'TOURNAMENT' AND deleted = false"
+            + " AND creation_date >= :start AND creation_date < :end", nativeQuery = true)
+    List<DeckEntity> findActiveTournamentDecksBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    boolean existsByTypeAndEventIdAndPositionAndIdNotAndDeletedFalse(DeckType type, String eventId, Integer position, String id);
+    @Modifying
+    @Query(value = "UPDATE deck SET vekn_id = :veknId, modification_date = modification_date"
+            + " WHERE id = :id AND type = 'TOURNAMENT' AND deleted = false"
+            + " AND (vekn_id IS NULL OR TRIM(vekn_id) = '')", nativeQuery = true)
+    int fillMissingVeknId(@Param("id") String id, @Param("veknId") String veknId);
 
     @Query(value = "SELECT * FROM deck WHERE type ='COMMUNITY' AND deleted = true AND modification_date < (NOW() - INTERVAL 60 DAY)", nativeQuery = true)
     List<DeckEntity> selectOldDeleted();

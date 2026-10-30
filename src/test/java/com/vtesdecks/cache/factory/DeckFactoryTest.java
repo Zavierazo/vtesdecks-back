@@ -1,10 +1,12 @@
 package com.vtesdecks.cache.factory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
 import com.vtesdecks.cache.indexable.Deck;
 import com.vtesdecks.cache.indexable.DeckCard;
+import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.card.Card;
 import com.vtesdecks.jpa.entity.DeckEntity;
@@ -51,6 +53,21 @@ class DeckFactoryTest {
         entity.setId("spoiler-deck");
         entity.setViews(0L);
         entity.setCreationDate(LocalDateTime.of(2026, 9, 18, 0, 0));
+    }
+
+    @Test
+    void keepsVeknIdInPersistenceWhilePreservingAuthorInDetailsAndSummary() {
+        entity.setAuthor("Tournament player");
+        entity.setVeknId("003120065");
+
+        Deck deck = factory.getDeck(entity, List.of(), List.of(), null);
+        DeckSummary summary = DeckSummary.from(deck);
+
+        ObjectMapper json = new ObjectMapper().findAndRegisterModules();
+        assertFalse(json.valueToTree(deck).has("veknId"));
+        assertFalse(json.valueToTree(summary).has("veknId"));
+        assertEquals("Tournament player", deck.getAuthor());
+        assertEquals("Tournament player", summary.getAuthor());
     }
 
     @Test

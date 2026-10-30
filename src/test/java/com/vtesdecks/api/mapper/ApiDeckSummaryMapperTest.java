@@ -27,6 +27,7 @@ import org.springframework.data.redis.core.mapping.RedisMappingContext;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -68,6 +69,21 @@ class ApiDeckSummaryMapperTest {
         CurrencyExchangeService currency = mock(CurrencyExchangeService.class);
         when(currency.convert(any(), anyString(), eq("USD"))).thenReturn(new BigDecimal("30.00"));
         ReflectionTestUtils.setField(mapper, "currencyExchangeService", currency);
+    }
+
+    @Test
+    void returnsAuthorWithoutVeknIdInDetailsAndListings() {
+        full.setAuthor("Tournament player");
+
+        ApiDeck detail = mapper.map(full, null, false, "EUR");
+        ApiDeck listing = mapper.mapSummary(DeckSummary.from(full), null, null, "EUR");
+
+        for (ApiDeck response : List.of(detail, listing)) {
+            var body = json.valueToTree(response);
+            assertFalse(body.has("veknId"));
+            assertFalse(body.has("vekn_id"));
+            assertEquals("Tournament player", response.getAuthor());
+        }
     }
 
     @Test

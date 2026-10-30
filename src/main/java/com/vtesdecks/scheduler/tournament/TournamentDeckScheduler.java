@@ -12,12 +12,15 @@ import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.TournamentSchedulerOwner;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
+import com.vtesdecks.jpa.repositories.ArchonUserRepository;
 import com.vtesdecks.model.twda.TwdaCard;
 import com.vtesdecks.model.twda.TwdaDeck;
 import com.vtesdecks.model.twda.TwdaEvent;
 import com.vtesdecks.scheduler.tournament.helpers.TournamentDeckName;
 import com.vtesdecks.scheduler.tournament.helpers.TournamentEventId;
 import com.vtesdecks.scheduler.tournament.helpers.TournamentImportPolicy;
+import com.vtesdecks.scheduler.tournament.helpers.TournamentImportExecutor;
+import com.vtesdecks.scheduler.tournament.helpers.TournamentPlayerLookup;
 import com.vtesdecks.util.VtesUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Imports tournament winning decks from the <a href="https://static.krcg.org/data/v5/twda.json">
@@ -50,8 +54,8 @@ import java.util.regex.Pattern;
  * {@code vekn.fr/decks/twd.htm} archive previously scrapped by {@link TournamentDeckOldScheduler},
  * and card entries carry the VEKN card ids used by the database, so no name matching is needed.
  * <p>
- * Manually verified decks are still scanned, but never modified: any difference against the
- * archive is only logged as a warning.
+ * Manually verified decks retain their curated data. Differences against the archive are
+ * reported, and only an empty VEKN ID may be filled from a unique player-name lookup.
  * <p>
  * While scanning, decks whose deck and deck_card rows have not been modified for two months are
  * automatically promoted to verified.
@@ -74,6 +78,7 @@ public class TournamentDeckScheduler {
 
     private final DeckRepository deckRepository;
     private final DeckCardRepository deckCardRepository;
+    private final ArchonUserRepository archonUserRepository;
     private final CryptCache cryptCache;
     private final LibraryCache libraryCache;
     private final PlatformTransactionManager transactionManager;
@@ -85,10 +90,12 @@ public class TournamentDeckScheduler {
             .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
             .findAndRegisterModules();
     private TournamentImportPolicy importPolicy;
+    @Value("${jobs.tournamentImportWorkers:4}")
+    private int importWorkers = 4;
 
     @PostConstruct
     void setUp() {
-        importPolicy = new TournamentImportPolicy(deckRepository, new TransactionTemplate(transactionManager));
+        importPolicy = new TournamentImportPolicy(deckRepository, deckCardRepository, new TransactionTemplate(transactionManager));
     }
 
     //Update tournament decks once a day at 06:30
@@ -99,20 +106,21 @@ public class TournamentDeckScheduler {
             Map<String, TwdaDeck> decks = jsonMapper.readValue(fetch(twdaUrl), new TypeReference<Map<String, TwdaDeck>>() {
             });
             log.info("Found {} TWDA decks", decks.size());
-            for (TwdaDeck deck : decks.values()) {
+            TournamentPlayerLookup players = new TournamentPlayerLookup(archonUserRepository.findAllProjectedBy());
+            TournamentImportExecutor.forEach(new ArrayList<>(decks.values()), importWorkers, deck -> {
                 try {
-                    parseDeck(deck);
+                    parseDeck(deck, players);
                 } catch (Exception e) {
                     log.error("Unable to import TWDA deck {}", deck.getId(), e);
                 }
-            }
+            });
         } catch (Exception e) {
             log.error("Unable to import TWDA decks", e);
         }
         log.info("Finished tournament decks import from TWDA");
     }
 
-    void parseDeck(TwdaDeck source) {
+    void parseDeck(TwdaDeck source, TournamentPlayerLookup players) {
         String id = "tournament-" + source.getId();
         TwdaEvent event = source.getEvent();
         if (event == null || event.getDate() == null) {
@@ -139,11 +147,11 @@ public class TournamentDeckScheduler {
                 return;
             }
         }
-        importPolicy.execute(id, TournamentEventId.fromUrl(event.getUrl()), 1, TournamentSchedulerOwner.TWDA,
-                (actual, action) -> importDeck(source, actual));
+        importPolicy.execute(id, TournamentEventId.fromUrl(event.getUrl()), 1, TournamentSchedulerOwner.TWDA, event.getDate(),
+                (actual, action) -> importDeck(source, actual, players));
     }
 
-    private void importDeck(TwdaDeck source, DeckEntity actual) {
+    private void importDeck(TwdaDeck source, DeckEntity actual, TournamentPlayerLookup players) {
         String id = actual != null ? actual.getId() : "tournament-" + source.getId();
         TwdaEvent event = source.getEvent();
 
@@ -166,9 +174,6 @@ public class TournamentDeckScheduler {
             deck.setFinalVp(source.getScore() != null ? source.getScore().getFinalsVp() : null);
         }
         deck.setPosition(1);
-        if (hasTournamentResultConflict(deck)) {
-            return;
-        }
         deck.setViews(actual != null ? actual.getViews() : 0);
         deck.setVerified(actual != null && actual.getVerified());
         boolean invalidSourceName = TournamentDeckName.isInvalid(source.getName());
@@ -204,15 +209,31 @@ public class TournamentDeckScheduler {
         if (!isValidDeck(deck, deckCards)) {
             return;
         }
-        if (actual == null && isDuplicateOfOtherDeck(deck)) {
+        List<DeckEntity> duplicates = importPolicy.findDuplicates(actual, deck, deckCards.values());
+        if (!duplicates.isEmpty()) {
+            if (actual == null && duplicates.size() == 1) {
+                fillMissingVeknId(duplicates.getFirst(), players);
+            }
             return;
         }
         if (actual != null && Boolean.TRUE.equals(actual.getVerified())) {
-            //Verified decks are curated by hand: scan them but never modify anything
+            // Verified decks retain their curated data; only a missing VEKN ID may be filled.
             reportVerifiedDifferences(actual, deck, deckCards);
+            fillMissingVeknId(actual, players);
             return;
         }
         persist(actual, deck, deckCards);
+        fillMissingVeknId(deck, players);
+    }
+
+    private void fillMissingVeknId(DeckEntity deck, TournamentPlayerLookup players) {
+        if (StringUtils.isNotBlank(deck.getVeknId()) || StringUtils.isBlank(deck.getAuthor())) {
+            return;
+        }
+        String veknId = players.findVeknId(deck.getAuthor().trim());
+        if (veknId != null) {
+            deckRepository.fillMissingVeknId(deck.getId(), veknId);
+        }
     }
 
     private String getFallbackName(TwdaDeck source) {
@@ -281,36 +302,6 @@ public class TournamentDeckScheduler {
             log.error("Invalid number of cards for deck {}. Crypt {} Library {}", deck.getId(), crypt, library);
             return false;
         }
-    }
-
-    /**
-     * Guards against the same event being imported under another id by a different source,
-     * including historical imports keyed by VEKN event id.
-     */
-    private boolean isDuplicateOfOtherDeck(DeckEntity deck) {
-        List<DeckEntity> existingDecks = deckRepository.findByTypeAndNameContainingIgnoreCase(DeckType.TOURNAMENT, deck.getName());
-        for (DeckEntity existingDeck : existingDecks) {
-            if (!existingDeck.getId().equals(deck.getId())
-                    && existingDeck.getTournament() != null && existingDeck.getTournament().equalsIgnoreCase(deck.getTournament())
-                    && existingDeck.getCreationDate().toLocalDate().equals(deck.getCreationDate().toLocalDate())
-                    && Boolean.FALSE.equals(existingDeck.getDeleted())) {
-                log.warn("Possible duplicate deck found: {} with id {}", deck.getName(), existingDeck.getId());
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasTournamentResultConflict(DeckEntity deck) {
-        if (StringUtils.isBlank(deck.getEventId()) || deck.getPosition() == null) {
-            return false;
-        }
-        boolean exists = deckRepository.existsByTypeAndEventIdAndPositionAndIdNotAndDeletedFalse(
-                DeckType.TOURNAMENT, deck.getEventId(), deck.getPosition(), deck.getId());
-        if (exists) {
-            log.warn("Skipping deck {}, event {} already has a deck in position {}", deck.getId(), deck.getEventId(), deck.getPosition());
-        }
-        return exists;
     }
 
     private void reportVerifiedDifferences(DeckEntity actual, DeckEntity deck, Map<Integer, DeckCardEntity> deckCards) {
@@ -382,20 +373,20 @@ public class TournamentDeckScheduler {
             deckRepository.saveAndFlush(deck);
             changed = true;
         }
-        List<DeckCardEntity> dbCards = deckCardRepository.findByIdDeckId(deck.getId());
+        List<DeckCardEntity> dbCards = insert ? List.of() : deckCardRepository.findByIdDeckId(deck.getId());
+        Map<Integer, DeckCardEntity> cardsById = dbCards.stream()
+                .collect(Collectors.toMap(card -> card.getId().getCardId(), card -> card));
         for (DeckCardEntity card : deckCards.values()) {
-            DeckCardEntity dbCard = dbCards.stream()
-                    .filter(db -> db.getId().getCardId().equals(card.getId().getCardId()))
-                    .findFirst().orElse(null);
+            DeckCardEntity dbCard = cardsById.get(card.getId().getCardId());
             if (dbCard == null) {
                 if (!insert) {
                     log.warn("New card detected for card {} of deck {}", card, deck.getId());
                 }
-                deckCardRepository.saveAndFlush(card);
+                deckCardRepository.save(card);
                 changed = true;
             } else if (!dbCard.equals(card)) {
                 log.warn("Found new card count for card {} of deck {}", card, deck.getId());
-                deckCardRepository.saveAndFlush(card);
+                deckCardRepository.save(card);
                 changed = true;
             }
         }

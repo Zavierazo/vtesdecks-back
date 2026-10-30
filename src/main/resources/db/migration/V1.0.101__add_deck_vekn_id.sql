@@ -1,0 +1,2 @@
+ALTER TABLE `deck`
+    ADD COLUMN `vekn_id` VARCHAR(64) DEFAULT NULL;

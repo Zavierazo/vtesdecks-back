@@ -12,6 +12,8 @@ import java.util.List;
 public interface DeckCardRepository extends JpaRepository<DeckCardEntity, DeckCardEntity.DeckCardId> {
     List<DeckCardEntity> findByIdDeckId(String deckId);
 
+    List<DeckCardEntity> findByIdDeckIdIn(List<String> deckIds);
+
     @Modifying
     @Transactional
     void deleteByIdDeckId(String deckId);

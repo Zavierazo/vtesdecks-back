@@ -61,6 +61,9 @@ public class DeckEntity {
     @Column(name = "author")
     private String author;
 
+    @Column(name = "vekn_id", length = 64)
+    private String veknId;
+
     @Column(name = "url")
     private String url;
 
