@@ -10,16 +10,16 @@ import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckCardEntity;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.TournamentSchedulerOwner;
+import com.vtesdecks.jpa.repositories.ArchonUserRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
-import com.vtesdecks.jpa.repositories.ArchonUserRepository;
 import com.vtesdecks.model.twda.TwdaCard;
 import com.vtesdecks.model.twda.TwdaDeck;
 import com.vtesdecks.model.twda.TwdaEvent;
 import com.vtesdecks.scheduler.tournament.helpers.TournamentDeckName;
 import com.vtesdecks.scheduler.tournament.helpers.TournamentEventId;
-import com.vtesdecks.scheduler.tournament.helpers.TournamentImportPolicy;
 import com.vtesdecks.scheduler.tournament.helpers.TournamentImportExecutor;
+import com.vtesdecks.scheduler.tournament.helpers.TournamentImportPolicy;
 import com.vtesdecks.scheduler.tournament.helpers.TournamentPlayerLookup;
 import com.vtesdecks.util.VtesUtils;
 import jakarta.annotation.PostConstruct;
@@ -124,28 +124,8 @@ public class TournamentDeckScheduler {
         String id = "tournament-" + source.getId();
         TwdaEvent event = source.getEvent();
         if (event == null || event.getDate() == null) {
-            //Temporal fix for the archive: some decks have no event date. Pending Lionel fixes the archive
-            if (event != null && source.getPlayer() != null) {
-                try {
-                    event.setDate(LocalDateTime.parse(source.getPlayer(), TOURNAMENT_DATE_FORMAT).toLocalDate());
-                    String comment = source.getComment();
-                    int newLineIdx = comment != null ? comment.indexOf("\n") : -1;
-                    if (newLineIdx > 0) {
-                        source.setPlayer(comment.substring(0, newLineIdx));
-                        source.setComment(comment.substring(newLineIdx + 1));
-                    } else {
-                        source.setPlayer(comment);
-                        source.setComment(null);
-                    }
-                    log.warn("Deck {} has no event date, using player field as date: {}", id, event.getDate());
-                } catch (Exception e) {
-                    log.warn("Deck {} has no event date, skipping", id, e);
-                    return;
-                }
-            } else {
-                log.warn("Deck {} has no event date, skipping", id);
-                return;
-            }
+            log.warn("Deck {} has no event date, skipping", id);
+            return;
         }
         importPolicy.execute(id, TournamentEventId.fromUrl(event.getUrl()), 1, TournamentSchedulerOwner.TWDA, event.getDate(),
                 (actual, action) -> importDeck(source, actual, players));
