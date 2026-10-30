@@ -129,6 +129,25 @@ class DeckDetailCacheTest {
     }
 
     @Test
+    void playerNameRefreshUpdatesListingsAndWarmDetailCache() throws Exception {
+        full.setAuthor("Old alias");
+        index.refreshIndex(full.getId());
+        index.getFull(full.getId());
+        full = DeckCacheFixtures.deck();
+        full.setAuthor("Current alias");
+
+        index.refreshIndex(full.getId());
+
+        assertEquals("Current alias", index.get(full.getId()).getAuthor());
+        assertEquals("Current alias", index.getFull(full.getId()).getAuthor());
+        try (var current = index.selectAll(DeckQuery.builder().author("Current alias").build());
+             var previous = index.selectAll(DeckQuery.builder().author("Old alias").build())) {
+            assertEquals("Current alias", current.uniqueResult().getAuthor());
+            assertTrue(previous.isEmpty());
+        }
+    }
+
+    @Test
     void hourlyRefreshDoesNotPopulateExpiredOrUnopenedDecks() {
         when(database.findAll()).thenReturn(List.of(entity));
         index.refreshIndex();

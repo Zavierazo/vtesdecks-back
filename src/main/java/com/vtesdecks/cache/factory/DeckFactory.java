@@ -24,6 +24,7 @@ import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.entity.DeckViewEntity;
 import com.vtesdecks.jpa.entity.ReactionEntity;
 import com.vtesdecks.jpa.repositories.CardErrataRepository;
+import com.vtesdecks.jpa.repositories.ArchonUserRepository;
 import com.vtesdecks.jpa.repositories.CommentRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.jpa.repositories.DeckViewRepository;
@@ -36,6 +37,7 @@ import com.vtesdecks.util.CosineSimilarityUtils;
 import com.vtesdecks.util.VtesUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -89,6 +91,8 @@ public class DeckFactory {
     @Autowired
     private UserRepository userRepository;
     @Autowired
+    private ArchonUserRepository archonUserRepository;
+    @Autowired
     private CommentRepository commentRepository;
     @Autowired
     private CardErrataRepository cardErrataRepository;
@@ -130,7 +134,7 @@ public class DeckFactory {
         value.setPlace(deck.getPlace());
         value.setCountry(deck.getCountry());
         value.setYear(deck.getYear() != null ? deck.getYear() : deck.getCreationDate().getYear());
-        value.setAuthor(deck.getAuthor());
+        value.setAuthor("Unknown");
         value.setUrl(deck.getUrl());
         value.setSource(deck.getSource());
         value.setDescription(deck.getDescription());
@@ -147,6 +151,14 @@ public class DeckFactory {
                 value.setAuthor(user.getDisplayName());
                 List<String> roles = userRepository.selectRolesByUserId(user.getId());
                 value.setUser(DeckUser.from(user, roles));
+            });
+        } else if (deck.getType() == DeckType.PRECONSTRUCTED) {
+            value.setAuthor("Black Chantry Productions");
+        } else if (StringUtils.isNotBlank(deck.getVeknId())) {
+            archonUserRepository.findById(deck.getVeknId()).ifPresent(player -> {
+                String alias = StringUtils.trimToNull(player.getAlias());
+                String name = StringUtils.trimToNull(player.getName());
+                value.setAuthor(alias != null ? alias : (name != null ? name : "Unknown"));
             });
         }
         if (deck.getExtra() != null && deck.getExtra().has("limitedFormat") && deck.getExtra().get("limitedFormat").has("name")) {

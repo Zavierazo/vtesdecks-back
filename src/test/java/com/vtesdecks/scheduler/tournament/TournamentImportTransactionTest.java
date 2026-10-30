@@ -22,6 +22,25 @@ import static org.mockito.Mockito.*;
 
 class TournamentImportTransactionTest {
     @Test
+    void dropsAuthorWithoutChangingDeckIdentityOrMetadata() {
+        JdbcDataSource dataSource = new JdbcDataSource();
+        dataSource.setURL("jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1");
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        try {
+            jdbc.execute("CREATE TABLE deck (id VARCHAR(100) PRIMARY KEY, author VARCHAR(255), vekn_id VARCHAR(64), name VARCHAR(255))");
+            jdbc.update("INSERT INTO deck VALUES ('existing', 'Old name', '003120065', 'Curated deck')");
+            new ResourceDatabasePopulator(new ClassPathResource("db/migration/V1.0.103__drop_deck_author.sql"))
+                    .execute(dataSource);
+            assertEquals("003120065", jdbc.queryForObject("SELECT vekn_id FROM deck", String.class));
+            assertEquals("Curated deck", jdbc.queryForObject("SELECT name FROM deck", String.class));
+            assertThrows(org.springframework.dao.DataAccessException.class,
+                    () -> jdbc.queryForObject("SELECT author FROM deck", String.class));
+        } finally {
+            jdbc.execute("SHUTDOWN");
+        }
+    }
+
+    @Test
     void veknIdMigrationPreservesExistingRowsAndAllowsUnsynchronizedPlayers() {
         JdbcDataSource dataSource = new JdbcDataSource();
         dataSource.setURL("jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1");
@@ -50,14 +69,14 @@ class TournamentImportTransactionTest {
         dataSource.setURL("jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1");
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         try {
-            jdbc.execute("CREATE TABLE deck (id VARCHAR(100) PRIMARY KEY, vekn_id VARCHAR(64), author VARCHAR(255), verified BOOLEAN)");
-            jdbc.update("INSERT INTO deck VALUES ('existing', NULL, 'Curated author', TRUE)");
+            jdbc.execute("CREATE TABLE deck (id VARCHAR(100) PRIMARY KEY, vekn_id VARCHAR(64), name VARCHAR(255), verified BOOLEAN)");
+            jdbc.update("INSERT INTO deck VALUES ('existing', NULL, 'Curated name', TRUE)");
             DeckRepository repository = mock(DeckRepository.class);
             when(repository.findById("existing")).thenAnswer(invocation -> Optional.of(
                     jdbc.queryForObject("SELECT * FROM deck WHERE id = 'existing'", (rs, row) ->
                             DeckEntity.builder().id(rs.getString("id")).type(DeckType.TOURNAMENT)
                                     .eventId("123").position(1).schedulerOwner(TournamentSchedulerOwner.TWDA)
-                                    .veknId(rs.getString("vekn_id")).author(rs.getString("author"))
+                                    .veknId(rs.getString("vekn_id")).name(rs.getString("name"))
                                     .verified(rs.getBoolean("verified")).build())));
             TournamentImportPolicy policy = new TournamentImportPolicy(repository, mock(DeckCardRepository.class),
                     new TransactionTemplate(new DataSourceTransactionManager(dataSource)));
@@ -70,7 +89,7 @@ class TournamentImportTransactionTest {
                     }));
 
             assertNull(jdbc.queryForObject("SELECT vekn_id FROM deck", String.class));
-            assertEquals("Curated author", jdbc.queryForObject("SELECT author FROM deck", String.class));
+            assertEquals("Curated name", jdbc.queryForObject("SELECT name FROM deck", String.class));
             assertTrue(jdbc.queryForObject("SELECT verified FROM deck", Boolean.class));
         } finally {
             jdbc.execute("SHUTDOWN");

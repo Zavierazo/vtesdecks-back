@@ -58,9 +58,6 @@ public class DeckEntity {
     @Column(name = "year")
     private Integer year;
 
-    @Column(name = "author")
-    private String author;
-
     @Column(name = "vekn_id", length = 64)
     private String veknId;
 

@@ -170,9 +170,9 @@ class TournamentImportPolicyTest {
 
     @ParameterizedTest
     @ValueSource(ints = {0, 8, 15})
-    void detectsNormalizedTournamentAndAuthorOnTheSameDayRegardlessOfDeckName(int hourOffset) {
+    void detectsNormalizedTournamentAndPlayerOnTheSameDayRegardlessOfDeckName(int hourOffset) {
         DeckEntity deck = duplicateCandidate();
-        DeckEntity other = deck.toBuilder().id("legacy").name("Incorrect archived title").author(" ALEX--SMITH ")
+        DeckEntity other = deck.toBuilder().id("legacy").name("Incorrect archived title").veknId("1001234")
                 .tournament(" MÉTRO  Championship ").creationDate(deck.getCreationDate().plusHours(hourOffset)).build();
         when(repository.findActiveTournamentDecksBetween(LocalDateTime.of(2026, 10, 3, 0, 0),
                 LocalDateTime.of(2026, 10, 4, 0, 0))).thenReturn(List.of(other));
@@ -193,7 +193,7 @@ class TournamentImportPolicyTest {
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {"Previous deck title", "Incorrect archived title"})
-    void ignoresDeckNamesWhenTournamentDateAndAuthorMatch(String previousName) {
+    void ignoresDeckNamesWhenTournamentDateAndPlayerMatch(String previousName) {
         DeckEntity deck = duplicateCandidate();
         DeckEntity other = deck.toBuilder().id("legacy").name(previousName).build();
         when(repository.findActiveTournamentDecksBetween(any(), any())).thenReturn(List.of(other));
@@ -202,9 +202,9 @@ class TournamentImportPolicyTest {
     }
 
     @Test
-    void doesNotDeduplicateMatchingDeckNamesWhenAuthorsDiffer() {
+    void doesNotDeduplicateMatchingDeckNamesWhenPlayersDiffer() {
         DeckEntity deck = duplicateCandidate();
-        DeckEntity other = deck.toBuilder().id("other").author("Another player").build();
+        DeckEntity other = deck.toBuilder().id("other").veknId("9999999").build();
         when(repository.findActiveTournamentDecksBetween(any(), any())).thenReturn(List.of(other));
 
         assertFalse(policy.hasImportConflict(null, deck, List.of()));
@@ -230,9 +230,9 @@ class TournamentImportPolicyTest {
 
     @ParameterizedTest
     @NullAndEmptySource
-    @ValueSource(strings = {" ", " -- "})
-    void requiresAuthorForLegacyMatching(String author) {
-        DeckEntity deck = duplicateCandidate().toBuilder().author(author).build();
+    @ValueSource(strings = {" "})
+    void requiresVeknIdForLegacyMetadataMatching(String veknId) {
+        DeckEntity deck = duplicateCandidate().toBuilder().veknId(veknId).build();
 
         assertFalse(policy.hasImportConflict(null, deck, List.of()));
 
@@ -262,7 +262,7 @@ class TournamentImportPolicyTest {
     @Test
     void checksEventAndPositionConflictsBeforeMatchingMetadata() {
         DeckEntity deck = duplicateCandidate().toBuilder().eventId("123")
-                .creationDate(null).tournament(null).author(null).build();
+                .creationDate(null).tournament(null).veknId(null).build();
         when(repository.findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType.TOURNAMENT, "123", 1))
                 .thenReturn(List.of(deck.toBuilder().id("existing").build()));
 
@@ -273,7 +273,7 @@ class TournamentImportPolicyTest {
 
     @ParameterizedTest
     @CsvSource({"123,", ",123", ","})
-    void fallsBackToTournamentDateAndAuthorWhenEitherEventIdIsMissing(String eventId, String previousEventId) {
+    void fallsBackToTournamentDateAndPlayerWhenEitherEventIdIsMissing(String eventId, String previousEventId) {
         DeckEntity deck = duplicateCandidate().toBuilder().eventId(eventId).build();
         DeckEntity other = deck.toBuilder().id("legacy").eventId(previousEventId).name("Different title").build();
         when(repository.findActiveTournamentDecksBetween(any(), any())).thenReturn(List.of(other));
@@ -283,7 +283,7 @@ class TournamentImportPolicyTest {
 
     @Test
     void matchesKnownEventIdsDespiteDifferentMetadataForLegacyWinnerPositions() {
-        DeckEntity deck = duplicateCandidate().toBuilder().eventId("123").author(null).tournament(null).build();
+        DeckEntity deck = duplicateCandidate().toBuilder().eventId("123").veknId(null).tournament(null).build();
         DeckEntity other = deck.toBuilder().id("legacy").position(null).name("Different title").build();
         when(repository.findActiveTournamentDecksBetween(any(), any())).thenReturn(List.of(other));
 
@@ -323,10 +323,10 @@ class TournamentImportPolicyTest {
 
     @ParameterizedTest
     @ValueSource(ints = {0, 12, 23})
-    void matchesExactCardsAndAuthorOnTheSameDayDespiteDifferentEventIdsAndNames(int hour) {
+    void matchesExactCardsAndPlayerOnTheSameDayDespiteDifferentEventIdsAndNames(int hour) {
         DeckEntity deck = duplicateCandidate().toBuilder().eventId("123").build();
         DeckEntity other = deck.toBuilder().id("legacy").eventId("legacy-uuid").tournament("Another label")
-                .author(" ALEX--SMITH ").creationDate(deck.getCreationDate().toLocalDate().atTime(hour, 59)).build();
+                .veknId("1001234").creationDate(deck.getCreationDate().toLocalDate().atTime(hour, 59)).build();
         when(repository.findActiveTournamentDecksBetween(any(), any())).thenReturn(List.of(other));
         when(cardRepository.findByIdDeckIdIn(List.of("legacy")))
                 .thenReturn(List.of(card("legacy", 100001, 60), card("legacy", 200001, 12)));
@@ -359,7 +359,7 @@ class TournamentImportPolicyTest {
     }
 
     @Test
-    void requiresCompleteNonemptyCompositionsAndMatchingAuthorsAndPositions() {
+    void requiresCompleteNonemptyCompositionsAndMatchingPlayersAndPositions() {
         DeckEntity deck = duplicateCandidate().toBuilder().eventId("123").build();
         DeckEntity other = deck.toBuilder().id("legacy").eventId("different").tournament("Different name").build();
         when(repository.findActiveTournamentDecksBetween(any(), any())).thenReturn(List.of(other));
@@ -371,7 +371,7 @@ class TournamentImportPolicyTest {
         }
         assertFalse(policy.hasImportConflict(null, deck, List.of()));
         when(repository.findActiveTournamentDecksBetween(any(), any()))
-                .thenReturn(List.of(other.toBuilder().author("Other player").build(), other.toBuilder().position(2).build()));
+                .thenReturn(List.of(other.toBuilder().veknId("9999999").build(), other.toBuilder().position(2).build()));
         clearInvocations(cardRepository);
         assertFalse(policy.hasImportConflict(null, deck, cards()));
         verifyNoInteractions(cardRepository);
@@ -388,6 +388,20 @@ class TournamentImportPolicyTest {
 
         assertEquals(List.of(first, second), policy.findDuplicates(null, deck, cards()));
         verify(cardRepository).findByIdDeckIdIn(List.of("first", "second"));
+    }
+
+    @Test
+    void blocksUnidentifiedCompositionWithoutClaimingThePlayerIdentity() {
+        DeckEntity deck = duplicateCandidate().toBuilder().eventId("new-event").build();
+        DeckEntity existing = deck.toBuilder().id("legacy").eventId("legacy-event").veknId(null).build();
+        when(repository.findActiveTournamentDecksBetween(any(), any())).thenReturn(List.of(existing));
+        when(cardRepository.findByIdDeckIdIn(List.of("legacy")))
+                .thenReturn(List.of(card("legacy", 200001, 12), card("legacy", 100001, 60)));
+
+        assertEquals(List.of(existing), policy.findDuplicates(null, deck, cards()));
+        assertFalse(policy.canEnrichDuplicate(existing, deck));
+        assertTrue(policy.canEnrichDuplicate(existing.toBuilder().eventId("new-event").build(), deck));
+        assertFalse(policy.canEnrichDuplicate(existing.toBuilder().eventId("new-event").position(2).build(), deck));
     }
 
     private List<DeckCardEntity> cards() {
@@ -409,7 +423,7 @@ class TournamentImportPolicyTest {
     }
 
     private DeckEntity duplicateCandidate() {
-        return existing(TournamentSchedulerOwner.ARCHON).toBuilder().eventId(null).name("Café Deck").author("Álex Smith")
+        return existing(TournamentSchedulerOwner.ARCHON).toBuilder().eventId(null).name("Café Deck").veknId("1001234")
                 .tournament("Metro Championship").creationDate(LocalDateTime.of(2026, 10, 3, 8, 0)).build();
     }
 }

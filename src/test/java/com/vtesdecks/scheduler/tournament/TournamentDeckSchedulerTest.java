@@ -115,7 +115,6 @@ public class TournamentDeckSchedulerTest {
         assertEquals("Somewhere, Spain", deck.getPlace());
         assertEquals("Spain", deck.getCountry());
         assertEquals(2023, deck.getYear());
-        assertEquals("John Doe", deck.getAuthor());
         assertEquals("003120065", deck.getVeknId());
         assertEquals("https://www.vekn.net/event-calendar/event/12345", deck.getUrl());
         assertEquals("12345", deck.getEventId());
@@ -612,16 +611,15 @@ public class TournamentDeckSchedulerTest {
     }
 
     @Test
-    void fillsVerifiedDeckUsingItsCuratedAuthorWithoutChangingItsMetadataOrCards() {
-        DeckEntity actual = existingDeck(true).toBuilder().author("  Curated Winner  ").name("Curated title").build();
+    void fillsVerifiedDeckUsingArchivePlayerWithoutChangingItsMetadataOrCards() {
+        DeckEntity actual = existingDeck(true).toBuilder().name("Curated title").build();
         DeckEntity before = actual.toBuilder().build();
         when(deckRepository.findById(actual.getId())).thenReturn(Optional.of(actual));
-        when(players.findVeknId("Curated Winner")).thenReturn("003120065");
+        when(players.findVeknId("John Doe")).thenReturn("003120065");
 
         scheduler.parseDeck(twdaDeck(), players);
 
-        verify(players).findVeknId("Curated Winner");
-        verify(players, never()).findVeknId("John Doe");
+        verify(players).findVeknId("John Doe");
         verify(deckRepository).fillMissingVeknId(actual.getId(), "003120065");
         verify(deckRepository, never()).saveAndFlush(any());
         verify(deckCardRepository, never()).save(any());
@@ -677,7 +675,7 @@ public class TournamentDeckSchedulerTest {
     void doesNotLookUpBlankAuthors() {
         TwdaDeck source = twdaDeck();
         source.setPlayer("  ");
-        DeckEntity actual = existingDeck(false).toBuilder().author("  ").build();
+        DeckEntity actual = existingDeck(false).toBuilder().build();
         when(deckRepository.findById(actual.getId())).thenReturn(Optional.of(actual));
 
         scheduler.parseDeck(source, players);
@@ -687,10 +685,11 @@ public class TournamentDeckSchedulerTest {
     }
 
     @Test
-    void fillsOnlyTheUniqueDuplicateUsingItsStoredAuthor() {
-        DeckEntity duplicate = existingDeck(true).toBuilder().id("historical").eventId(null).build();
+    void fillsOnlyTheUniqueEventDuplicateUsingTheArchivePlayer() {
+        DeckEntity duplicate = existingDeck(true).toBuilder().id("historical").eventId("12345").build();
         DeckEntity before = duplicate.toBuilder().build();
-        when(deckRepository.findActiveTournamentDecksBetween(any(), any())).thenReturn(List.of(duplicate));
+        when(deckRepository.findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType.TOURNAMENT, "12345", 1))
+                .thenReturn(List.of(), List.of(duplicate));
         when(players.findVeknId("John Doe")).thenReturn("003120065");
 
         scheduler.parseDeck(twdaDeck(), players);
@@ -703,13 +702,14 @@ public class TournamentDeckSchedulerTest {
 
     @Test
     void doesNotEnrichAmbiguousDuplicateDecks() {
-        DeckEntity first = existingDeck(true).toBuilder().id("first").eventId(null).build();
-        when(deckRepository.findActiveTournamentDecksBetween(any(), any())).thenReturn(List.of(first, first.toBuilder().id("second").build()));
+        DeckEntity first = existingDeck(true).toBuilder().id("first").eventId("12345").build();
+        when(deckRepository.findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType.TOURNAMENT, "12345", 1))
+                .thenReturn(List.of(), List.of(first, first.toBuilder().id("second").build()));
         when(players.findVeknId("John Doe")).thenReturn("003120065");
 
         scheduler.parseDeck(twdaDeck(), players);
 
-        verify(players, never()).findVeknId(any());
+        verify(players).findVeknId("John Doe");
         verify(deckRepository, never()).fillMissingVeknId(any(), any());
         verify(deckRepository, never()).saveAndFlush(any());
     }
@@ -729,16 +729,17 @@ public class TournamentDeckSchedulerTest {
     @ParameterizedTest
     @ValueSource(strings = {"Pedro Coelho Mendes Bueno Barbosa", "Pedro Coelho"})
     void fillsVeknIdFromUniqueContainsMatchWhenThereIsNoExactMatch(String author) {
-        DeckEntity actual = existingDeck(true).toBuilder().author(author).build();
+        DeckEntity actual = existingDeck(true).toBuilder().build();
         when(deckRepository.findById(actual.getId())).thenReturn(Optional.of(actual));
         when(players.findVeknId(author)).thenReturn("003120065");
 
-        scheduler.parseDeck(twdaDeck(), players);
+        TwdaDeck source = twdaDeck();
+        source.setPlayer(author);
+        scheduler.parseDeck(source, players);
 
         var order = org.mockito.Mockito.inOrder(players, deckRepository);
         order.verify(players).findVeknId(author);
         order.verify(deckRepository).fillMissingVeknId(actual.getId(), "003120065");
-        assertEquals(author, actual.getAuthor());
         verify(deckRepository, never()).saveAndFlush(any());
     }
 
@@ -771,7 +772,7 @@ public class TournamentDeckSchedulerTest {
         assertTrue(output.getAll().contains("WARN"));
         assertTrue(output.getAll().contains("eventId and veknId are required"));
         assertTrue(output.getAll().contains("tournament-2023event"));
-        assertTrue(output.getAll().contains("John Doe"));
+        assertTrue(output.getAll().contains("veknId=003120065"));
         assertTrue(output.getAll().contains("http://www.vekn.fr/decks/twd.htm#2023event"));
     }
 
@@ -878,7 +879,6 @@ public class TournamentDeckSchedulerTest {
                 .place("Somewhere, Spain")
                 .country("Spain")
                 .year(2023)
-                .author("John Doe")
                 .url("https://www.vekn.net/event-calendar/event/12345")
                 .eventId("12345")
                 .finalVp(new BigDecimal("1.5"))

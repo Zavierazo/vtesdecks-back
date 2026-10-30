@@ -147,7 +147,6 @@ public class TournamentDeckScheduler {
         deck.setPlace(StringUtils.trimToNull(event.getPlace()));
         deck.setCountry(event.getCountry() != null ? StringUtils.trimToNull(event.getCountry().getName()) : null);
         deck.setYear(event.getDate().getYear());
-        deck.setAuthor(source.getPlayer());
         deck.setUrl(StringUtils.isNotBlank(event.getUrl()) ? event.getUrl() : null);
         deck.setEventId(TournamentEventId.fromUrl(deck.getUrl()));
         if (actual == null || actual.getFinalVp() == null) {
@@ -189,37 +188,39 @@ public class TournamentDeckScheduler {
         if (!isValidDeck(deck, deckCards)) {
             return;
         }
+        String veknId = deck.getVeknId();
+        if (StringUtils.isBlank(veknId) && StringUtils.isNotBlank(source.getPlayer())) {
+            veknId = players.findVeknId(source.getPlayer().trim());
+        }
+        if (actual == null) {
+            deck.setVeknId(veknId);
+        }
         List<DeckEntity> duplicates = importPolicy.findDuplicates(actual, deck, deckCards.values());
         if (!duplicates.isEmpty()) {
-            if (actual == null && duplicates.size() == 1) {
-                fillMissingVeknId(duplicates.getFirst(), players);
+            if ((actual == null) && (duplicates.size() == 1)
+                    && importPolicy.canEnrichDuplicate(duplicates.getFirst(), deck)) {
+                fillMissingVeknId(duplicates.getFirst(), veknId);
             }
             return;
         }
         if (actual != null && Boolean.TRUE.equals(actual.getVerified())) {
             // Verified decks retain their curated data; only a missing VEKN ID may be filled.
             reportVerifiedDifferences(actual, deck, deckCards);
-            fillMissingVeknId(actual, players);
+            fillMissingVeknId(actual, veknId);
             return;
-        }
-        if (actual == null) {
-            deck.setVeknId(players.findVeknId(deck.getAuthor()));
         }
         if (!importPolicy.canPersist(actual, deck)) {
             return;
         }
         persist(actual, deck, deckCards);
-        fillMissingVeknId(deck, players);
+        fillMissingVeknId(deck, veknId);
     }
 
-    private void fillMissingVeknId(DeckEntity deck, TournamentPlayerLookup players) {
-        if (StringUtils.isNotBlank(deck.getVeknId()) || StringUtils.isBlank(deck.getAuthor())) {
+    private void fillMissingVeknId(DeckEntity deck, String veknId) {
+        if (StringUtils.isNotBlank(deck.getVeknId()) || StringUtils.isBlank(veknId)) {
             return;
         }
-        String veknId = players.findVeknId(deck.getAuthor().trim());
-        if (veknId != null) {
-            deckRepository.fillMissingVeknId(deck.getId(), veknId);
-        }
+        deckRepository.fillMissingVeknId(deck.getId(), veknId);
     }
 
     private String getFallbackName(TwdaDeck source) {
@@ -298,7 +299,6 @@ public class TournamentDeckScheduler {
         diffField(id, "place", actual.getPlace(), deck.getPlace());
         diffField(id, "country", actual.getCountry(), deck.getCountry());
         diffField(id, "year", actual.getYear(), deck.getYear());
-        diffField(id, "author", actual.getAuthor(), deck.getAuthor());
         diffField(id, "url", actual.getUrl(), deck.getUrl());
         diffField(id, "source", actual.getSource(), deck.getSource());
         diffField(id, "name", actual.getName(), deck.getName());

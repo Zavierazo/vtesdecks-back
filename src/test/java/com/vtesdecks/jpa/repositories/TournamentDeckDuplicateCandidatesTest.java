@@ -27,10 +27,10 @@ class TournamentDeckDuplicateCandidatesTest {
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         try {
             jdbc.execute("CREATE TABLE deck (id VARCHAR(100) PRIMARY KEY, type VARCHAR(32), deleted BOOLEAN, vekn_id VARCHAR(64),"
-                    + " name VARCHAR(255), author VARCHAR(255), tournament VARCHAR(255), source VARCHAR(255),"
+                    + " name VARCHAR(255), description VARCHAR(255), tournament VARCHAR(255), source VARCHAR(255),"
                     + " final_vp DECIMAL(3,1), final_seat INT, verified BOOLEAN, views BIGINT, creation_date TIMESTAMP,"
                     + " modification_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)");
-            jdbc.update("INSERT INTO deck VALUES ('historical', ?, ?, ?, 'Curated name', 'Curated author', 'Original event',"
+            jdbc.update("INSERT INTO deck VALUES ('historical', ?, ?, ?, 'Curated name', 'Curated description', 'Original event',"
                             + " 'original-source', 2.0, 5, TRUE, 42, '2010-01-01 12:00:00', '2010-01-02 12:00:00')",
                     type, deleted, oldVeknId);
             Map<String, Object> expected = jdbc.queryForMap("SELECT * FROM deck WHERE id = 'historical'");

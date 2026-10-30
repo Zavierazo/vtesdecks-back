@@ -238,12 +238,6 @@ public class TournamentArchonDeckScheduler {
         deck.setCountry(countryName(tournament.getCountry()));
         deck.setYear(tournament.getStart().getYear());
         fillVeknId(deck, veknId);
-        String author = veknId;
-        if (StringUtils.isNotBlank(veknId)) {
-            author = archonUserRepository.findById(veknId)
-                    .map(user -> StringUtils.defaultIfBlank(user.getName(), veknId)).orElse(veknId);
-        }
-        deck.setAuthor(author);
         deck.setUrl(tournamentUrl(tournament));
         deck.setEventId(eventId);
         deck.setFinalVp(finalist.vp());
@@ -275,7 +269,9 @@ public class TournamentArchonDeckScheduler {
         }
         List<DeckEntity> duplicates = importPolicy.findDuplicates(actual, deck, deckCards.values());
         if (!duplicates.isEmpty()) {
-            if (actual == null && duplicates.size() == 1 && veknId != null && StringUtils.isBlank(duplicates.getFirst().getVeknId())) {
+            if ((actual == null) && (duplicates.size() == 1) && (veknId != null)
+                    && StringUtils.isBlank(duplicates.getFirst().getVeknId())
+                    && importPolicy.canEnrichDuplicate(duplicates.getFirst(), deck)) {
                 deckRepository.fillMissingVeknId(duplicates.getFirst().getId(), veknId);
             }
             return;

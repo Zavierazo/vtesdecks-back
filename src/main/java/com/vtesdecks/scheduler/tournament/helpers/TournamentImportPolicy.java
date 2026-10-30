@@ -105,9 +105,9 @@ public class TournamentImportPolicy {
             return true;
         }
         log.warn("Skipping new {} tournament deck {}: eventId and veknId are required."
-                        + " eventId={}, veknId={}, tournament={}, author={}, date={}, source={}",
+                        + " eventId={}, veknId={}, tournament={}, date={}, source={}",
                 deck.getSchedulerOwner(), deck.getId(), deck.getEventId(), deck.getVeknId(),
-                deck.getTournament(), deck.getAuthor(), deck.getCreationDate(), deck.getSource());
+                deck.getTournament(), deck.getCreationDate(), deck.getSource());
         return false;
     }
 
@@ -129,16 +129,23 @@ public class TournamentImportPolicy {
         return actual == null ? findMatchingDecks(deck, cards) : List.of();
     }
 
+    public boolean canEnrichDuplicate(DeckEntity existing, DeckEntity incoming) {
+        return StringUtils.isNotBlank(incoming.getEventId())
+                && incoming.getEventId().equals(existing.getEventId())
+                && Objects.equals(Objects.requireNonNullElse(existing.getPosition(), 1),
+                Objects.requireNonNullElse(incoming.getPosition(), 1));
+    }
+
     /**
      * Detects the same result under another source ID without conflating different finalists.
      */
     private List<DeckEntity> findMatchingDecks(DeckEntity deck, Collection<DeckCardEntity> cards) {
         String tournament = normalizeName(deck.getTournament());
-        String author = normalizeName(deck.getAuthor());
+        String veknId = StringUtils.trimToNull(deck.getVeknId());
         String eventId = StringUtils.trimToNull(deck.getEventId());
         Map<Integer, Integer> incomingCards = cardCounts(cards);
-        if (deck.getCreationDate() == null || (eventId == null && (author.isEmpty()
-                || (tournament.isEmpty() && incomingCards.isEmpty())))) {
+        if ((deck.getCreationDate() == null) || ((eventId == null)
+                && (incomingCards.isEmpty() && ((veknId == null) || tournament.isEmpty())))) {
             return List.of();
         }
         var start = deck.getCreationDate().toLocalDate().atStartOfDay();
@@ -149,8 +156,7 @@ public class TournamentImportPolicy {
                         && Objects.equals(Objects.requireNonNullElse(existing.getPosition(), 1), Objects.requireNonNullElse(deck.getPosition(), 1)))
                 .toList();
         List<String> cardCandidateIds = candidates.stream()
-                .filter(existing -> !incomingCards.isEmpty() && !author.isEmpty()
-                        && author.equals(normalizeName(existing.getAuthor())))
+                .filter(existing -> !incomingCards.isEmpty() && compatiblePlayer(veknId, existing))
                 .map(DeckEntity::getId).toList();
         Map<String, List<DeckCardEntity>> existingCards = new HashMap<>();
         if (!cardCandidateIds.isEmpty()) {
@@ -161,14 +167,16 @@ public class TournamentImportPolicy {
         List<DeckEntity> duplicates = new ArrayList<>();
         for (DeckEntity existing : candidates) {
             String existingEventId = StringUtils.trimToNull(existing.getEventId());
+            boolean samePlayer = (veknId != null) && veknId.equals(StringUtils.trimToNull(existing.getVeknId()));
             boolean sameResult = (eventId != null && existingEventId != null)
                     ? eventId.equals(existingEventId)
                     : (!tournament.isEmpty() && tournament.equals(normalizeName(existing.getTournament()))
-                    && !author.isEmpty() && author.equals(normalizeName(existing.getAuthor())));
-            boolean sameCardsAndAuthor = !incomingCards.isEmpty() && !author.isEmpty()
-                    && author.equals(normalizeName(existing.getAuthor()))
+                    && samePlayer);
+            // A missing player ID cannot prove ownership. Block an identical legacy list
+            // conservatively, but callers must not enrich it without a matching event.
+            boolean sameCardsAndPlayer = !incomingCards.isEmpty() && compatiblePlayer(veknId, existing)
                     && incomingCards.equals(cardCounts(existingCards.getOrDefault(existing.getId(), List.of())));
-            if (sameResult || sameCardsAndAuthor) {
+            if (sameResult || sameCardsAndPlayer) {
                 duplicates.add(existing);
             }
         }
@@ -177,6 +185,11 @@ public class TournamentImportPolicy {
                     deck.getId(), duplicates.stream().map(DeckEntity::getId).toList(), start.toLocalDate(), deck.getPosition());
         }
         return duplicates;
+    }
+
+    private boolean compatiblePlayer(String veknId, DeckEntity existing) {
+        String existingId = StringUtils.trimToNull(existing.getVeknId());
+        return (veknId == null) || (existingId == null) || veknId.equals(existingId);
     }
 
     private static Map<Integer, Integer> cardCounts(Collection<DeckCardEntity> cards) {

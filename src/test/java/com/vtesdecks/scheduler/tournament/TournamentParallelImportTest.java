@@ -73,14 +73,14 @@ class TournamentParallelImportTest {
                 new TransactionTemplate(new DataSourceTransactionManager(dataSource)));
         try {
             jdbc.execute("CREATE TABLE deck (id VARCHAR(100) PRIMARY KEY, type VARCHAR(32), deleted BOOLEAN,"
-                    + " author VARCHAR(255), tournament VARCHAR(255), event_id VARCHAR(100), creation_date TIMESTAMP)");
+                    + " vekn_id VARCHAR(64), tournament VARCHAR(255), event_id VARCHAR(100), creation_date TIMESTAMP)");
             jdbc.execute("CREATE TABLE deck_card (deck_id VARCHAR(100), id INT, number INT, PRIMARY KEY(deck_id, id))");
             String query = DeckRepository.class.getMethod("findActiveTournamentDecksBetween", LocalDateTime.class, LocalDateTime.class)
                     .getAnnotation(Query.class).value();
             when(decks.findActiveTournamentDecksBetween(any(), any())).thenAnswer(invocation -> namedJdbc.query(query,
                     Map.of("start", invocation.getArgument(0), "end", invocation.getArgument(1)),
                     (row, index) -> DeckEntity.builder().id(row.getString("id")).type(DeckType.TOURNAMENT).position(1)
-                            .eventId(row.getString("event_id")).tournament(row.getString("tournament")).author(row.getString("author"))
+                            .eventId(row.getString("event_id")).tournament(row.getString("tournament")).veknId(row.getString("vekn_id"))
                             .creationDate(row.getTimestamp("creation_date").toLocalDateTime()).build()));
             when(cards.findByIdDeckIdIn(any())).thenAnswer(invocation -> namedJdbc.query(
                     "SELECT deck_id, id, number FROM deck_card WHERE deck_id IN (:ids)",
@@ -93,12 +93,12 @@ class TournamentParallelImportTest {
                 LocalDate day = LocalDate.of(2026, 10, 3).plusDays(index % 2);
                 policy.execute(id, eventId, 1, TournamentSchedulerOwner.ARCHON, day, (actual, action) -> {
                     DeckEntity incoming = DeckEntity.builder().id(id).type(DeckType.TOURNAMENT).position(1).eventId(eventId)
-                            .tournament("Different label " + index).author("Player").creationDate(day.atStartOfDay()).build();
+                            .tournament("Different label " + index).veknId("1001234").creationDate(day.atStartOfDay()).build();
                     if (!policy.findDuplicates(actual, incoming, List.of(card(id, 200001, 12), card(id, 100001, 60))).isEmpty()) {
                         duplicates.incrementAndGet();
                         return;
                     }
-                    jdbc.update("INSERT INTO deck VALUES (?, 'TOURNAMENT', FALSE, 'Player', ?, ?, ?)", id, incoming.getTournament(), eventId, day.atStartOfDay());
+                    jdbc.update("INSERT INTO deck VALUES (?, 'TOURNAMENT', FALSE, '1001234', ?, ?, ?)", id, incoming.getTournament(), eventId, day.atStartOfDay());
                     jdbc.update("INSERT INTO deck_card VALUES (?, 200001, 12), (?, 100001, 60)", id, id);
                 });
             });

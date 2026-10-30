@@ -1,0 +1,1 @@
+ALTER TABLE deck DROP COLUMN author;

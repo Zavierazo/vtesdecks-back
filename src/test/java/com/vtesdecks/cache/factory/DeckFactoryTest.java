@@ -9,22 +9,31 @@ import com.vtesdecks.cache.indexable.DeckCard;
 import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.card.Card;
+import com.vtesdecks.cache.indexable.deck.DeckType;
+import com.vtesdecks.jpa.entity.ArchonUserEntity;
 import com.vtesdecks.jpa.entity.DeckEntity;
+import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.repositories.ArchonUserRepository;
 import com.vtesdecks.jpa.repositories.CardErrataRepository;
 import com.vtesdecks.jpa.repositories.CommentRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.jpa.repositories.DeckViewRepository;
 import com.vtesdecks.jpa.repositories.ReactionRepository;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.limitedformat.LimitedFormatPayload;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -36,12 +45,18 @@ class DeckFactoryTest {
     private CryptCache cryptCache;
     private LibraryCache libraryCache;
     private DeckEntity entity;
+    private ArchonUserRepository players;
+    private UserRepository users;
 
     @BeforeEach
     void setUp() {
         factory = new DeckFactory();
         cryptCache = mock(CryptCache.class);
         libraryCache = mock(LibraryCache.class);
+        players = mock(ArchonUserRepository.class);
+        users = mock(UserRepository.class);
+        ReflectionTestUtils.setField(factory, "archonUserRepository", players);
+        ReflectionTestUtils.setField(factory, "userRepository", users);
         ReflectionTestUtils.setField(factory, "cryptCache", cryptCache);
         ReflectionTestUtils.setField(factory, "libraryCache", libraryCache);
         ReflectionTestUtils.setField(factory, "deckUserRepository", mock(DeckUserRepository.class));
@@ -56,9 +71,11 @@ class DeckFactoryTest {
     }
 
     @Test
-    void keepsVeknIdInPersistenceWhilePreservingAuthorInDetailsAndSummary() {
-        entity.setAuthor("Tournament player");
+    void resolvesPlayerNameInDetailsAndSummaryWithoutExposingVeknId() {
         entity.setVeknId("003120065");
+        ArchonUserEntity player = new ArchonUserEntity();
+        player.setName("Tournament player");
+        when(players.findById("003120065")).thenReturn(Optional.of(player));
 
         Deck deck = factory.getDeck(entity, List.of(), List.of(), null);
         DeckSummary summary = DeckSummary.from(deck);
@@ -68,6 +85,76 @@ class DeckFactoryTest {
         assertFalse(json.valueToTree(summary).has("veknId"));
         assertEquals("Tournament player", deck.getAuthor());
         assertEquals("Tournament player", summary.getAuthor());
+    }
+
+    @Test
+    void prefersCurrentAliasAndReflectsChangesOnRebuild() {
+        entity.setVeknId("003120065");
+        ArchonUserEntity player = new ArchonUserEntity();
+        player.setName("Registered name");
+        player.setAlias(" First alias ");
+        when(players.findById("003120065")).thenReturn(Optional.of(player));
+        assertEquals("First alias", factory.getDeck(entity, List.of(), List.of(), null).getAuthor());
+        player.setAlias("New alias");
+        assertEquals("New alias", factory.getDeck(entity, List.of(), List.of(), null).getAuthor());
+        player.setAlias(null);
+        player.setName("New registered name");
+        assertEquals("New registered name", factory.getDeck(entity, List.of(), List.of(), null).getAuthor());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"  "})
+    void fallsBackToRegisteredNameWhenAliasIsBlank(String alias) {
+        entity.setVeknId("003120065");
+        ArchonUserEntity player = new ArchonUserEntity();
+        player.setName(" Registered name ");
+        player.setAlias(alias);
+        when(players.findById("003120065")).thenReturn(Optional.of(player));
+        assertEquals("Registered name", factory.getDeck(entity, List.of(), List.of(), null).getAuthor());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "missing-player"})
+    void usesUnknownWhenVeknIdOrPlayerIsMissing(String veknId) {
+        entity.setVeknId(veknId);
+        assertEquals("Unknown", factory.getDeck(entity, List.of(), List.of(), null).getAuthor());
+        if ((veknId == null) || veknId.isBlank()) {
+            verifyNoInteractions(players);
+        }
+    }
+
+    @Test
+    void usesUnknownWhenPlayerHasNeitherAliasNorName() {
+        entity.setVeknId("003120065");
+        when(players.findById("003120065")).thenReturn(Optional.of(new ArchonUserEntity()));
+        assertEquals("Unknown", factory.getDeck(entity, List.of(), List.of(), null).getAuthor());
+    }
+
+    @Test
+    void attributesPreconstructedDecksToBlackChantry() {
+        entity.setType(DeckType.PRECONSTRUCTED);
+        entity.setVeknId("003120065");
+        assertEquals("Black Chantry Productions", factory.getDeck(entity, List.of(), List.of(), null).getAuthor());
+        verifyNoInteractions(players, users);
+    }
+
+    @Test
+    void accountOwnerTakesPriorityOverPreconstructedAndVeknAttribution() {
+        entity.setType(DeckType.PRECONSTRUCTED);
+        entity.setUser(42);
+        entity.setVeknId("003120065");
+        UserEntity user = new UserEntity();
+        user.setId(42);
+        user.setEmail("player@example.test");
+        user.setUsername("player");
+        user.setDisplayName("Account display name");
+        when(users.findById(42)).thenReturn(Optional.of(user));
+        Deck result = factory.getDeck(entity, List.of(), List.of(), null);
+        assertEquals("Account display name", result.getAuthor());
+        assertEquals(42, result.getUser().getId());
+        verifyNoInteractions(players);
     }
 
     @Test

@@ -11,7 +11,6 @@ import com.vtesdecks.integration.ArchonClient;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.DeckCardEntity;
 import com.vtesdecks.jpa.entity.TournamentSchedulerOwner;
-import com.vtesdecks.jpa.entity.ArchonUserEntity;
 import com.vtesdecks.jpa.repositories.ArchonUserRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
@@ -176,7 +175,7 @@ class TournamentArchonDeckSchedulerTest {
         tournament.setStart(LocalDateTime.of(2000, 1, 1, 0, 0));
         DeckEntity actual = DeckEntity.builder().id("historical-deck").type(DeckType.TOURNAMENT)
                 .eventId("13370").position(1).schedulerOwner(owner).verified(verified)
-                .name("Historical deck").author("Original author").source("original-source")
+                .name("Historical deck").source("original-source")
                 .finalVp(new BigDecimal("1.5")).finalSeat(1).creationDate(tournament.getStart()).build();
         DeckEntity expected = actual.toBuilder().veknId("003120065").build();
         when(deckRepository.findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType.TOURNAMENT, "13370", 1))
@@ -198,7 +197,7 @@ class TournamentArchonDeckSchedulerTest {
         tournament.setDecklistsMode(mode);
         DeckEntity actual = DeckEntity.builder().id("historical-deck").type(DeckType.TOURNAMENT)
                 .eventId("13370").position(1).schedulerOwner(TournamentSchedulerOwner.ARCHON)
-                .name("Historical deck").author("Original author").source("original-source")
+                .name("Historical deck").source("original-source")
                 .finalVp(new BigDecimal("1.5")).finalSeat(1).build();
         DeckEntity expected = actual.toBuilder().veknId("003120065").build();
         when(deckRepository.findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType.TOURNAMENT, "13370", 1))
@@ -220,7 +219,7 @@ class TournamentArchonDeckSchedulerTest {
         for (TournamentArchonDeckScheduler.Finalist finalist : scheduler.finalists(tournament)) {
             DeckEntity actual = DeckEntity.builder().id("historical-deck-" + finalist.position()).type(DeckType.TOURNAMENT)
                     .eventId("13370").position(finalist.position()).schedulerOwner(TournamentSchedulerOwner.TWDA)
-                    .verified(true).author("Original author").build();
+                    .verified(true).build();
             when(deckRepository.findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType.TOURNAMENT, "13370", finalist.position()))
                     .thenReturn(List.of(actual));
             decks.add(actual);
@@ -232,7 +231,6 @@ class TournamentArchonDeckSchedulerTest {
         verify(deckRepository, org.mockito.Mockito.times(5)).saveAndFlush(any());
         for (DeckEntity actual : decks) {
             assertEquals("000000" + actual.getPosition(), actual.getVeknId());
-            assertEquals("Original author", actual.getAuthor());
             org.junit.jupiter.api.Assertions.assertNull(actual.getFinalVp());
             org.junit.jupiter.api.Assertions.assertNull(actual.getFinalSeat());
         }
@@ -309,7 +307,6 @@ class TournamentArchonDeckSchedulerTest {
         assertEquals("Madrid, Spain", mapped.getPlace());
         assertEquals("Spain", mapped.getCountry());
         assertEquals(2026, mapped.getYear());
-        assertEquals("3120065", mapped.getAuthor());
         assertEquals("3120065", mapped.getVeknId());
         assertEquals("13370", mapped.getEventId());
         assertEquals("https://www.vekn.net/event-calendar/event/13370", mapped.getUrl());
@@ -321,34 +318,25 @@ class TournamentArchonDeckSchedulerTest {
     }
 
     @Test
-    void resolvesMemberNameForNewDeck() {
-        ArchonUserEntity member = new ArchonUserEntity();
-        member.setName("Hernando Sagardia");
-        when(archonUserRepository.findById("3120065")).thenReturn(Optional.of(member));
+    void importsNewDeckWithoutResolvingItsDisplayName() {
         ArchonTournament tournament = tournament();
         scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(), Map.of("winner", "3120065"));
         ArgumentCaptor<DeckEntity> captor = ArgumentCaptor.forClass(DeckEntity.class);
         verify(deckRepository).saveAndFlush(captor.capture());
-        assertEquals("Hernando Sagardia", captor.getValue().getAuthor());
         assertEquals("3120065", captor.getValue().getVeknId());
     }
 
     @Test
-    void resolvesExistingArchonAuthorOnReimport() {
+    void reimportsExistingDeckWithoutResolvingItsDisplayName() {
         DeckEntity actual = DeckEntity.builder().id("tournament-13370")
                 .source("https://archon.vekn.net/tournaments/tournament-uuid")
                 .type(DeckType.TOURNAMENT).schedulerOwner(TournamentSchedulerOwner.ARCHON)
-                .author("3120065").verified(false).views(0L).build();
+                .verified(false).views(0L).build();
         when(deckRepository.findById(actual.getId())).thenReturn(Optional.of(actual));
-        ArchonUserEntity member = new ArchonUserEntity();
-        member.setVeknId("3120065");
-        member.setName("Hernando Sagardia");
-        when(archonUserRepository.findById("3120065")).thenReturn(Optional.of(member));
         ArchonTournament tournament = tournament();
         scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(), Map.of("winner", "3120065"));
         ArgumentCaptor<DeckEntity> captor = ArgumentCaptor.forClass(DeckEntity.class);
         verify(deckRepository).saveAndFlush(captor.capture());
-        assertEquals("Hernando Sagardia", captor.getValue().getAuthor());
         assertEquals("3120065", captor.getValue().getVeknId());
     }
 
@@ -386,18 +374,14 @@ class TournamentArchonDeckSchedulerTest {
     }
 
     @Test
-    void normalizesVeknIdBeforeResolvingAuthor() {
+    void normalizesVeknIdWithoutResolvingDisplayNames() {
         ArchonTournament tournament = tournament();
-        ArchonUserEntity member = new ArchonUserEntity();
-        member.setName("Tournament player");
-        when(archonUserRepository.findById("003120065")).thenReturn(Optional.of(member));
 
         scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(), Map.of("winner", " 003120065 "));
 
         ArgumentCaptor<DeckEntity> captor = ArgumentCaptor.forClass(DeckEntity.class);
         verify(deckRepository).saveAndFlush(captor.capture());
         assertEquals("003120065", captor.getValue().getVeknId());
-        assertEquals("Tournament player", captor.getValue().getAuthor());
     }
 
     @ParameterizedTest
@@ -422,7 +406,7 @@ class TournamentArchonDeckSchedulerTest {
     void fillsOnlyMissingVeknIdOfVerifiedDecksUnderTheirExistingId(TournamentSchedulerOwner owner) {
         DeckEntity actual = DeckEntity.builder().id("curated-id").type(DeckType.TOURNAMENT)
                 .eventId("13370").position(1).schedulerOwner(owner).verified(true)
-                .name("Curated deck").author("Curated author").source("curated-source")
+                .name("Curated deck").source("curated-source")
                 .finalVp(new BigDecimal("2.0")).finalSeat(5).views(42L).build();
         DeckEntity expected = actual.toBuilder().veknId("003120065").build();
         when(deckRepository.findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType.TOURNAMENT, "13370", 1))
@@ -531,17 +515,14 @@ class TournamentArchonDeckSchedulerTest {
     void fillsOnlyMissingVeknIdWhenSkippingHistoricalDuplicate(boolean verified, String existingVeknId) {
         ArchonTournament tournament = tournament();
         DeckEntity existing = DeckEntity.builder().id("tournament-legacy").type(DeckType.TOURNAMENT)
-                .position(1).name("Incorrect archived title").author(" ALEX--SMITH ")
+                .position(1).eventId("13370").name("Incorrect archived title")
                 .tournament(" ÁRCHON   event ").creationDate(tournament.getStart())
                 .schedulerOwner(TournamentSchedulerOwner.TWDA).verified(verified).veknId(existingVeknId)
                 .description("Curated description").views(42L).source("original-source")
                 .finalVp(new BigDecimal("2.0")).finalSeat(5).modificationDate(tournament.getStart()).build();
         DeckEntity before = existing.toBuilder().build();
-        ArchonUserEntity member = new ArchonUserEntity();
-        member.setName("Álex Smith");
-        when(archonUserRepository.findById("003120065")).thenReturn(Optional.of(member));
-        when(deckRepository.findActiveTournamentDecksBetween(tournament.getStart().toLocalDate().atStartOfDay(),
-                tournament.getStart().toLocalDate().plusDays(1).atStartOfDay())).thenReturn(List.of(existing));
+        when(deckRepository.findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType.TOURNAMENT, "13370", 1))
+                .thenReturn(List.of(), List.of(existing));
 
         scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(), Map.of("winner", "003120065"));
 
@@ -557,12 +538,10 @@ class TournamentArchonDeckSchedulerTest {
     void preservesExistingVeknIdWhenSkippingHistoricalDuplicate(String existingVeknId) {
         ArchonTournament tournament = tournament();
         DeckEntity existing = DeckEntity.builder().id("historical").type(DeckType.TOURNAMENT)
-                .position(1).veknId(existingVeknId).author("Álex Smith").tournament("Archon Event")
+                .position(1).eventId("13370").veknId(existingVeknId).tournament("Archon Event")
                 .creationDate(tournament.getStart()).verified(true).build();
-        ArchonUserEntity member = new ArchonUserEntity();
-        member.setName("Álex Smith");
-        when(archonUserRepository.findById("003120065")).thenReturn(Optional.of(member));
-        when(deckRepository.findActiveTournamentDecksBetween(any(), any())).thenReturn(List.of(existing));
+        when(deckRepository.findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType.TOURNAMENT, "13370", 1))
+                .thenReturn(List.of(), List.of(existing));
 
         scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(), Map.of("winner", "003120065"));
 
@@ -576,12 +555,8 @@ class TournamentArchonDeckSchedulerTest {
     void doesNotFillVeknIdWhenHistoricalDuplicateIsAmbiguous() {
         ArchonTournament tournament = tournament();
         DeckEntity first = DeckEntity.builder().id("first").type(DeckType.TOURNAMENT)
-                .position(1).author("Álex Smith").tournament("Archon Event").creationDate(tournament.getStart()).build();
-        ArchonUserEntity member = new ArchonUserEntity();
-        member.setName("Álex Smith");
-        when(archonUserRepository.findById("003120065")).thenReturn(Optional.of(member));
-        when(deckRepository.findActiveTournamentDecksBetween(any(), any()))
-                .thenReturn(List.of(first, first.toBuilder().id("second").build()));
+                .position(1).tournament("Archon Event").creationDate(tournament.getStart()).build();
+        prepareCompositionMatches(List.of(first, first.toBuilder().id("second").build()));
 
         scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(), Map.of("winner", "003120065"));
 
@@ -606,7 +581,7 @@ class TournamentArchonDeckSchedulerTest {
 
     @ParameterizedTest
     @CsvSource({"TWDA,false", "TWDA,true", "ARCHON,false", "ARCHON,true", "ETERNAL_VIGILANCE,false", "ETERNAL_VIGILANCE,true"})
-    void fillsOnlyVeknIdForUniqueCompositionMatchDespiteDifferentEventMetadata(TournamentSchedulerOwner owner, boolean verified) {
+    void blocksUnidentifiedCompositionMatchWithoutAssigningAPlayer(TournamentSchedulerOwner owner, boolean verified) {
         DeckEntity existing = compositionCandidate("legacy").toBuilder().schedulerOwner(owner).verified(verified).build();
         DeckEntity before = existing.toBuilder().build();
         prepareCompositionMatches(List.of(existing));
@@ -614,7 +589,7 @@ class TournamentArchonDeckSchedulerTest {
         ArchonTournament tournament = tournament();
         scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(), Map.of("winner", "003120065"));
 
-        verify(deckRepository).fillMissingVeknId("legacy", "003120065");
+        verify(deckRepository, never()).fillMissingVeknId(any(), any());
         assertEquals(before, existing);
         assertEquals(before.getEventId(), existing.getEventId());
         assertEquals(before.getModificationDate(), existing.getModificationDate());
@@ -626,21 +601,21 @@ class TournamentArchonDeckSchedulerTest {
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {"003120065", "0099999"})
-    void skipsCompositionMatchWithoutOverwritingExistingVeknId(String existingVeknId) {
+    void preservesCompositionCandidatesAndAcceptsDifferentKnownPlayers(String existingVeknId) {
         DeckEntity existing = compositionCandidate("legacy").toBuilder().veknId(existingVeknId).build();
         prepareCompositionMatches(List.of(existing));
         ArchonTournament tournament = tournament();
 
         scheduler.parseDeck(tournament, scheduler.finalists(tournament).getFirst(), deck(), Map.of("winner", "003120065"));
 
-        if (existingVeknId == null || existingVeknId.isBlank()) {
-            verify(deckRepository).fillMissingVeknId("legacy", "003120065");
-        } else {
-            verify(deckRepository, never()).fillMissingVeknId(any(), any());
-        }
+        verify(deckRepository, never()).fillMissingVeknId(any(), any());
         assertEquals(existingVeknId, existing.getVeknId());
-        verify(deckRepository, never()).saveAndFlush(any());
-        verify(deckCardRepository, never()).save(any());
+        if ("0099999".equals(existingVeknId)) {
+            verify(deckRepository).saveAndFlush(any());
+        } else {
+            verify(deckRepository, never()).saveAndFlush(any());
+            verify(deckCardRepository, never()).save(any());
+        }
     }
 
     @Test
@@ -673,16 +648,13 @@ class TournamentArchonDeckSchedulerTest {
 
     private DeckEntity compositionCandidate(String id) {
         return DeckEntity.builder().id(id).type(DeckType.TOURNAMENT).position(1).eventId("legacy-uuid")
-                .name("Archived title").author(" ALEX--SMITH ").tournament("Different event label")
+                .name("Archived title").tournament("Different event label")
                 .creationDate(tournament().getStart().toLocalDate().atTime(23, 59)).schedulerOwner(TournamentSchedulerOwner.TWDA)
                 .description("Curated description").source("original-source").views(42L).verified(true)
                 .finalVp(new BigDecimal("2.0")).finalSeat(5).modificationDate(tournament().getStart()).build();
     }
 
     private void prepareCompositionMatches(List<DeckEntity> existing) {
-        ArchonUserEntity member = new ArchonUserEntity();
-        member.setName("Álex Smith");
-        when(archonUserRepository.findById("003120065")).thenReturn(Optional.of(member));
         when(deckRepository.findActiveTournamentDecksBetween(any(), any())).thenReturn(existing);
         List<DeckCardEntity> cards = new ArrayList<>();
         for (DeckEntity candidate : existing) {
@@ -759,7 +731,7 @@ class TournamentArchonDeckSchedulerTest {
     void takesOverEternalVigilanceDeckUnderItsExistingId() {
         DeckEntity actual = DeckEntity.builder().id("legacy-id").type(DeckType.TOURNAMENT)
                 .eventId("13370").position(1).schedulerOwner(TournamentSchedulerOwner.ETERNAL_VIGILANCE)
-                .author("Old author").views(123L).customTags(List.of("keep"))
+                .views(123L).customTags(List.of("keep"))
                 .modificationDate(LocalDateTime.now().minusYears(1)).build();
         when(deckRepository.findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType.TOURNAMENT, "13370", 1))
                 .thenReturn(List.of(actual));
@@ -772,7 +744,6 @@ class TournamentArchonDeckSchedulerTest {
         assertEquals("legacy-id", saved.getId());
         assertEquals(TournamentSchedulerOwner.ARCHON, saved.getSchedulerOwner());
         assertEquals("https://archon.vekn.net/tournaments/tournament-uuid", saved.getSource());
-        assertEquals("3120065", saved.getAuthor());
         assertEquals("3120065", saved.getVeknId());
         assertEquals(123L, saved.getViews());
         assertEquals(actual.getCustomTags(), saved.getCustomTags());
@@ -787,7 +758,7 @@ class TournamentArchonDeckSchedulerTest {
     void enrichesTwdaUnderDifferentIdWithoutChangingAnyOtherField() {
         DeckEntity actual = DeckEntity.builder().id("twda-legacy-id").type(DeckType.TOURNAMENT)
                 .eventId("13370").position(1).schedulerOwner(TournamentSchedulerOwner.TWDA)
-                .name("TWDA name").source("twda-source").author("Curated author").views(42L).build();
+                .name("TWDA name").source("twda-source").views(42L).build();
         DeckEntity expected = actual.toBuilder().finalVp(new BigDecimal("1.5")).finalSeat(1).veknId("003120065").build();
         when(deckRepository.findByTypeAndEventIdAndPositionAndDeletedFalse(DeckType.TOURNAMENT, "13370", 1))
                 .thenReturn(List.of(actual));
@@ -804,7 +775,7 @@ class TournamentArchonDeckSchedulerTest {
     @ValueSource(strings = {"different-id", "003120065"})
     void preservesTwdaVeknIdWhenEnrichingResults(String incomingId) {
         DeckEntity actual = DeckEntity.builder().id("tournament-13370").type(DeckType.TOURNAMENT)
-                .schedulerOwner(TournamentSchedulerOwner.TWDA).veknId("003120065").author("Curated author").build();
+                .schedulerOwner(TournamentSchedulerOwner.TWDA).veknId("003120065").build();
         when(deckRepository.findById(actual.getId())).thenReturn(Optional.of(actual));
         ArchonTournament tournament = tournament();
 
@@ -813,7 +784,6 @@ class TournamentArchonDeckSchedulerTest {
 
         verify(deckRepository).saveAndFlush(actual);
         assertEquals("003120065", actual.getVeknId());
-        assertEquals("Curated author", actual.getAuthor());
         org.mockito.Mockito.verifyNoInteractions(deckCardRepository, archonUserRepository);
     }
 
