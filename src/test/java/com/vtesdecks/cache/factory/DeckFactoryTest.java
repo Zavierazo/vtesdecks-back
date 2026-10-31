@@ -1,6 +1,5 @@
 package com.vtesdecks.cache.factory;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vtesdecks.cache.CryptCache;
 import com.vtesdecks.cache.LibraryCache;
 import com.vtesdecks.cache.indexable.Crypt;
@@ -107,7 +106,7 @@ class DeckFactoryTest {
     }
 
     @Test
-    void resolvesPlayerNameInDetailsAndSummaryWithoutExposingVeknId() {
+    void resolvesPlayerNameAndPreservesVeknIdInDetailsAndSummary() {
         entity.setVeknId("003120065");
         ArchonUserEntity player = new ArchonUserEntity();
         player.setName("Tournament player");
@@ -116,9 +115,8 @@ class DeckFactoryTest {
         Deck deck = factory.getDeck(entity, List.of(), List.of(), null);
         DeckSummary summary = DeckSummary.from(deck);
 
-        ObjectMapper json = new ObjectMapper().findAndRegisterModules();
-        assertFalse(json.valueToTree(deck).has("veknId"));
-        assertFalse(json.valueToTree(summary).has("veknId"));
+        assertEquals("003120065", deck.getVeknId());
+        assertEquals("003120065", summary.getVeknId());
         assertEquals("Tournament player", deck.getAuthor());
         assertEquals("Tournament player", summary.getAuthor());
     }

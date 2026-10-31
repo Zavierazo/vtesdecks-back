@@ -9,6 +9,8 @@ import com.vtesdecks.service.DeckUserService;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.*;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.support.PersistenceExceptionTranslationInterceptor;
 import org.springframework.data.jpa.repository.support.JpaRepositoryFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -72,6 +74,9 @@ class ApiArchonServiceTest {
         factory.afterPropertiesSet();
         var entityManager = SharedEntityManagerCreator.createSharedEntityManager(factory.getObject());
         var repositories = new JpaRepositoryFactory(entityManager);
+        // Match Spring's repository exception translation, including unique-constraint violations.
+        repositories.addRepositoryProxyPostProcessor((proxy, repositoryInformation) ->
+                proxy.addAdvice(new PersistenceExceptionTranslationInterceptor(factory)));
         users = repositories.getRepository(UserRepository.class);
         transactions = new JpaTransactionManager(factory.getObject());
     }
@@ -191,12 +196,15 @@ class ApiArchonServiceTest {
         when(client.userInfo("access")).thenReturn(new ArchonMemberClient.Member("another-member", "003120065"));
         assertEquals(409, failure(() -> service.complete(callback(start()))));
         assertEquals(1, linkedUsers());
+        assertEquals("003120065", users.findVerifiedVeknId(7));
+        assertNull(users.findVerifiedVeknId(8));
+        verify(deckUserService, times(1)).refreshTournamentDecks("003120065");
     }
 
     @Test
     void databaseAlsoEnforcesUniqueness() {
         service.complete(callback(start()));
-        assertThrows(Exception.class, () -> new TransactionTemplate(transactions)
+        assertThrows(DataIntegrityViolationException.class, () -> new TransactionTemplate(transactions)
                 .executeWithoutResult(status -> users.updateVerifiedVeknId(8, "003120065")));
         assertEquals(1, linkedUsers());
     }

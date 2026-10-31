@@ -130,6 +130,7 @@ class ApiDeckSummaryMapperTest {
     @Test
     void returnsAuthorWithoutVeknIdInDetailsAndListings() {
         full.setAuthor("Tournament player");
+        full.setVeknId("003120065");
 
         ApiDeck detail = mapper.map(full, null, false, "EUR");
         ApiDeck listing = mapper.mapSummary(DeckSummary.from(full), null, null, "EUR");
