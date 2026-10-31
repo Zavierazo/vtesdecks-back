@@ -89,6 +89,35 @@ reconciling offers. Failed downloads or imports leave existing offers intact.
 Legacy DriveThruCards and GamePod rows without a locale are matched as English;
 the feed supplies the stored locale, including separate Spanish GamePod offers.
 
+Offers retain nullable `seller`, `country` and `continent` fields from Market.
+The cheapest offer is retained per card, platform, printing, language and seller;
+location changes update that offer without changing its identity. Missing sellers
+are stored as SQL NULL. The unique index treats missing printing, language and
+seller as one value while leaving their stored values nullable. Conflicting
+legacy duplicates stop the migration without deleting records.
+
+Both the card-info shop list and `/cards/{id}/shops` expose these optional fields.
+Only the seller name `tcgmarket` is omitted from API responses (case-insensitive).
+Its stored value remains unchanged so offer identity and reconciliation retain
+the upstream seller; all other seller names are exposed when present.
+The initial card-info response uses the existing compact summary for every
+platform, including eBay. Show more reveals all retained sellers and printings.
+Deploy migration
+`V1.0.106__add_card_shop_seller_and_location.sql` and the backend before the
+frontend. The next successful market synchronization fills the new metadata.
+Market supplies seller as a nullable string; older responses without it remain
+compatible.
+
+The MySQL migration tests can be run against a disposable loopback MySQL 8
+instance with an empty-password root account:
+
+```bash
+mvn test -Dtest=CardShopSellerMigrationTest -Dvtes.test.mysql.url=jdbc:mysql://127.0.0.1:3306/
+```
+
+Each test creates and removes its own isolated schema. Without that property,
+the MySQL-specific tests are skipped; the other offer tests run normally.
+
 ### Archon tournament deck schedule
 
 Archon finalist decks are imported daily at 07:30, with extra passes on Friday,

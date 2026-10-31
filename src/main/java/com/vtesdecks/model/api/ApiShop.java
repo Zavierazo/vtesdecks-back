@@ -12,6 +12,9 @@ public class ApiShop {
     private ApiShopInfo shopInfo;
     private String set;
     private String locale;
+    private String country;
+    private String continent;
+    private String seller;
     private String link;
     private BigDecimal price;
     private String currency;

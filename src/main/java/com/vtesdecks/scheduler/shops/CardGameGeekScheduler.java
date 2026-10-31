@@ -417,6 +417,8 @@ public class CardGameGeekScheduler {
                 .platform(PLATFORM)
                 .set(set != null ? set.getAbbrev() : null)
                 .locale(null)
+                .country("IT")
+                .continent("EU")
                 .price(price)
                 .currency(EURO)
                 .priceDefaultCurrency(price != null ? price.setScale(2, RoundingMode.UP) : null)

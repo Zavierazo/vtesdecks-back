@@ -11,6 +11,7 @@ import com.vtesdecks.model.market.CardOffersResponse;
 import com.vtesdecks.service.CurrencyExchangeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,9 +103,9 @@ public class MarketScheduler {
     private record CompositeKey(
             ShopPlatform platform,
             Integer cardId,
-            String edition,
-            String editionDetails,
-            String locale
+            String set,
+            String locale,
+            String seller
     ) {
     }
 
@@ -115,9 +116,9 @@ public class MarketScheduler {
                         offer -> new CompositeKey(
                                 PLATFORM_MAP.get(offer.getMarket()),
                                 offer.getCardId(),
-                                offer.getEdition(),
-                                offer.getEditionDetails(),
-                                offer.getLanguage()
+                                getSet(offer),
+                                StringUtils.defaultIfEmpty(offer.getLanguage(), null),
+                                StringUtils.trimToNull(offer.getSeller())
                         ),
                         Collectors.minBy(Comparator.comparing(CardOffer::getPrice))
                 ))
@@ -130,8 +131,9 @@ public class MarketScheduler {
             Optional<CardShopEntity> currentOptional = existingCardSets.stream()
                     .filter(card -> Objects.equals(card.getCardId(), cardShopEntity.getCardId()) &&
                             Objects.equals(card.getPlatform(), cardShopEntity.getPlatform()) &&
-                            Objects.equals(card.getSet(), cardShopEntity.getSet()) &&
-                            Objects.equals(getMatchingLocale(card), getMatchingLocale(cardShopEntity))
+                            Objects.equals(StringUtils.defaultIfEmpty(card.getSet(), null), cardShopEntity.getSet()) &&
+                            Objects.equals(getMatchingLocale(card), getMatchingLocale(cardShopEntity)) &&
+                            Objects.equals(StringUtils.trimToNull(card.getSeller()), cardShopEntity.getSeller())
                     )
                     .min(Comparator.comparing(card -> !Objects.equals(card.getLocale(), cardShopEntity.getLocale())));
             if (currentOptional.isPresent()) {
@@ -151,7 +153,7 @@ public class MarketScheduler {
         if (card.getLocale() == null && (card.getPlatform() == ShopPlatform.DTC || card.getPlatform() == ShopPlatform.GP)) {
             return "en";
         }
-        return card.getLocale();
+        return StringUtils.defaultIfEmpty(card.getLocale(), null);
     }
 
     private boolean isImportableOffer(CardOffer offer) {
@@ -169,15 +171,19 @@ public class MarketScheduler {
         return offer.getPrice().compareTo(BigDecimal.ZERO) > 0;
     }
 
-    private CardShopEntity toCardShopEntity(CardOffer cardOffer) {
-        ShopPlatform platform = PLATFORM_MAP.get(cardOffer.getMarket());
+    private String getSet(CardOffer cardOffer) {
         String set = null;
-        if (cardOffer.getEdition() != null) {
+        if (StringUtils.isNotEmpty(cardOffer.getEdition())) {
             set = cardOffer.getEdition();
-            if (cardOffer.getEditionDetails() != null) {
+            if (StringUtils.isNotEmpty(cardOffer.getEditionDetails())) {
                 set += ":" + cardOffer.getEditionDetails();
             }
         }
+        return set;
+    }
+
+    private CardShopEntity toCardShopEntity(CardOffer cardOffer) {
+        ShopPlatform platform = PLATFORM_MAP.get(cardOffer.getMarket());
 
         // Build data object
         ObjectNode data = objectMapper.createObjectNode();
@@ -187,8 +193,11 @@ public class MarketScheduler {
                 .cardId(cardOffer.getCardId())
                 .link(cardOffer.getLink())
                 .platform(platform)
-                .set(set)
-                .locale(cardOffer.getLanguage())
+                .set(getSet(cardOffer))
+                .locale(StringUtils.defaultIfEmpty(cardOffer.getLanguage(), null))
+                .country(cardOffer.getCountry())
+                .continent(cardOffer.getContinent())
+                .seller(StringUtils.trimToNull(cardOffer.getSeller()))
                 .price(cardOffer.getPrice())
                 .currency(cardOffer.getCurrency())
                 .priceDefaultCurrency(currencyExchangeService.convert(cardOffer.getPrice(), cardOffer.getCurrency(), DEFAULT_CURRENCY))

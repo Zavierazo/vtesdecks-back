@@ -69,6 +69,13 @@ public abstract class ApiCardMapper {
     @Mapping(target = "shopInfo", source = "platform")
     public abstract ApiShop mapCardShop(CardShopEntity entity);
 
+    @AfterMapping
+    protected void omitHiddenSeller(@MappingTarget ApiShop shop) {
+        if ("tcgmarket".equalsIgnoreCase(shop.getSeller())) {
+            shop.setSeller(null);
+        }
+    }
+
     @Mapping(target = "name", source = "platform")
     public abstract ApiShopInfo mapShopInfo(ShopPlatform platform);
 

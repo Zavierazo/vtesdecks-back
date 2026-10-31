@@ -150,6 +150,113 @@ class MarketSchedulerTest {
         verify(repository).flush();
     }
 
+    @Test
+    void keepsTheCheapestOfferForEachSellerPrintingAndLanguage() {
+        CardOffer expensive = offer(1, "ebay", "en");
+        expensive.setSeller("seller-one");
+        expensive.setPrice(new BigDecimal("2.00"));
+        CardOffer cheap = offer(2, "ebay", "en");
+        cheap.setSeller("seller-one");
+        cheap.setCountry("GB");
+        cheap.setContinent("EU");
+        cheap.setPrice(new BigDecimal("1.00"));
+        CardOffer secondSeller = offer(3, "ebay", "en");
+        secondSeller.setSeller("seller-two");
+        CardOffer spanish = offer(4, "ebay", "es");
+        spanish.setSeller("seller-one");
+        CardOffer otherPrinting = offer(5, "ebay", "en");
+        otherPrinting.setSeller("seller-one");
+        otherPrinting.setEdition("Jyhad");
+        otherPrinting.setEditionDetails(null);
+        when(client.getCardOffers(0, 1000)).thenReturn(page(5, List.of(expensive, cheap, secondSeller, spanish, otherPrinting)));
+
+        scheduler.scrapCards();
+
+        verify(repository, times(4)).save(any());
+        verify(repository, never()).save(argThat(row -> row.getData().get("id").intValue() == 1));
+        verify(repository).save(argThat(row -> row.getData().get("id").intValue() == 2 &&
+                row.getSeller().equals("seller-one") && row.getCountry().equals("GB") && row.getContinent().equals("EU")));
+        verify(repository).save(argThat(row -> row.getSeller().equals("seller-two")));
+        verify(repository).save(argThat(row -> row.getLocale().equals("es")));
+        verify(repository).save(argThat(row -> row.getSet().equals("Jyhad")));
+    }
+
+    @Test
+    void importsThePublishedSellerPayloadAndKeepsBothVendors() throws IOException {
+        // Reduced live response captured after seller was published on 2026-10-31.
+        CardOffersResponse response;
+        try (var input = getClass().getResourceAsStream("/market/seller-offers.json")) {
+            response = mapper.readValue(input, CardOffersResponse.class);
+        }
+        when(client.getCardOffers(0, 1000)).thenReturn(response);
+
+        scheduler.scrapCards();
+
+        ArgumentCaptor<CardShopEntity> saved = ArgumentCaptor.forClass(CardShopEntity.class);
+        verify(repository, times(2)).save(saved.capture());
+        assertEquals(Set.of("idasoft17", "melvin-lightfoot"),
+                Set.copyOf(saved.getAllValues().stream().map(CardShopEntity::getSeller).toList()));
+        for (CardShopEntity row : saved.getAllValues()) {
+            assertEquals(101774, row.getCardId());
+            assertNull(row.getSet());
+            assertEquals("en", row.getLocale());
+            assertEquals(new BigDecimal("2.0"), row.getPrice());
+            assertEquals("USD", row.getCurrency());
+            assertEquals("idasoft17".equals(row.getSeller()) ? "AU" : "NO", row.getCountry());
+            assertEquals("idasoft17".equals(row.getSeller()) ? "OC" : "EU", row.getContinent());
+        }
+    }
+
+    @Test
+    void updatesLocationWithoutChangingTheOfferIdentityAndIsIdempotent() {
+        CardOffer offer = offer(1, "ebay", "en");
+        offer.setSeller("seller-one");
+        offer.setCountry("FR");
+        offer.setContinent("EU");
+        CardShopEntity current = existing(10, ShopPlatform.EBAY, "en");
+        current.setSet("POD:GP");
+        current.setSeller("seller-one");
+        current.setLink(offer.getLink());
+        current.setPrice(offer.getPrice());
+        current.setCountry("US");
+        current.setContinent("NA");
+        when(client.getCardOffers(0, 1000)).thenReturn(page(1, List.of(offer)));
+        when(repository.findByPlatformIn(anyCollection())).thenReturn(List.of(current));
+
+        scheduler.scrapCards();
+
+        ArgumentCaptor<CardShopEntity> saved = ArgumentCaptor.forClass(CardShopEntity.class);
+        verify(repository).save(saved.capture());
+        assertEquals(10, saved.getValue().getId());
+        assertEquals("FR", saved.getValue().getCountry());
+        assertEquals("EU", saved.getValue().getContinent());
+        verify(repository, never()).deleteAll(any());
+
+        when(repository.findByPlatformIn(anyCollection())).thenReturn(List.of(saved.getValue()));
+        scheduler.scrapCards();
+
+        verify(repository, times(1)).save(any());
+        verify(repository, never()).deleteAll(any());
+    }
+
+    @Test
+    void treatsBlankAndMissingSellersAsOneNullableSeller() {
+        CardOffer blank = offer(1, "ebay", null);
+        blank.setSeller(" ");
+        blank.setEdition(null);
+        blank.setEditionDetails("ignored without an edition");
+        blank.setPrice(new BigDecimal("2.00"));
+        CardOffer absent = offer(2, "ebay", null);
+        absent.setEdition(null);
+        absent.setEditionDetails(null);
+        when(client.getCardOffers(0, 1000)).thenReturn(page(2, List.of(blank, absent)));
+
+        scheduler.scrapCards();
+
+        verify(repository).save(argThat(row -> row.getSeller() == null && row.getSet() == null &&
+                row.getLocale() == null && row.getData().get("id").intValue() == 2));
+    }
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("invalidFirstPages")
     void rejectsMalformedOrIncompleteDownloadsBeforeAccessingTheDatabase(String name, CardOffersResponse response) {

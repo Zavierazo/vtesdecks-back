@@ -48,6 +48,15 @@ public class CardShopEntity {
     @Column(name = "locale")
     private String locale;
 
+    @Column(name = "country", length = 2, columnDefinition = "char(2)")
+    private String country;
+
+    @Column(name = "continent", length = 2, columnDefinition = "char(2)")
+    private String continent;
+
+    @Column(name = "seller", length = 255)
+    private String seller;
+
     @Column(name = "link", nullable = false)
     private String link;
 
