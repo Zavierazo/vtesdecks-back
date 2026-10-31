@@ -13,8 +13,6 @@ import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.scheduler.UserMonthScheduler;
 import com.vtesdecks.scheduler.VtesdleTodayScheduler;
 import com.vtesdecks.scheduler.shops.CardGameGeekScheduler;
-import com.vtesdecks.scheduler.shops.DriveThruCardsScheduler;
-import com.vtesdecks.scheduler.shops.GamePodScheduler;
 import com.vtesdecks.scheduler.shops.MarketScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentDeckScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentArchonDeckScheduler;
@@ -42,10 +40,6 @@ class ApiAdminSchedulerServiceTest {
     private TournamentArchonDeckScheduler tournamentArchonDeckScheduler;
     @Mock
     private ArchonUserScheduler archonUserScheduler;
-    @Mock
-    private DriveThruCardsScheduler driveThruCardsScheduler;
-    @Mock
-    private GamePodScheduler gamePodScheduler;
     @Mock
     private VtesdleTodayScheduler vtesdleTodayScheduler;
     @Mock
@@ -75,8 +69,10 @@ class ApiAdminSchedulerServiceTest {
 
     @Test
     void exposesEveryMigratedManualScheduler() {
-        assertEquals(24, service.getAll().size());
+        assertEquals(22, service.getAll().size());
         assertFalse(service.getAll().stream().anyMatch(item -> item.key().equals("twda-eternal-vigilance")));
+        assertFalse(service.getAll().stream().anyMatch(item -> item.key().equals("drive-thru-cards") || item.key().equals("game-pod")));
+        assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("market")));
         assertTrue(service.getAll().stream().anyMatch(item ->
                 item.key().equals("collection-clean") && item.description().equals("Clean collections")));
         assertTrue(service.getAll().stream().anyMatch(item ->
@@ -101,6 +97,12 @@ class ApiAdminSchedulerServiceTest {
     void runsKnownScheduler() {
         assertTrue(service.run("achievements", 42));
         verify(achievementScheduler).reconcile();
+    }
+
+    @Test
+    void runsMarketScheduler() {
+        assertTrue(service.run("market", 42));
+        verify(marketScheduler).scrapCards();
     }
 
     @Test
@@ -146,12 +148,12 @@ class ApiAdminSchedulerServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"unknown", "twda-eternal-vigilance"})
+    @ValueSource(strings = {"unknown", "twda-eternal-vigilance", "drive-thru-cards", "game-pod"})
     void rejectsUnknownOrRetiredScheduler(String key) {
         assertFalse(service.run(key, 42));
         verifyNoInteractions(cleanUpScheduler, tournamentDeckScheduler,
                 tournamentArchonDeckScheduler,
-                driveThruCardsScheduler, gamePodScheduler, vtesdleTodayScheduler, cardGameGeekScheduler,
+                vtesdleTodayScheduler, cardGameGeekScheduler,
                 proxyCardOptionScheduler, marketScheduler, deckArchetypeScheduler, deckArchetypeIndex,
                 deckIndex, cryptCache, libraryCache, userMonthScheduler, achievementScheduler, patreonReminderScheduler);
     }

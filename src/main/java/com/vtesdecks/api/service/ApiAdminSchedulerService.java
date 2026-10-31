@@ -14,8 +14,6 @@ import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.scheduler.UserMonthScheduler;
 import com.vtesdecks.scheduler.VtesdleTodayScheduler;
 import com.vtesdecks.scheduler.shops.CardGameGeekScheduler;
-import com.vtesdecks.scheduler.shops.DriveThruCardsScheduler;
-import com.vtesdecks.scheduler.shops.GamePodScheduler;
 import com.vtesdecks.scheduler.shops.MarketScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentDeckScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentArchonDeckScheduler;
@@ -40,8 +38,6 @@ public class ApiAdminSchedulerService {
             new ApiAdminScheduler("twda-decks", "Import tournament decks"),
             new ApiAdminScheduler("twda-archon-decks", "Import Archon finalist decks"),
             new ApiAdminScheduler("archon-users", "Synchronize Archon members"),
-            new ApiAdminScheduler("drive-thru-cards", "Synchronize DriveThruCards"),
-            new ApiAdminScheduler("game-pod", "Synchronize Game Pod"),
             new ApiAdminScheduler("card-game-geek", "Synchronize Card Game Geek"),
             new ApiAdminScheduler("market", "Synchronize market prices"),
             new ApiAdminScheduler("vtesdle-today", "Select today's Vtesdle card"),
@@ -60,8 +56,6 @@ public class ApiAdminSchedulerService {
     private final TournamentDeckScheduler tournamentDeckScheduler;
     private final TournamentArchonDeckScheduler tournamentArchonDeckScheduler;
     private final ArchonUserScheduler archonUserScheduler;
-    private final DriveThruCardsScheduler driveThruCardsScheduler;
-    private final GamePodScheduler gamePodScheduler;
     private final VtesdleTodayScheduler vtesdleTodayScheduler;
     private final CardGameGeekScheduler cardGameGeekScheduler;
     private final ProxyCardOptionScheduler proxyCardOptionScheduler;
@@ -92,8 +86,6 @@ public class ApiAdminSchedulerService {
             case "twda-decks" -> tournamentDeckScheduler.scrappingDecks();
             case "twda-archon-decks" -> tournamentArchonDeckScheduler.scrappingDecks();
             case "archon-users" -> archonUserScheduler.scrappingUsers();
-            case "drive-thru-cards" -> driveThruCardsScheduler.scrapCards();
-            case "game-pod" -> gamePodScheduler.scrapCards();
             case "card-game-geek" -> cardGameGeekScheduler.scrapCards();
             case "market" -> marketScheduler.scrapCards();
             case "vtesdle-today" -> vtesdleTodayScheduler.selectTodayVtesdle();

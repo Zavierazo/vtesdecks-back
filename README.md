@@ -77,6 +77,18 @@ Use an API testing tool or cURL to trigger the scheduler:
 curl -X POST http://localhost:8080/admin/scheduler/scrap_decks
 ```
 
+### Card shop synchronization
+
+VTES Market supplies DriveThruCards, GamePod, TCG Market and eBay offers through
+`/api/card_offers`. The market scheduler synchronizes them every six hours and
+is available as the `market` manual admin job. CardGameGeek retains its separate
+scheduler.
+
+The import checks the complete paginated total and unique offer IDs before
+reconciling offers. Failed downloads or imports leave existing offers intact.
+Legacy DriveThruCards and GamePod rows without a locale are matched as English;
+the feed supplies the stored locale, including separate Spanish GamePod offers.
+
 ### Archon tournament deck schedule
 
 Archon finalist decks are imported daily at 07:30, with extra passes on Friday,

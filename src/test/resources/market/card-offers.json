@@ -1,0 +1,38 @@
+{
+  "total": 3,
+  "offers": [
+    {
+      "id": 119068,
+      "card_id": 200035,
+      "currency": "EUR",
+      "link": "https://www.gamepod.es/products/al-ashrad-amr-of-alamut-2-assamite?variant=49757975249236",
+      "market": "gamepod",
+      "price": "0.48",
+      "language": "es",
+      "edition": "POD",
+      "edition_details": "GP"
+    },
+    {
+      "id": 119067,
+      "card_id": 200035,
+      "currency": "EUR",
+      "link": "https://www.gamepod.es/products/al-ashrad-amr-of-alamut-2-assamite?variant=49757975216468",
+      "market": "gamepod",
+      "price": "0.48",
+      "language": "en",
+      "edition": "POD",
+      "edition_details": "GP"
+    },
+    {
+      "id": 118456,
+      "card_id": 200035,
+      "currency": "USD",
+      "link": "https://www.drivethrucards.com/product/297323/crypt-al-ashrad-amr-of-alamut-assamite?affiliate_id=2900918",
+      "market": "drivethrucards",
+      "price": "0.38",
+      "language": "en",
+      "edition": "POD",
+      "edition_details": "DTC"
+    }
+  ]
+}
