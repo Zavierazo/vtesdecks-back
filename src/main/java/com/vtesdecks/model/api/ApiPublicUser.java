@@ -17,6 +17,8 @@ public class ApiPublicUser {
     private String user;
     private String displayName;
     private String profileImage;
+    private String veknId;
+    private String archonProfileUrl;
     private List<String> roles;
     private List<ApiPublicUser> followers;
     private List<ApiPublicUser> following;
