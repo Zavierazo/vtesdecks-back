@@ -1,10 +1,15 @@
 package com.vtesdecks.service.impl;
 
 import com.vtesdecks.api.service.AchievementService;
+import com.googlecode.cqengine.ConcurrentIndexedCollection;
+import com.vtesdecks.cache.indexable.DeckSummary;
+import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.repositories.DeckRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.messaging.MessageProducer;
+import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.service.DeckService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 
+import static com.googlecode.cqengine.query.QueryFactory.all;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -26,6 +32,8 @@ import static org.mockito.Mockito.*;
 class DeckUserServiceImplTest {
     @Mock
     private DeckRepository deckRepository;
+    @Mock
+    private UserRepository userRepository;
     @Mock
     private DeckUserRepository deckUserRepository;
     @Mock
@@ -36,6 +44,40 @@ class DeckUserServiceImplTest {
     private AchievementService achievementService;
     @InjectMocks
     private DeckUserServiceImpl service;
+
+    @Test
+    void profileUpdatesRefreshOwnedAndLinkedTournamentDecks() {
+        DeckSummary community = new DeckSummary();
+        community.setId("community");
+        var owned = new ConcurrentIndexedCollection<DeckSummary>();
+        owned.add(community);
+        DeckSummary tournament = new DeckSummary();
+        tournament.setId("tournament");
+        var linked = new ConcurrentIndexedCollection<DeckSummary>();
+        linked.add(tournament);
+        when(userRepository.findVerifiedVeknId(42)).thenReturn("003120065");
+        when(deckService.getDecks(any())).thenReturn(owned.retrieve(all(DeckSummary.class)),
+                linked.retrieve(all(DeckSummary.class)));
+
+        service.refreshUserDecks(42);
+
+        ArgumentCaptor<DeckQuery> queries = ArgumentCaptor.forClass(DeckQuery.class);
+        verify(deckService, times(2)).getDecks(queries.capture());
+        assertEquals(DeckType.USER, queries.getAllValues().get(0).getType());
+        assertEquals(42, queries.getAllValues().get(0).getUserId());
+        DeckQuery tournamentQuery = queries.getAllValues().get(1);
+        assertEquals(DeckType.TOURNAMENT, tournamentQuery.getType());
+        assertEquals("003120065", tournamentQuery.getVeknId());
+        assertNull(tournamentQuery.getUserId());
+        verify(messageProducer).publishDeckSync("community");
+        verify(messageProducer).publishDeckSync("tournament");
+    }
+
+    @Test
+    void doesNotRefreshTheArchiveWithoutAVerifiedVeknId() {
+        service.refreshTournamentDecks(null);
+        verifyNoInteractions(deckService, messageProducer);
+    }
 
     @Test
     void rejectsOwnerRatingBeforeReadingOrWritingEngagement() {

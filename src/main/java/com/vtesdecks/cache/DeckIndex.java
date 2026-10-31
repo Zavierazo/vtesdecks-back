@@ -109,6 +109,7 @@ public class DeckIndex {
         decks.addIndex(HashIndex.onAttribute(DeckSummary.PUBLISHED_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.TYPE_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.USER_ATTRIBUTE));
+        decks.addIndex(HashIndex.onAttribute(DeckSummary.VEKN_ID_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.AUTHOR_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.ROUNDS_ATTRIBUTE));
         decks.addIndex(HashIndex.onAttribute(DeckSummary.EVENT_ID_ATTRIBUTE));
@@ -297,7 +298,8 @@ public class DeckIndex {
             case OLDEST:
                 queryOptions = queryOptions(orderBy(ascending(DeckSummary.CREATION_DATE_ATTRIBUTE),
                         ascending(DeckSummary.EVENT_ID_ATTRIBUTE),
-                        ascending(DeckSummary.POSITION_ATTRIBUTE)), threshold, deduplication);
+                        ascending(DeckSummary.POSITION_ATTRIBUTE),
+                        ascending(DeckSummary.ID_ATTRIBUTE)), threshold, deduplication);
                 break;
             case POPULAR:
                 queryOptions = queryOptions(orderBy(descending(DeckSummary.VIEWS_LAST_MONTH_ATTRIBUTE),
@@ -347,6 +349,9 @@ public class DeckIndex {
             } else {
                 query = and(query, equal(DeckSummary.USER_ATTRIBUTE, -1));
             }
+        }
+        if (deckQuery.getVeknId() != null) {
+            query = and(query, equal(DeckSummary.VEKN_ID_ATTRIBUTE, deckQuery.getVeknId()));
         }
         if (deckQuery.getCards() != null && !deckQuery.getCards().isEmpty()) {
             for (Map.Entry<Integer, Integer> card : deckQuery.getCards().entrySet()) {

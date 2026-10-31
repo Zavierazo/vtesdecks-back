@@ -2,8 +2,11 @@ package com.vtesdecks.api.controller;
 
 import com.vtesdecks.api.service.AchievementService;
 import com.vtesdecks.api.service.ApiPublicUserService;
+import com.vtesdecks.api.service.ApiDeckService;
 import com.vtesdecks.model.api.ApiAchievementFamily;
 import com.vtesdecks.model.api.ApiPublicUser;
+import com.vtesdecks.model.api.ApiDecks;
+import org.springframework.http.CacheControl;
 import com.vtesdecks.model.api.ApiUserOfMonth;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +28,15 @@ import java.util.List;
 public class ApiPublicUserController {
     private final ApiPublicUserService apiPublicUserService;
     private final AchievementService achievementService;
+    private final ApiDeckService apiDeckService;
+
+    @GetMapping(value = "/{username}/tournament-decks", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiDecks> getTournamentDecks(@PathVariable String username,
+            @RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "6") int limit,
+            @RequestParam(defaultValue = "EUR") String currency) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(apiDeckService.getTournamentDecks(username, offset, limit, currency));
+    }
 
     @GetMapping(value = "/{username}", produces = {
             MediaType.APPLICATION_JSON_VALUE

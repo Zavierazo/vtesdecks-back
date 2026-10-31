@@ -71,6 +71,42 @@ class DeckFactoryTest {
     }
 
     @Test
+    void cachesVerifiedTournamentAttributionSeparatelyAndClearsItOnRebuildAfterUnlink() {
+        entity.setType(DeckType.TOURNAMENT);
+        entity.setVeknId("003120065");
+        ArchonUserEntity player = new ArchonUserEntity();
+        player.setName("Original tournament player");
+        when(players.findById("003120065")).thenReturn(Optional.of(player));
+        UserEntity user = new UserEntity();
+        user.setId(42);
+        user.setUsername("player");
+        user.setDisplayName("Verified display name");
+        user.setEmail("player@example.test");
+        when(users.findByVeknId("003120065")).thenReturn(Optional.of(user));
+        when(users.selectRolesByUserId(42)).thenReturn(List.of("SUPPORTER"));
+
+        Deck cached = factory.getDeck(entity, List.of(), List.of(), null);
+        DeckSummary summary = DeckSummary.from(cached);
+        assertEquals("Verified display name", cached.getTournamentPlayer().getDisplayName());
+        assertEquals("player", summary.getTournamentPlayer().getUsername());
+        assertEquals(List.of("SUPPORTER"), summary.getTournamentPlayer().getRoles());
+        assertNull(cached.getUser());
+        assertNull(summary.getUser());
+        assertEquals("Original tournament player", cached.getAuthor());
+
+        user.setDisplayName("Updated display name");
+        assertEquals("Verified display name", cached.getTournamentPlayer().getDisplayName());
+        Deck refreshed = factory.getDeck(entity, List.of(), List.of(), null);
+        assertEquals("Updated display name", refreshed.getTournamentPlayer().getDisplayName());
+
+        when(users.findByVeknId("003120065")).thenReturn(Optional.empty());
+        Deck unlinked = factory.getDeck(entity, List.of(), List.of(), null);
+        assertNull(unlinked.getTournamentPlayer());
+        assertNull(DeckSummary.from(unlinked).getTournamentPlayer());
+        assertEquals("Original tournament player", unlinked.getAuthor());
+    }
+
+    @Test
     void resolvesPlayerNameInDetailsAndSummaryWithoutExposingVeknId() {
         entity.setVeknId("003120065");
         ArchonUserEntity player = new ArchonUserEntity();

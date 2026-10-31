@@ -42,6 +42,7 @@ public class DeckSummary {
     public static final Attribute<DeckSummary, Long> CREATION_TIMESTAMP_ATTRIBUTE = QueryFactory.attribute(DeckSummary.class, Long.class, "creationDate", (DeckSummary deck) -> deck.getCreationDate().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
     public static final Attribute<DeckSummary, LocalDateTime> MODIFY_DATE_ATTRIBUTE = QueryFactory.attribute(DeckSummary.class, LocalDateTime.class, "modificationDate", DeckSummary::getModifyDate);
     public static final Attribute<DeckSummary, Integer> USER_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, Integer.class, "user", (DeckSummary deck) -> deck.getUser() != null ? deck.getUser().getId() : null);
+    public static final Attribute<DeckSummary, String> VEKN_ID_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, String.class, "veknId", DeckSummary::getVeknId);
     public static final Attribute<DeckSummary, Integer> CLAN_NUMBER_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, Integer.class, "clanNumber", (DeckSummary deck) -> deck.getClans().size());
     public static final Attribute<DeckSummary, Integer> DISCIPLINE_NUMBER_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, Integer.class, "disciplineNumber", (DeckSummary deck) -> deck.getDisciplines().size());
     public static final Attribute<DeckSummary, String> AUTHOR_ATTRIBUTE = QueryFactory.nullableAttribute(DeckSummary.class, String.class, "author", (DeckSummary deck) -> deck.getAuthor() != null ? deck.getAuthor().toLowerCase() : null);
@@ -130,6 +131,8 @@ public class DeckSummary {
     private String country;
     private Integer year;
     private DeckUser user;
+    private DeckUser tournamentPlayer;
+    private String veknId;
     private String author;
     private String set;
     private String limitedFormat;
@@ -177,6 +180,8 @@ public class DeckSummary {
         summary.setCountry(deck.getCountry());
         summary.setYear(deck.getYear());
         summary.setUser(deck.getUser());
+        summary.setTournamentPlayer(deck.getTournamentPlayer());
+        summary.setVeknId(deck.getVeknId());
         summary.setAuthor(deck.getAuthor());
         summary.setSet(deck.getSet());
         summary.setLimitedFormat(deck.getLimitedFormat());

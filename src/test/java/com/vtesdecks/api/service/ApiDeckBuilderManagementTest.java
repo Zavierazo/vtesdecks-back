@@ -93,4 +93,32 @@ class ApiDeckBuilderManagementTest {
             verifyNoInteractions(messages, notifications, achievements);
         }
     }
+
+    @Test void matchingVeknIdNeverGrantsAnyTournamentDeckWritePermission() {
+        DeckEntity deck = DeckEntity.builder().id("tournament").type(DeckType.TOURNAMENT)
+                .veknId("003120065").name("Archive deck").user(null).build();
+        when(decks.findById("tournament")).thenReturn(Optional.of(deck));
+        var linkedUser = new com.vtesdecks.jpa.entity.UserEntity();
+        linkedUser.setId(7); linkedUser.setAdmin(false);
+        when(users.findById(7)).thenReturn(Optional.of(linkedUser));
+        var input = new com.vtesdecks.model.api.ApiDeckBuilder();
+        input.setId("tournament"); input.setName("Tampered"); input.setCards(List.of());
+        try (var auth = mockStatic(ApiUtils.class)) {
+            auth.when(ApiUtils::extractUserId).thenReturn(7);
+            assertNull(service.getDeck("tournament"));
+            assertThrows(IllegalArgumentException.class, () -> service.storeDeck(input));
+            assertFalse(service.deleteDeck("tournament", false));
+            assertFalse(service.deleteDeck("tournament", true));
+            assertFalse(service.restoreDeck("tournament"));
+            assertFalse(service.updateCollectionTracker("tournament", true));
+            assertThrows(ResponseStatusException.class, () -> service.visibility("tournament", true));
+            assertThrows(ResponseStatusException.class, () -> service.visibility("tournament", false));
+            assertEquals("Archive deck", deck.getName());
+            assertNull(deck.getUser());
+            assertFalse(deck.getDeleted());
+            verify(decks, never()).save(any());
+            verify(decks, never()).saveAndFlush(any());
+            verifyNoInteractions(cards, messages, notifications, achievements);
+        }
+    }
 }

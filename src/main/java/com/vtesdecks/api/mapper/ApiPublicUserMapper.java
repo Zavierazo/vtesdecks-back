@@ -2,6 +2,7 @@ package com.vtesdecks.api.mapper;
 
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.indexable.DeckSummary;
+import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.model.api.ApiPublicUser;
 import com.vtesdecks.model.api.ApiUserOfMonth;
@@ -15,7 +16,8 @@ public abstract class ApiPublicUserMapper {
 
     @Named("mapDeckUser")
     public ApiPublicUser mapUser(DeckSummary deck) {
-        var user = deck.getUser();
+        var user = deck.getType() == DeckType.TOURNAMENT && deck.getTournamentPlayer() != null
+                ? deck.getTournamentPlayer() : deck.getUser();
         if (user == null) {
             return null;
         }

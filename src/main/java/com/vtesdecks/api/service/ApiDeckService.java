@@ -186,6 +186,20 @@ public class ApiDeckService {
         return apiDecks;
     }
 
+    public ApiDecks getTournamentDecks(String username, int offset, int limit, String currencyCode) {
+        if (offset < 0 || limit < 1 || limit > 60) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination");
+        }
+        UserEntity user = userRepository.findByUsername(username);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        String veknId = Objects.requireNonNullElse(user.getVeknId(), "-1");
+        // userId remains null so this endpoint can only return public archive decks.
+        return getDecks(DeckQuery.builder().type(DeckType.TOURNAMENT).veknId(veknId)
+                .order(DeckSort.NEWEST).build(), null, null, currencyCode, offset, limit);
+    }
+
     private void applyAchievementBadges(ApiDeck deck) {
         if (deck.getUser() == null) {
             return;

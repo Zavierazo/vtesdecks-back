@@ -2,11 +2,31 @@ package com.vtesdecks.jpa.repositories;
 
 import com.vtesdecks.jpa.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
 public interface UserRepository extends JpaRepository<UserEntity, Integer> {
+
+    interface ArchonAccountLock {
+        Integer getId();
+        long getAuthVersion();
+        String getVeknId();
+    }
+
+    // A scalar projection also reads the latest version when OpenEntityManagerInView is active.
+    @Query(value = "SELECT id AS id, auth_version AS authVersion, vekn_id AS veknId FROM `user` WHERE id = :id FOR UPDATE", nativeQuery = true)
+    java.util.Optional<ArchonAccountLock> lockArchonAccount(Integer id);
+
+    @Query("select u.veknId from UserEntity u where u.id = :id")
+    String findVerifiedVeknId(Integer id);
+
+    java.util.Optional<UserEntity> findByVeknId(String veknId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "UPDATE `user` SET vekn_id = :veknId WHERE id = :id", nativeQuery = true)
+    void updateVerifiedVeknId(Integer id, String veknId);
 
     /** Minimal identifiers and visibility flags; never load account secrets for sitemap generation. */
     interface SitemapUser {

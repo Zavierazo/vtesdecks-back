@@ -23,8 +23,8 @@ import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.entity.DeckViewEntity;
 import com.vtesdecks.jpa.entity.ReactionEntity;
-import com.vtesdecks.jpa.repositories.CardErrataRepository;
 import com.vtesdecks.jpa.repositories.ArchonUserRepository;
+import com.vtesdecks.jpa.repositories.CardErrataRepository;
 import com.vtesdecks.jpa.repositories.CommentRepository;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.jpa.repositories.DeckViewRepository;
@@ -102,6 +102,7 @@ public class DeckFactory {
     public Deck getDeck(DeckEntity deck, List<DeckCard> deckCards, List<LimitedFormatPayload> limitedFormats, LocalDateTime cardsModificationDate) {
         Deck value = new Deck();
         value.setId(deck.getId());
+        value.setVeknId(deck.getVeknId());
         value.setType(deck.getType() != null ? DeckType.valueOf(deck.getType().name()) : null);
         value.setName(deck.getName());
         List<DeckViewEntity> views = deckViewRepository.findByIdDeckId(deck.getId());
@@ -146,6 +147,10 @@ public class DeckFactory {
         value.setPublished(deck.getPublished());
         value.setCollection(deck.getCollection());
         value.setDeckArchetypeId(deck.getDeckArchetypeId());
+        if (deck.getType() == DeckType.TOURNAMENT && StringUtils.isNotBlank(deck.getVeknId())) {
+            userRepository.findByVeknId(deck.getVeknId()).ifPresent(user ->
+                    value.setTournamentPlayer(DeckUser.from(user, userRepository.selectRolesByUserId(user.getId()))));
+        }
         if (deck.getUser() != null) {
             userRepository.findById(deck.getUser()).ifPresent(user -> {
                 value.setAuthor(user.getDisplayName());

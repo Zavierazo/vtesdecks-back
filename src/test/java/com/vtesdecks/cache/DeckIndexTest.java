@@ -66,6 +66,22 @@ class DeckIndexTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void verifiedPlayerFilterIsExactAndDoesNotRevealPrivateDecksOrChangeOwnership() {
+        IndexedCollection<DeckSummary> decks = (IndexedCollection<DeckSummary>) ReflectionTestUtils.getField(index, "decks");
+        var linked = eventDeck("linked", "event", 1, LocalDateTime.of(2026, 1, 1, 0, 0));
+        linked.setVeknId("003120065");
+        var privateDeck = eventDeck("private-linked", "event", 2, LocalDateTime.of(2026, 1, 1, 0, 0));
+        privateDeck.setVeknId("003120065"); privateDeck.setPublished(false);
+        var different = eventDeck("different", "event", 3, LocalDateTime.of(2026, 1, 1, 0, 0));
+        different.setVeknId("3120065");
+        decks.addAll(List.of(linked, privateDeck, different));
+        assertEquals(List.of("linked"), ids(DeckQuery.builder().type(DeckType.TOURNAMENT).veknId("003120065").build()));
+        assertEquals(List.of("different"), ids(DeckQuery.builder().type(DeckType.TOURNAMENT).veknId("3120065").build()));
+        assertEquals(null, index.get("linked").getUser());
+    }
+
+    @Test
     void preservesInclusiveYearAndPlayerRanges() {
         assertEquals(List.of("deck-2"), ids(DeckQuery.builder().minYear(2022).maxYear(2022).build()));
         assertEquals(List.of("deck-2"), ids(DeckQuery.builder().minPlayers(20).maxPlayers(20).build()));

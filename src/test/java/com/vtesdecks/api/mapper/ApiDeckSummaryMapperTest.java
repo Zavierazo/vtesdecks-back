@@ -13,6 +13,8 @@ import com.vtesdecks.cache.indexable.DeckCard;
 import com.vtesdecks.cache.indexable.DeckSummary;
 import com.vtesdecks.cache.indexable.Library;
 import com.vtesdecks.cache.indexable.deck.CollectionTracker;
+import com.vtesdecks.cache.indexable.deck.DeckType;
+import com.vtesdecks.cache.indexable.deck.DeckUser;
 import com.vtesdecks.cache.redis.entity.DeckArchetype;
 import com.vtesdecks.cache.redis.repositories.DeckArchetypeRedisRepository;
 import com.vtesdecks.configuration.WebConfiguration;
@@ -69,6 +71,60 @@ class ApiDeckSummaryMapperTest {
         CurrencyExchangeService currency = mock(CurrencyExchangeService.class);
         when(currency.convert(any(), anyString(), eq("USD"))).thenReturn(new BigDecimal("30.00"));
         ReflectionTestUtils.setField(mapper, "currencyExchangeService", currency);
+    }
+
+    @Test
+    void mapsCachedTournamentAttributionWithoutGrantingOwnership() {
+        full.setType(DeckType.TOURNAMENT);
+        full.setUser(null);
+        full.setAuthor("Original tournament player");
+        full.setTournamentPlayer(DeckUser.builder().id(42).username("player")
+                .displayName("Verified player").profileImage("https://example.test/player.png")
+                .roles(List.of("SUPPORTER")).build());
+        var converter = new MappingRedisConverter(new RedisMappingContext());
+        converter.afterPropertiesSet();
+        RedisData data = new RedisData();
+        converter.write(full, data);
+        Deck cached = converter.read(Deck.class, data);
+
+        for (ApiDeck response : List.of(mapper.map(cached, 42, false, "EUR"),
+                mapper.mapSummary(DeckSummary.from(cached), 42, null, "EUR"))) {
+            assertEquals("player", response.getUser().getUser());
+            assertEquals("Verified player", response.getUser().getDisplayName());
+            assertEquals(List.of("SUPPORTER"), response.getUser().getRoles());
+            assertFalse(response.getOwner());
+            assertEquals("Original tournament player", response.getAuthor());
+            var body = json.valueToTree(response);
+            assertFalse(body.has("veknId"));
+            assertFalse(body.has("tournamentPlayer"));
+            assertFalse(body.get("user").has("id"));
+            assertFalse(body.get("user").has("email"));
+        }
+        assertNull(cached.getUser());
+        assertNotNull(cached.getTournamentPlayer());
+
+        cached.setTournamentPlayer(null);
+        for (ApiDeck response : List.of(mapper.map(cached, 42, false, "EUR"),
+                mapper.mapSummary(DeckSummary.from(cached), 42, null, "EUR"))) {
+            assertNull(response.getUser());
+            assertFalse(response.getOwner());
+            assertEquals("Original tournament player", response.getAuthor());
+        }
+    }
+
+    @Test
+    void keepsOwnerAttributionWithoutATournamentLinkAndIgnoresLinksOnOtherDeckTypes() {
+        DeckUser owner = full.getUser();
+        for (DeckType type : List.of(DeckType.TOURNAMENT, DeckType.COMMUNITY)) {
+            full.setType(type);
+            full.setTournamentPlayer(type == DeckType.COMMUNITY
+                    ? DeckUser.builder().id(7).username("other-player").build() : null);
+            for (ApiDeck response : List.of(mapper.map(full, owner.getId(), false, "EUR"),
+                    mapper.mapSummary(DeckSummary.from(full), owner.getId(), null, "EUR"))) {
+                assertEquals(owner.getUsername(), response.getUser().getUser());
+                assertTrue(response.getOwner());
+            }
+        }
     }
 
     @Test

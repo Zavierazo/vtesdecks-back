@@ -7,6 +7,7 @@ import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckUserEntity;
 import com.vtesdecks.jpa.repositories.DeckUserRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
+import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.messaging.MessageProducer;
 import com.vtesdecks.model.DeckQuery;
 import com.vtesdecks.model.DeckSort;
@@ -24,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class DeckUserServiceImpl implements DeckUserService {
     private final DeckUserRepository deckUserRepository;
     private final DeckRepository deckRepository;
+    private final UserRepository userRepository;
     private final DeckService deckService;
     private final MessageProducer messageProducer;
     private final AchievementService achievementService;
@@ -103,6 +105,20 @@ public class DeckUserServiceImpl implements DeckUserService {
                 .build());
         if (deckUsers != null) {
             deckUsers.forEach(deck -> messageProducer.publishDeckSync(deck.getId()));
+        }
+        refreshTournamentDecks(userRepository.findVerifiedVeknId(userId));
+    }
+
+    @Override
+    public void refreshTournamentDecks(String veknId) {
+        if (veknId == null) {
+            return;
+        }
+        try (ResultSet<DeckSummary> decks = deckService.getDecks(DeckQuery.builder()
+                .type(DeckType.TOURNAMENT).veknId(veknId).build())) {
+            if (decks != null) {
+                decks.forEach(deck -> messageProducer.publishDeckSync(deck.getId()));
+            }
         }
     }
 }

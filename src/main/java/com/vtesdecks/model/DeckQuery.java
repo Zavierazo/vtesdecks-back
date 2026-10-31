@@ -7,8 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.LocalDate;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +26,7 @@ public class DeckQuery {
     private String name;
     private String author;
     private String username;
+    private String veknId;
     @Deprecated(since = "vtesdecks-front 2.62.0", forRemoval = true)
     private Boolean exactAuthor;
     private String cardText;

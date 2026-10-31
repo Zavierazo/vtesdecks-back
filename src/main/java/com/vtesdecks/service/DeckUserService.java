@@ -7,4 +7,6 @@ public interface DeckUserService {
     Boolean favorite(Integer userId, String deckId, Boolean favorite);
 
     void refreshUserDecks(Integer userId);
+
+    void refreshTournamentDecks(String veknId);
 }
