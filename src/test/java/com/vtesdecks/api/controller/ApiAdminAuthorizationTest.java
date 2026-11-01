@@ -25,6 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -82,6 +83,11 @@ class ApiAdminAuthorizationTest {
         mvc.perform(post("/api/1.0/admin/schedulers/deck-index"))
                 .andExpect(status().isForbidden())
                 .andExpect(content().string("Access Denied"));
+        for (String field : List.of("patreon-id", "vekn-id")) {
+            mvc.perform(put("/api/1.0/admin/users/target/" + field)
+                    .contentType("application/json").content("{\"patreonId\":null,\"veknId\":null}"))
+                    .andExpect(status().isForbidden());
+        }
         verifyNoInteractions(schedulerService);
     }
 

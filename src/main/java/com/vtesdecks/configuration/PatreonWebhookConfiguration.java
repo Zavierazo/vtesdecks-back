@@ -10,4 +10,10 @@ public class PatreonWebhookConfiguration {
 
     @Value("${patreon.webhook.secret:}")
     private String secret;
+
+    @Value("${patreon.campaignId:}")
+    private String campaignId;
+
+    @Value("${patreon.api.accessToken:}")
+    private String accessToken;
 }

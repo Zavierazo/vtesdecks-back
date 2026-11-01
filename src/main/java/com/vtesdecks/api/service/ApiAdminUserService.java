@@ -39,6 +39,7 @@ public class ApiAdminUserService {
     private final PasswordResetService passwordResetService;
     private final ApiUserService apiUserService;
     private final UserSecurityService security;
+    private final ApiArchonService archonService;
 
     @Transactional(readOnly = true)
     public Optional<ApiAdminUser> get(String identifier) {
@@ -143,6 +144,43 @@ public class ApiAdminUserService {
         return result;
     }
 
+    @Transactional
+    public Optional<ApiAdminUser> updatePatreonId(String identifier, String value, Integer actorUserId) {
+        UserEntity user = findUser(identifier);
+        if (user == null) {
+            return Optional.empty();
+        }
+        String patreonId = normalizeIdentifier(value);
+        if (patreonId != null && userRepository.findUserIdByPatreonId(patreonId)
+                .filter(id -> !id.equals(user.getId())).isPresent()) {
+            throw new IllegalStateException("Patreon ID is already in use");
+        }
+        userRepository.updatePatreonId(user.getId(), patreonId);
+        log.info("Admin Patreon ID updated actorUserId={} targetUserId={}", actorUserId, user.getId());
+        return userRepository.findById(user.getId()).map(this::map);
+    }
+
+    public Optional<ApiAdminUser> updateVeknId(String identifier, String value, Integer actorUserId) {
+        UserEntity user = findUser(identifier);
+        if (user == null) {
+            return Optional.empty();
+        }
+        archonService.replaceVeknId(user.getId(), normalizeIdentifier(value));
+        log.info("Admin VEKN ID updated actorUserId={} targetUserId={}", actorUserId, user.getId());
+        return userRepository.findById(user.getId()).map(this::map);
+    }
+
+    private String normalizeIdentifier(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String normalized = value.trim();
+        if (normalized.length() > 64 || !normalized.matches("[0-9]+")) {
+            throw new IllegalArgumentException("Identifier must contain at most 64 digits");
+        }
+        return normalized;
+    }
+
     private ApiAdminUser map(UserEntity user) {
         List<String> roles = new ArrayList<>(new LinkedHashSet<>(userRepository.selectRolesByUserId(user.getId())));
         roles.sort(String::compareTo);
@@ -174,6 +212,8 @@ public class ApiAdminUserService {
                 .displayName(user.getDisplayName())
                 .profileImage(ApiUtils.getProfileImage(user))
                 .email(user.getEmail())
+                .patreonId(user.getPatreonId())
+                .veknId(user.getVeknId())
                 .validated(user.getValidated())
                 .admin(user.getAdmin())
                 .roles(roles)

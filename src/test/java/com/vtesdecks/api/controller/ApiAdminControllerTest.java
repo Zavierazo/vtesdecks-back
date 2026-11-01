@@ -5,6 +5,8 @@ import com.vtesdecks.api.service.ApiAdminUserService;
 import com.vtesdecks.api.service.PasswordResetService;
 import com.vtesdecks.model.api.ApiAdminUser;
 import com.vtesdecks.model.api.ApiAdminUserEmail;
+import com.vtesdecks.model.api.ApiAdminUserPatreonId;
+import com.vtesdecks.model.api.ApiAdminUserVeknId;
 import com.vtesdecks.model.api.ApiUser;
 import com.vtesdecks.service.FeatureFlagService;
 import org.junit.jupiter.api.AfterEach;
@@ -94,6 +96,30 @@ class ApiAdminControllerTest {
         when(userService.impersonate("target", 42)).thenReturn(Optional.of(user));
 
         assertEquals(user, controller.impersonateUser("target").getBody());
+    }
+
+    @Test
+    void identifierUpdatesExposeSavedValuesAndExpectedErrors() {
+        var body = new ApiAdminUserPatreonId("00123");
+        var user = ApiAdminUser.builder().user("target").patreonId("00123").build();
+        when(userService.updatePatreonId("target", "00123", 42)).thenReturn(Optional.of(user));
+        assertEquals("00123", controller.updateUserPatreonId("target", body).getBody().getPatreonId());
+        when(userService.updatePatreonId("target", "00123", 42)).thenThrow(new IllegalStateException());
+        assertEquals(409, controller.updateUserPatreonId("target", body).getStatusCode().value());
+        org.mockito.Mockito.doThrow(new IllegalArgumentException()).when(userService).updatePatreonId("target", "00123", 42);
+        assertEquals(400, controller.updateUserPatreonId("target", body).getStatusCode().value());
+        assertEquals(404, controller.updateUserVeknId("missing", new ApiAdminUserVeknId(null)).getStatusCode().value());
+    }
+
+    @Test
+    void requiresExplicitIdentifierFieldButAcceptsNullToClear() throws Exception {
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/1.0/admin/users/target/patreon-id")
+                .contentType("application/json").content("{}"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/1.0/admin/users/missing/vekn-id")
+                .contentType("application/json").content("{\"veknId\":null}"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
     }
 
     @Test

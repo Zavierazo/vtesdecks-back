@@ -20,7 +20,9 @@ import java.util.Set;
 @Slf4j
 public class ApiPatreonWebhookController {
 
-    private static final Set<String> SUPPORTED_EVENTS = Set.of("members:create", "members:update");
+    private static final Set<String> SUPPORTED_EVENTS = Set.of(
+            "members:create", "members:update", "members:delete",
+            "members:pledge:create", "members:pledge:update", "members:pledge:delete");
 
     private final PatreonSignatureVerifier signatureVerifier;
     private final PatreonWebhookService webhookService;
@@ -35,12 +37,15 @@ public class ApiPatreonWebhookController {
             log.warn("Rejected Patreon webhook with an invalid signature");
             return ResponseEntity.status(401).build();
         }
-        if (!SUPPORTED_EVENTS.contains(event)) {
-            log.warn("Rejected unsupported Patreon webhook event {}", event);
+        if (event == null) {
             return ResponseEntity.badRequest().build();
         }
+        if (!SUPPORTED_EVENTS.contains(event)) {
+            log.warn("Rejected unsupported Patreon webhook event {}", event);
+            return ResponseEntity.noContent().build();
+        }
         try {
-            webhookService.process(body);
+            webhookService.process(event, body);
             return ResponseEntity.noContent().build();
         } catch (IOException | IllegalArgumentException exception) {
             log.warn("Rejected malformed Patreon webhook: {}", exception.getMessage());

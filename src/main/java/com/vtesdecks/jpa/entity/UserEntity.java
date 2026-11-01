@@ -28,6 +28,9 @@ public class UserEntity {
     @Column(name = "auth_version", nullable = false)
     private long authVersion;
 
+    @Column(name = "patreon_id", unique = true, length = 64, insertable = false, updatable = false)
+    private String patreonId;
+
     @Column(name = "vekn_id", unique = true, length = 64, insertable = false, updatable = false)
     private String veknId;
 

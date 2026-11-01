@@ -8,6 +8,9 @@ import com.vtesdecks.model.api.ApiAdminScheduler;
 import com.vtesdecks.model.api.ApiAdminUser;
 import com.vtesdecks.model.api.ApiAdminUserAccess;
 import com.vtesdecks.model.api.ApiAdminUserEmail;
+import com.vtesdecks.model.api.ApiAdminUserPatreonId;
+import com.vtesdecks.model.api.ApiAdminUserVeknId;
+import org.springframework.dao.DataIntegrityViolationException;
 import com.vtesdecks.model.api.ApiFeatureFlag;
 import com.vtesdecks.model.api.ApiFeatureFlagValue;
 import com.vtesdecks.model.api.ApiUser;
@@ -75,6 +78,38 @@ public class ApiAdminController {
             return ResponseEntity.badRequest().build();
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+    }
+
+    @PutMapping(value = "/users/{identifier}/patreon-id", consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiAdminUser> updateUserPatreonId(@PathVariable String identifier,
+                                                          @RequestBody ApiAdminUserPatreonId body) {
+        if (body == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        try {
+            return userService.updatePatreonId(identifier, body.patreonId(), ApiUtils.extractUserId())
+                    .map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().build();
+        } catch (IllegalStateException | DataIntegrityViolationException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+    }
+
+    @PutMapping(value = "/users/{identifier}/vekn-id", consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiAdminUser> updateUserVeknId(@PathVariable String identifier,
+                                                       @RequestBody ApiAdminUserVeknId body) {
+        if (body == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        try {
+            return userService.updateVeknId(identifier, body.veknId(), ApiUtils.extractUserId())
+                    .map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().build();
         }
     }
 

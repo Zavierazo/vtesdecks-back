@@ -2,14 +2,17 @@ package com.vtesdecks.api.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.configuration.PatreonWebhookConfiguration;
+import com.vtesdecks.integration.PatreonMember;
+import com.vtesdecks.integration.PatreonMember.Decision;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 
@@ -17,86 +20,45 @@ import java.io.IOException;
 @RequiredArgsConstructor
 @Slf4j
 public class PatreonWebhookService {
-
-    private static final String SUPPORTER_ROLE = "supporter";
-    private static final String ASSIGN_SUPPORTER_SQL = """
-            INSERT IGNORE INTO user_role (user_id, role_id)
-            SELECT ?, MIN(candidate_role.id)
-            FROM role candidate_role
-            WHERE candidate_role.name = ?
-              AND NOT EXISTS (
-                SELECT 1
-                FROM user_role assigned_user_role
-                JOIN role assigned_role ON assigned_role.id = assigned_user_role.role_id
-                WHERE assigned_user_role.user_id = ? AND assigned_role.name = ?
-              )
-            HAVING MIN(candidate_role.id) IS NOT NULL
-            """;
-
     private final ObjectMapper objectMapper;
-    private final UserRepository userRepository;
-    private final JdbcTemplate jdbcTemplate;
+    private final UserRepository users;
+    private final PatreonSupporterService supporters;
+    private final PatreonWebhookConfiguration configuration;
 
     @Transactional
-    public void process(byte[] body) throws IOException {
+    public void process(String event, byte[] body) throws IOException {
+        if (StringUtils.isBlank(configuration.getCampaignId())) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Patreon campaign is not configured");
+        }
         JsonNode root = objectMapper.readTree(body);
-        JsonNode data = root.path("data");
-        if (data.isMissingNode() || !data.isObject()) {
+        if (root == null || !root.path("data").isObject()) {
             throw new IllegalArgumentException("Missing Patreon member data");
         }
-
-        String memberId = text(data, "id");
-        JsonNode attributes = data.path("attributes");
-        long lifetimeSupportCents = attributes.path("campaign_lifetime_support_cents").asLong(0);
-        if (lifetimeSupportCents <= 0) {
-            // Patreon webhook examples have historically used both names.
-            lifetimeSupportCents = attributes.path("lifetime_support_cents").asLong(0);
-        }
-        if (lifetimeSupportCents <= 0) {
-            log.info("Ignoring unpaid Patreon member {}", memberId);
+        JsonNode data = root.path("data");
+        String campaignId = data.path("relationships").path("campaign").path("data").path("id").asText();
+        if (!configuration.getCampaignId().equals(campaignId)) {
+            log.warn("Ignored Patreon webhook for another or missing campaign");
             return;
         }
-
-        String email = text(attributes, "email");
-        if (StringUtils.isBlank(email)) {
-            email = includedUserEmail(root, data);
-        }
-        if (StringUtils.isBlank(email)) {
-            log.info("Ignoring paid Patreon member {} because no email was supplied", memberId);
-            return;
-        }
-
-        UserEntity user = userRepository.findByEmailIgnoreCase(email.trim());
-        if (user == null) {
-            log.info("No VTESDecks user matches paid Patreon member {} with email {}", memberId, email);
-            return;
-        }
-
-        int inserted = jdbcTemplate.update(
-                ASSIGN_SUPPORTER_SQL,
-                user.getId(), SUPPORTER_ROLE, user.getId(), SUPPORTER_ROLE);
-        if (inserted > 0) {
-            log.info("Granted supporter role to VTESDecks user {} from Patreon member {}", user.getId(), memberId);
-        } else {
-            log.debug("VTESDecks user {} already has the supporter role", user.getId());
-        }
-    }
-
-    private String includedUserEmail(JsonNode root, JsonNode data) {
-        String userId = text(data.path("relationships").path("user").path("data"), "id");
-        if (StringUtils.isBlank(userId) || !root.path("included").isArray()) {
-            return null;
-        }
-        for (JsonNode included : root.path("included")) {
-            if ("user".equals(text(included, "type")) && userId.equals(text(included, "id"))) {
-                return text(included.path("attributes"), "email");
+        PatreonMember member = PatreonMember.read(root, data, configuration.getCampaignId(), "members:delete".equals(event));
+        Integer userId = users.findUserIdByPatreonId(member.userId()).orElse(null);
+        if (userId == null && member.decision() == Decision.GRANT && member.email() != null) {
+            var emailUser = users.findByEmailIgnoreCase(member.email());
+            if (emailUser != null) {
+                var account = users.lockPatreonAccount(emailUser.getId()).orElseThrow();
+                if (StringUtils.isNotBlank(account.getPatreonId()) && !member.userId().equals(account.getPatreonId())) {
+                    log.warn("Patreon identity conflict userId={} receivedPatreonId={}", account.getId(), member.userId());
+                    return;
+                }
+                users.updatePatreonId(account.getId(), member.userId());
+                userId = account.getId();
+                log.info("Linked Patreon account userId={} patreonId={}", userId, member.userId());
             }
         }
-        return null;
-    }
-
-    private String text(JsonNode node, String field) {
-        JsonNode value = node.path(field);
-        return value.isTextual() ? value.textValue() : null;
+        if (userId == null) {
+            log.info("No linked account for Patreon userId={} decision={}", member.userId(), member.decision());
+            return;
+        }
+        supporters.apply(userId, member.userId(), member.decision());
     }
 }

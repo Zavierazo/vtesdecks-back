@@ -1,6 +1,8 @@
 package com.vtesdecks.api.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vtesdecks.configuration.PatreonWebhookConfiguration;
+import com.vtesdecks.integration.PatreonMember.Decision;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,135 +10,130 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PatreonWebhookServiceTest {
-
-    @Mock
-    private UserRepository userRepository;
-    @Mock
-    private JdbcTemplate jdbcTemplate;
+    @Mock private UserRepository users;
+    @Mock private PatreonSupporterService supporters;
     private PatreonWebhookService service;
 
     @BeforeEach
-    void setUp() {
-        service = new PatreonWebhookService(new ObjectMapper(), userRepository, jdbcTemplate);
+    void setup() {
+        var configuration = mock(PatreonWebhookConfiguration.class);
+        when(configuration.getCampaignId()).thenReturn("campaign");
+        service = new PatreonWebhookService(new ObjectMapper(), users, supporters, configuration);
     }
 
     @Test
-    void assignsSupporterToMatchingVerifiedPaidPatron() throws Exception {
-        UserEntity user = user(42, true);
-        when(userRepository.findByEmailIgnoreCase("patron@example.com")).thenReturn(user);
-        whenAssignment().thenReturn(1);
-
-        service.process(payload(500, "patron@example.com").getBytes(StandardCharsets.UTF_8));
-
-        verifyAssignment();
+    void prioritizesLinkedIdOverAnyEmail() throws Exception {
+        when(users.findUserIdByPatreonId("123")).thenReturn(Optional.of(42));
+        process("Paid", 500, "active_patron", "other@example.com");
+        verify(supporters).apply(42, "123", Decision.GRANT);
+        verify(users, never()).findByEmailIgnoreCase(anyString());
     }
 
     @Test
-    void acceptsEmailFromIncludedPatreonUser() throws Exception {
-        UserEntity user = user(42, true);
-        when(userRepository.findByEmailIgnoreCase("included@example.com")).thenReturn(user);
-
-        service.process(payloadWithIncludedEmail(500).getBytes(StandardCharsets.UTF_8));
-
-        verifyAssignment();
+    void linksPaidUserFoundByEmailWithoutOverwritingAnExistingId() throws Exception {
+        var user = new UserEntity(); user.setId(42);
+        when(users.findByEmailIgnoreCase("patron@example.com")).thenReturn(user);
+        when(users.lockPatreonAccount(42)).thenReturn(Optional.of(account(null)));
+        process("Paid", 500, "active_patron", "patron@example.com");
+        verify(users).updatePatreonId(42, "123");
+        verify(supporters).apply(42, "123", Decision.GRANT);
     }
 
     @Test
-    void repeatedDeliveryUsesIdempotentAssignment() throws Exception {
-        UserEntity user = user(42, true);
-        when(userRepository.findByEmailIgnoreCase("patron@example.com")).thenReturn(user);
-        whenAssignment().thenReturn(1, 0);
-        byte[] body = payload(500, "patron@example.com").getBytes(StandardCharsets.UTF_8);
-
-        service.process(body);
-        service.process(body);
-
-        verify(jdbcTemplate, org.mockito.Mockito.times(2))
-                .update(anyString(), eq(42), eq("supporter"), eq(42), eq("supporter"));
+    void preservesConflictingIdentityAndRole() throws Exception {
+        var user = new UserEntity(); user.setId(42);
+        when(users.findByEmailIgnoreCase("patron@example.com")).thenReturn(user);
+        when(users.lockPatreonAccount(42)).thenReturn(Optional.of(account("999")));
+        process("Paid", 500, "active_patron", "patron@example.com");
+        verify(users, never()).updatePatreonId(anyInt(), anyString());
+        verifyNoInteractions(supporters);
     }
 
     @Test
-    void ignoresMemberWithoutSuccessfulPayment() throws Exception {
-        service.process(payload(0, "patron@example.com").getBytes(StandardCharsets.UTF_8));
-
-        verify(userRepository, never()).findByEmailIgnoreCase(anyString());
-        verifyNoAssignment();
+    void cancelledRenewalKeepsThePaidPeriodAndExpiryRemovesOnlyTheRole() throws Exception {
+        when(users.findUserIdByPatreonId("123")).thenReturn(Optional.of(42));
+        process("Paid", 500, "former_patron", "");
+        process("Paid", 0, "former_patron", "");
+        verify(supporters).apply(42, "123", Decision.GRANT);
+        verify(supporters).apply(42, "123", Decision.REMOVE);
+        verify(users, never()).updatePatreonId(anyInt(), any());
     }
 
     @Test
-    void ignoresMissingOrUnmatchedEmail() throws Exception {
-        service.process(payload(500, null).getBytes(StandardCharsets.UTF_8));
-        when(userRepository.findByEmailIgnoreCase("unknown@example.com")).thenReturn(null);
-        service.process(payload(500, "unknown@example.com").getBytes(StandardCharsets.UTF_8));
-
-        verifyNoAssignment();
+    void declinedChargeRemovesSupporterEvenWithHistoricalPayments() throws Exception {
+        when(users.findUserIdByPatreonId("123")).thenReturn(Optional.of(42));
+        process("Declined", 500, "declined_patron", "");
+        verify(supporters).apply(42, "123", Decision.REMOVE);
     }
 
     @Test
-    void assignsSupporterToMatchingUnverifiedUser() throws Exception {
-        when(userRepository.findByEmailIgnoreCase("patron@example.com")).thenReturn(user(42, false));
-
-        service.process(payload(500, "patron@example.com").getBytes(StandardCharsets.UTF_8));
-
-        verifyAssignment();
+    void doesNotLinkOrRemoveAnUnknownSupporterByEmailOnCancellation() throws Exception {
+        process("Paid", 0, "former_patron", "patron@example.com");
+        verify(users, never()).findByEmailIgnoreCase(anyString());
+        verifyNoInteractions(supporters);
     }
 
     @Test
-    void acceptsLegacyLifetimeSupportFieldName() throws Exception {
-        UserEntity user = user(42, true);
-        when(userRepository.findByEmailIgnoreCase("patron@example.com")).thenReturn(user);
-        String body = payload(500, "patron@example.com")
-                .replace("campaign_lifetime_support_cents", "lifetime_support_cents");
-
-        service.process(body.getBytes(StandardCharsets.UTF_8));
-
-        verifyAssignment();
+    void incompletePaymentInformationKeepsTheRole() throws Exception {
+        when(users.findUserIdByPatreonId("123")).thenReturn(Optional.of(42));
+        service.process("members:update", payload("null", "null", "null", "").getBytes(StandardCharsets.UTF_8));
+        verify(supporters).apply(42, "123", Decision.KEEP);
     }
 
-    private UserEntity user(int id, boolean validated) {
-        UserEntity user = new UserEntity();
-        user.setId(id);
-        user.setValidated(validated);
-        return user;
+    @Test
+    void acceptsEmailFromIncludedUser() throws Exception {
+        var user = new UserEntity(); user.setId(42);
+        when(users.findByEmailIgnoreCase("included@example.com")).thenReturn(user);
+        when(users.lockPatreonAccount(42)).thenReturn(Optional.of(account(null)));
+        String body = payload("\"Paid\"", "500", "\"active_patron\"", "");
+        body = body.substring(0, body.lastIndexOf('}'))
+                + ",\"included\":[{\"type\":\"user\",\"id\":\"123\",\"attributes\":{\"email\":\"included@example.com\"}}]}";
+        service.process("members:update", body.getBytes(StandardCharsets.UTF_8));
+        verify(users).updatePatreonId(42, "123");
     }
 
-    private org.mockito.stubbing.OngoingStubbing<Integer> whenAssignment() {
-        return when(jdbcTemplate.update(anyString(), eq(42), eq("supporter"), eq(42), eq("supporter")));
+    @Test
+    void ignoresOtherCampaignWithoutLookingUpAnyAccount() throws Exception {
+        service.process("members:update", payload("null", "0", "null", "").replace("campaign", "other").getBytes(StandardCharsets.UTF_8));
+        verifyNoInteractions(users, supporters);
     }
 
-    private void verifyAssignment() {
-        verify(jdbcTemplate).update(anyString(), eq(42), eq("supporter"), eq(42), eq("supporter"));
+    @Test
+    void neverGrantsOnFreeTrialAndProcessesDeletion() throws Exception {
+        when(users.findUserIdByPatreonId("123")).thenReturn(Optional.of(42));
+        service.process("members:update", payload("\"Paid\"", "500", "null", "")
+                .replace("\"campaign_lifetime_support_cents\":500", "\"is_free_trial\":true").getBytes(StandardCharsets.UTF_8));
+        verify(supporters).apply(42, "123", Decision.KEEP);
+        service.process("members:delete", payload("null", "null", "null", "").getBytes(StandardCharsets.UTF_8));
+        verify(supporters).apply(42, "123", Decision.REMOVE);
     }
 
-    private void verifyNoAssignment() {
-        verify(jdbcTemplate, never()).update(anyString(), eq(42), eq("supporter"), eq(42), eq("supporter"));
+    private void process(String charge, int amount, String status, String email) throws Exception {
+        service.process("members:update", payload("\"" + charge + "\"", Integer.toString(amount), "\"" + status + "\"", email).getBytes(StandardCharsets.UTF_8));
     }
 
-    private String payload(long lifetimeSupportCents, String email) {
-        String emailJson = email == null ? "" : ",\"email\":\"" + email + "\"";
+    private String payload(String charge, String amount, String status, String email) {
         return """
-                {"data":{"type":"member","id":"member-1",
-                "attributes":{"campaign_lifetime_support_cents":%d%s},
-                "relationships":{"user":{"data":{"type":"user","id":"patreon-user-1"}}}}}
-                """.formatted(lifetimeSupportCents, emailJson);
+                {"data":{"type":"member","id":"member-1","attributes":{
+                "email":"%s","last_charge_status":%s,"currently_entitled_amount_cents":%s,
+                "patron_status":%s,"campaign_lifetime_support_cents":500},
+                "relationships":{"user":{"data":{"id":"123","type":"user"}},
+                "campaign":{"data":{"id":"campaign","type":"campaign"}}}}}
+                """.formatted(email, charge, amount, status);
     }
 
-    private String payloadWithIncludedEmail(long lifetimeSupportCents) {
-        String base = payload(lifetimeSupportCents, null);
-        return base.substring(0, base.lastIndexOf('}'))
-                + ",\"included\":[{\"type\":\"user\",\"id\":\"patreon-user-1\","
-                + "\"attributes\":{\"email\":\"included@example.com\"}}]}";
+    private UserRepository.PatreonAccount account(String patreonId) {
+        return new UserRepository.PatreonAccount() {
+            public Integer getId() { return 42; }
+            public String getPatreonId() { return patreonId; }
+        };
     }
 }

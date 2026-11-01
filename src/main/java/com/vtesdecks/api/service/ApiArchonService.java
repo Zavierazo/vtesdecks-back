@@ -135,6 +135,31 @@ public class ApiArchonService {
         revoke(token);
     }
 
+    /** Trusted administrator override; admin updates are guaranteed not to run in parallel. */
+    public void replaceVeknId(Integer userId, String veknId) {
+        String token;
+        try {
+            token = transaction.execute(status -> {
+                String previousVeknId = users.findVerifiedVeknId(userId);
+                if (Objects.equals(previousVeknId, veknId)) {
+                    return null;
+                }
+                if (veknId != null && users.findUserIdByVeknId(veknId)
+                        .filter(id -> !id.equals(userId)).isPresent()) {
+                    throw error(HttpStatus.CONFLICT, "archon_identity_in_use");
+                }
+                users.updateVerifiedVeknId(userId, veknId);
+                String previousToken = logins.disconnect(userId);
+                deckUserService.refreshTournamentDecks(previousVeknId);
+                deckUserService.refreshTournamentDecks(veknId);
+                return previousToken;
+            });
+        } catch (DataIntegrityViolationException exception) {
+            throw error(HttpStatus.CONFLICT, "archon_identity_in_use");
+        }
+        revoke(token);
+    }
+
     private Attempt consume(Integer userId, ApiArchonCallback callback) {
         var user = lockUser(userId);
         var attempt = logins.findAttempt(userId);

@@ -9,6 +9,7 @@ import com.vtesdecks.scheduler.ArchonUserScheduler;
 import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import com.vtesdecks.scheduler.PatreonReminderScheduler;
+import com.vtesdecks.scheduler.PatreonSupporterScheduler;
 import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.scheduler.UserMonthScheduler;
 import com.vtesdecks.scheduler.VtesdleTodayScheduler;
@@ -64,12 +65,14 @@ class ApiAdminSchedulerServiceTest {
     private AchievementScheduler achievementScheduler;
     @Mock
     private PatreonReminderScheduler patreonReminderScheduler;
+    @Mock
+    private PatreonSupporterScheduler patreonSupporterScheduler;
     @InjectMocks
     private ApiAdminSchedulerService service;
 
     @Test
     void exposesEveryMigratedManualScheduler() {
-        assertEquals(22, service.getAll().size());
+        assertEquals(23, service.getAll().size());
         assertFalse(service.getAll().stream().anyMatch(item -> item.key().equals("twda-eternal-vigilance")));
         assertFalse(service.getAll().stream().anyMatch(item -> item.key().equals("drive-thru-cards") || item.key().equals("game-pod")));
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("market")));
@@ -91,6 +94,12 @@ class ApiAdminSchedulerServiceTest {
                 && item.description().equals("Refresh library index")));
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("twda-archon-decks")
                 && item.description().equals("Import Archon finalist decks")));
+    }
+
+    @Test
+    void runsPatreonSupporterReconciliation() {
+        assertTrue(service.run("patreon-supporters", 42));
+        verify(patreonSupporterScheduler).reconcile();
     }
 
     @Test

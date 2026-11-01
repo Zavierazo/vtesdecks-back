@@ -283,6 +283,43 @@ class ApiArchonServiceTest {
         assertEquals(503, failure(() -> service.connect()));
     }
 
+    @Test
+    void adminReplacementRevokesCachedTokenAndRefreshesBothIdentities() {
+        service.complete(callback(start()));
+        clearInvocations(deckUserService);
+        service.replaceVeknId(7, "00123");
+        assertEquals("00123", service.status().veknId());
+        assertTrue(redisValues.isEmpty());
+        verify(client).revoke("access");
+        verify(deckUserService).refreshTournamentDecks("003120065");
+        verify(deckUserService).refreshTournamentDecks("00123");
+        service.replaceVeknId(7, null);
+        assertFalse(service.status().linked());
+    }
+
+    @Test
+    void adminReplacementInvalidatesInFlightOAuthAndWorksWhenNewConnectionsAreDisabled() {
+        String state = start();
+        when(client.userInfo("access")).thenAnswer(call -> {
+            service.replaceVeknId(7, "00123");
+            return new ArchonMemberClient.Member("member-7", "003120065");
+        });
+        assertEquals(400, failure(() -> service.complete(callback(state))));
+        assertEquals("00123", service.status().veknId());
+        when(client.available()).thenReturn(false);
+        service.replaceVeknId(7, "00456");
+        assertEquals("00456", service.status().veknId());
+    }
+
+    @Test
+    void conflictingAdminReplacementPreservesPendingAuthorization() {
+        new TransactionTemplate(transactions).executeWithoutResult(status -> users.updateVerifiedVeknId(8, "00123"));
+        start();
+        assertEquals(409, failure(() -> service.replaceVeknId(7, "00123")));
+        assertNotNull(logins.findAttempt(7));
+        assertFalse(service.status().linked());
+    }
+
     private String start() {
         return service.connect().authorizationUrl().split("state=")[1].split("&")[0];
     }

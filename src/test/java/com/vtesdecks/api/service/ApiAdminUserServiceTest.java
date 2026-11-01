@@ -13,13 +13,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
@@ -38,12 +42,14 @@ class ApiAdminUserServiceTest {
     private PasswordResetService passwordResetService;
     @Mock
     private ApiUserService apiUserService;
+    @Mock
+    private ApiArchonService archonService;
     private ApiAdminUserService service;
     private UserEntity user;
 
     @BeforeEach
     void setUp() {
-        service = new ApiAdminUserService(userRepository, jdbcTemplate, passwordResetService, apiUserService, security);
+        service = new ApiAdminUserService(userRepository, jdbcTemplate, passwordResetService, apiUserService, security, archonService);
         user = new UserEntity();
         user.setId(7);
         user.setUsername("target");
@@ -163,6 +169,43 @@ class ApiAdminUserServiceTest {
 
         assertEquals("target-token", result.getToken());
         verify(apiUserService).getAuthenticatedUser(user, List.of("supporter"));
+    }
+
+    @Test
+    void updatesPrivatePatreonIdWithoutSavingOrChangingRoles() {
+        when(userRepository.findByUsername("target")).thenReturn(user);
+        when(userRepository.findById(7)).thenAnswer(call -> {
+            user.setPatreonId("00123");
+            return Optional.of(user);
+        });
+        when(userRepository.selectRolesByUserId(7)).thenReturn(List.of("supporter"));
+        var result = service.updatePatreonId("target", " 00123 ", 42).orElseThrow();
+        assertEquals("00123", result.getPatreonId());
+        verify(userRepository).updatePatreonId(7, "00123");
+        verify(userRepository, never()).save(any());
+        verify(security, never()).revoke(any());
+    }
+
+    @Test
+    void rejectsInvalidAndDuplicateIdentifiers() {
+        when(userRepository.findByUsername("target")).thenReturn(user);
+        assertThrows(IllegalArgumentException.class, () -> service.updatePatreonId("target", "abc", 42));
+        assertThrows(IllegalArgumentException.class, () -> service.updateVeknId("target", "1".repeat(65), 42));
+        when(userRepository.findUserIdByPatreonId("123")).thenReturn(Optional.of(8));
+        assertThrows(IllegalStateException.class, () -> service.updatePatreonId("target", "123", 42));
+        verify(userRepository, never()).updatePatreonId(anyInt(), any());
+    }
+
+    @Test
+    void clearsPatreonIdAndDelegatesTrustedVeknEdits() {
+        when(userRepository.findByUsername("target")).thenReturn(user);
+        when(userRepository.findById(7)).thenReturn(Optional.of(user));
+        service.updatePatreonId("target", " ", 42);
+        verify(userRepository).updatePatreonId(7, null);
+        service.updateVeknId("target", " 003120065 ", 42);
+        verify(archonService).replaceVeknId(7, "003120065");
+        service.updateVeknId("target", null, 42);
+        verify(archonService).replaceVeknId(7, null);
     }
 
     @Test

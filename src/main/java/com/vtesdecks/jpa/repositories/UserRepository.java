@@ -15,6 +15,27 @@ public interface UserRepository extends JpaRepository<UserEntity, Integer> {
         String getVeknId();
     }
 
+    interface PatreonAccount {
+        Integer getId();
+        String getPatreonId();
+    }
+
+    @Query("select u.id as id, u.patreonId as patreonId from UserEntity u where u.patreonId is not null")
+    List<PatreonAccount> findPatreonAccounts();
+
+    @Query(value = "SELECT id AS id, patreon_id AS patreonId FROM `user` WHERE id = :id FOR UPDATE", nativeQuery = true)
+    java.util.Optional<PatreonAccount> lockPatreonAccount(Integer id);
+
+    @Query("select u.id from UserEntity u where u.patreonId = :patreonId")
+    java.util.Optional<Integer> findUserIdByPatreonId(String patreonId);
+
+    @Query("select u.id from UserEntity u where u.veknId = :veknId")
+    java.util.Optional<Integer> findUserIdByVeknId(String veknId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "UPDATE `user` SET patreon_id = :patreonId WHERE id = :id", nativeQuery = true)
+    void updatePatreonId(Integer id, String patreonId);
+
     // A scalar projection also reads the latest version when OpenEntityManagerInView is active.
     @Query(value = "SELECT id AS id, auth_version AS authVersion, vekn_id AS veknId FROM `user` WHERE id = :id FOR UPDATE", nativeQuery = true)
     java.util.Optional<ArchonAccountLock> lockArchonAccount(Integer id);

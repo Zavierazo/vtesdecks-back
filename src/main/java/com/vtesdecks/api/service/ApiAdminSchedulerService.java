@@ -10,6 +10,7 @@ import com.vtesdecks.scheduler.ArchonUserScheduler;
 import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
 import com.vtesdecks.scheduler.PatreonReminderScheduler;
+import com.vtesdecks.scheduler.PatreonSupporterScheduler;
 import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.scheduler.UserMonthScheduler;
 import com.vtesdecks.scheduler.VtesdleTodayScheduler;
@@ -49,6 +50,7 @@ public class ApiAdminSchedulerService {
             new ApiAdminScheduler("deck-archetype-index", "Rebuild deck archetype index"),
             new ApiAdminScheduler("user-month", "Calculate users of the month"),
             new ApiAdminScheduler("achievements", "Reconcile achievements"),
+            new ApiAdminScheduler("patreon-supporters", "Synchronize Patreon supporters"),
             new ApiAdminScheduler("patreon-reminder", "Send Patreon reminders")
     );
 
@@ -68,6 +70,7 @@ public class ApiAdminSchedulerService {
     private final UserMonthScheduler userMonthScheduler;
     private final AchievementScheduler achievementScheduler;
     private final PatreonReminderScheduler patreonReminderScheduler;
+    private final PatreonSupporterScheduler patreonSupporterScheduler;
 
     public List<ApiAdminScheduler> getAll() {
         return SCHEDULERS;
@@ -97,6 +100,7 @@ public class ApiAdminSchedulerService {
             case "deck-archetype-index" -> deckArchetypeIndex.refreshIndex();
             case "user-month" -> userMonthScheduler.selectUsersOfMonth();
             case "achievements" -> achievementScheduler.reconcile();
+            case "patreon-supporters" -> patreonSupporterScheduler.reconcile();
             case "patreon-reminder" -> patreonReminderScheduler.remindPatreon();
             default -> {
                 return false;

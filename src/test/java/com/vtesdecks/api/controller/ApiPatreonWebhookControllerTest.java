@@ -49,7 +49,17 @@ class ApiPatreonWebhookControllerTest {
                         .content(BODY))
                 .andExpect(status().isNoContent());
 
-        verify(webhookService).process(BODY.getBytes(StandardCharsets.UTF_8));
+        verify(webhookService).process(eq("members:update"), eq(BODY.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"members:create", "members:update", "members:delete", "members:pledge:create", "members:pledge:update", "members:pledge:delete"})
+    void acceptsAllMembershipEvents(String event) throws Exception {
+        when(signatureVerifier.isValid(any(byte[].class), eq("signature"))).thenReturn(true);
+        mockMvc.perform(post("/api/1.0/webhooks/patreon")
+                .header("X-Patreon-Event", event).header("X-Patreon-Signature", "signature").content(BODY))
+                .andExpect(status().isNoContent());
+        verify(webhookService).process(eq(event), any(byte[].class));
     }
 
     @Test
@@ -63,20 +73,20 @@ class ApiPatreonWebhookControllerTest {
                         .content(BODY))
                 .andExpect(status().isUnauthorized());
 
-        verify(webhookService, never()).process(any());
+        verify(webhookService, never()).process(any(), any());
     }
 
     @Test
-    void rejectsUnsupportedEvent() throws Exception {
+    void acknowledgesIgnoredAuthenticatedEvent() throws Exception {
         when(signatureVerifier.isValid(any(byte[].class), eq("signature"))).thenReturn(true);
 
         mockMvc.perform(post("/api/1.0/webhooks/patreon")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Patreon-Event", "members:delete")
+                        .header("X-Patreon-Event", "posts:publish")
                         .header("X-Patreon-Signature", "signature")
                         .content(BODY))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNoContent());
 
-        verify(webhookService, never()).process(any());
+        verify(webhookService, never()).process(any(), any());
     }
 }

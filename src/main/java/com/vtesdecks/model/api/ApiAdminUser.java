@@ -16,6 +16,8 @@ public class ApiAdminUser {
     private String displayName;
     private String profileImage;
     private String email;
+    private String patreonId;
+    private String veknId;
     private Boolean validated;
     private Boolean admin;
     private List<String> roles;
