@@ -21,8 +21,10 @@ import com.vtesdecks.integration.KRCGClient;
 import com.vtesdecks.jpa.entity.DeckCardEntity;
 import com.vtesdecks.jpa.entity.DeckEntity;
 import com.vtesdecks.jpa.entity.UserEntity;
+import com.vtesdecks.jpa.repositories.CryptRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.DeckRepository;
+import com.vtesdecks.jpa.repositories.LibraryRepository;
 import com.vtesdecks.jpa.repositories.LimitedFormatRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.messaging.MessageProducer;
@@ -52,13 +54,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -84,6 +89,8 @@ public class ApiDeckBuilderService {
     private final DeckArchetypeMapper deckArchetypeMapper;
     private final AchievementService achievementService;
     private final DeckValidation deckValidation;
+    private final CryptRepository cryptRepository;
+    private final LibraryRepository libraryRepository;
     private final DeckArchetypeMatcher archetypeMatcher;
 
 
@@ -143,6 +150,7 @@ public class ApiDeckBuilderService {
     @Transactional
     public ApiDeckBuilder storeDeck(ApiDeckBuilder apiDeckBuilder) {
         CustomDeckTags.validate(apiDeckBuilder.getCustomTags());
+        validateCardIds(apiDeckBuilder.getCards());
         Integer userId = ApiUtils.extractUserId();
         DeckEntity deck = null;
         if (apiDeckBuilder.getId() != null) {
@@ -247,6 +255,26 @@ public class ApiDeckBuilderService {
         achievementService.activity(userId);
         return getDeck(deckId);
 
+    }
+
+    private void validateCardIds(List<ApiCard> cards) {
+        if (cards == null) {
+            return;
+        }
+        Set<Integer> unknown = cards.stream().filter(Objects::nonNull).map(ApiCard::getId).collect(Collectors.toSet());
+        List<Integer> crypt = unknown.stream().filter(Objects::nonNull).filter(id -> id >= 200000).toList();
+        List<Integer> library = unknown.stream().filter(Objects::nonNull).filter(id -> id < 200000).toList();
+        if (!crypt.isEmpty()) {
+            unknown.removeAll(cryptRepository.selectExistingIds(crypt));
+        }
+        if (!library.isEmpty()) {
+            unknown.removeAll(libraryRepository.selectExistingIds(library));
+        }
+        if (!unknown.isEmpty()) {
+            throw new IllegalArgumentException("Some cards no longer exist in the current catalog. "
+                    + "Refresh your browser to update the card database. If the problem persists, contact support. "
+                    + "Unknown card IDs: " + unknown.stream().sorted(Comparator.nullsFirst(Integer::compareTo)).toList());
+        }
     }
 
     public List<ApiDeckBuilderHistory> getDeckBuilderHistory(String deckId) {

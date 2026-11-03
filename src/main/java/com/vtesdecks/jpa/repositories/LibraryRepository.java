@@ -10,6 +10,9 @@ import java.util.List;
 
 public interface LibraryRepository extends JpaRepository<LibraryEntity, Integer> {
 
+    @Query("select card.id from LibraryEntity card where card.id in :cardIds")
+    List<Integer> selectExistingIds(Collection<Integer> cardIds);
+
     @Query("select card.id from LibraryEntity card")
     List<Integer> selectIds();
 

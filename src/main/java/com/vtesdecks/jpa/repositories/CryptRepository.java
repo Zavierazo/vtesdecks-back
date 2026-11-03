@@ -10,6 +10,9 @@ import java.util.List;
 
 public interface CryptRepository extends JpaRepository<CryptEntity, Integer> {
 
+    @Query("select card.id from CryptEntity card where card.id in :cardIds")
+    List<Integer> selectExistingIds(Collection<Integer> cardIds);
+
     @Query("select card.id from CryptEntity card")
     List<Integer> selectIds();
 
