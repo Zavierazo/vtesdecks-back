@@ -9,6 +9,7 @@ import com.vtesdecks.scheduler.AchievementScheduler;
 import com.vtesdecks.scheduler.ArchonUserScheduler;
 import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
+import com.vtesdecks.scheduler.I18nImageScheduler;
 import com.vtesdecks.scheduler.PatreonReminderScheduler;
 import com.vtesdecks.scheduler.PatreonSupporterScheduler;
 import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
@@ -43,6 +44,7 @@ public class ApiAdminSchedulerService {
             new ApiAdminScheduler("market", "Synchronize market prices"),
             new ApiAdminScheduler("vtesdle-today", "Select today's Vtesdle card"),
             new ApiAdminScheduler("proxy-card-options", "Refresh proxy card options"),
+            new ApiAdminScheduler("i18n-images", "Discover translated card images"),
             new ApiAdminScheduler("deck-index", "Refresh deck index"),
             new ApiAdminScheduler("crypt-index", "Refresh crypt index"),
             new ApiAdminScheduler("library-index", "Refresh library index"),
@@ -61,6 +63,7 @@ public class ApiAdminSchedulerService {
     private final VtesdleTodayScheduler vtesdleTodayScheduler;
     private final CardGameGeekScheduler cardGameGeekScheduler;
     private final ProxyCardOptionScheduler proxyCardOptionScheduler;
+    private final I18nImageScheduler i18nImageScheduler;
     private final DeckIndex deckIndex;
     private final CryptCache cryptCache;
     private final LibraryCache libraryCache;
@@ -93,6 +96,7 @@ public class ApiAdminSchedulerService {
             case "market" -> marketScheduler.scrapCards();
             case "vtesdle-today" -> vtesdleTodayScheduler.selectTodayVtesdle();
             case "proxy-card-options" -> proxyCardOptionScheduler.proxyCardOptionScheduler();
+            case "i18n-images" -> i18nImageScheduler.scanImages();
             case "deck-index" -> deckIndex.refreshIndex();
             case "crypt-index" -> cryptCache.refreshIndex();
             case "library-index" -> libraryCache.refreshIndex();

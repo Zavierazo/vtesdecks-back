@@ -97,7 +97,6 @@ public abstract class CryptFactory {
                 I18n i18n = new I18n();
                 i18n.setName(cryptI18n.getName());
                 i18n.setText(cryptI18n.getText());
-                i18n.setImage(cryptI18n.getImage());
                 i18nMap.put(cryptI18n.getId().getLocale(), i18n);
                 if (cryptI18n.getModificationDate() != null && cryptI18n.getModificationDate().isAfter(crypt.getLastUpdate())) {
                     crypt.setLastUpdate(cryptI18n.getModificationDate());

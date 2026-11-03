@@ -9,5 +9,4 @@ public class CryptI18nCsv {
     private String locale;
     private String name;
     private String text;
-    private String image;
 }

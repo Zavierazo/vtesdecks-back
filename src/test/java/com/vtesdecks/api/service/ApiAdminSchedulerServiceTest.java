@@ -8,6 +8,7 @@ import com.vtesdecks.scheduler.AchievementScheduler;
 import com.vtesdecks.scheduler.ArchonUserScheduler;
 import com.vtesdecks.scheduler.CleanUpScheduler;
 import com.vtesdecks.scheduler.DeckArchetypeScheduler;
+import com.vtesdecks.scheduler.I18nImageScheduler;
 import com.vtesdecks.scheduler.PatreonReminderScheduler;
 import com.vtesdecks.scheduler.PatreonSupporterScheduler;
 import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
@@ -48,6 +49,8 @@ class ApiAdminSchedulerServiceTest {
     @Mock
     private ProxyCardOptionScheduler proxyCardOptionScheduler;
     @Mock
+    private I18nImageScheduler i18nImageScheduler;
+    @Mock
     private DeckIndex deckIndex;
     @Mock
     private CryptCache cryptCache;
@@ -72,7 +75,7 @@ class ApiAdminSchedulerServiceTest {
 
     @Test
     void exposesEveryMigratedManualScheduler() {
-        assertEquals(23, service.getAll().size());
+        assertEquals(24, service.getAll().size());
         assertFalse(service.getAll().stream().anyMatch(item -> item.key().equals("twda-eternal-vigilance")));
         assertFalse(service.getAll().stream().anyMatch(item -> item.key().equals("drive-thru-cards") || item.key().equals("game-pod")));
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("market")));
@@ -112,6 +115,13 @@ class ApiAdminSchedulerServiceTest {
     void runsMarketScheduler() {
         assertTrue(service.run("market", 42));
         verify(marketScheduler).scrapCards();
+    }
+
+    @Test
+    void runsI18nImageDiscovery() {
+        assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("i18n-images")));
+        assertTrue(service.run("i18n-images", 42));
+        verify(i18nImageScheduler).scanImages();
     }
 
     @Test
@@ -163,7 +173,7 @@ class ApiAdminSchedulerServiceTest {
         verifyNoInteractions(cleanUpScheduler, tournamentDeckScheduler,
                 tournamentArchonDeckScheduler,
                 vtesdleTodayScheduler, cardGameGeekScheduler,
-                proxyCardOptionScheduler, marketScheduler, deckArchetypeScheduler, deckArchetypeIndex,
+                proxyCardOptionScheduler, i18nImageScheduler, marketScheduler, deckArchetypeScheduler, deckArchetypeIndex,
                 deckIndex, cryptCache, libraryCache, userMonthScheduler, achievementScheduler, patreonReminderScheduler);
     }
 }

@@ -110,7 +110,6 @@ public abstract class LibraryFactory {
                 I18n i18n = new I18n();
                 i18n.setName(libraryI18n.getName());
                 i18n.setText(libraryI18n.getText());
-                i18n.setImage(libraryI18n.getImage());
                 i18nMap.put(libraryI18n.getId().getLocale(), i18n);
                 if (libraryI18n.getModificationDate() != null && libraryI18n.getModificationDate().isAfter(library.getLastUpdate())) {
                     library.setLastUpdate(libraryI18n.getModificationDate());

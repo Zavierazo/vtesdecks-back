@@ -10,13 +10,16 @@ import com.googlecode.cqengine.query.QueryFactory;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.query.option.Thresholds;
 import com.googlecode.cqengine.resultset.ResultSet;
+import com.vtesdecks.cache.factory.CardI18nImageFactory;
 import com.vtesdecks.cache.factory.CryptFactory;
 import com.vtesdecks.cache.indexable.Crypt;
+import com.vtesdecks.jpa.entity.CardI18nImageEntity;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.CryptEntity;
 import com.vtesdecks.jpa.entity.CryptI18nEntity;
 import com.vtesdecks.jpa.entity.LimitedFormatEntity;
 import com.vtesdecks.jpa.entity.extra.DeckCardCount;
+import com.vtesdecks.jpa.repositories.CardI18nImageRepository;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
 import com.vtesdecks.jpa.repositories.CryptI18nRepository;
 import com.vtesdecks.jpa.repositories.CryptRepository;
@@ -35,6 +38,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -57,6 +61,7 @@ import static com.googlecode.cqengine.query.option.EngineThresholds.INDEX_ORDERI
 public class CryptCache {
     private final CryptRepository cryptRepository;
     private final CryptI18nRepository cryptI18nRepository;
+    private final CardI18nImageRepository cardI18nImageRepository;
     private final DeckCardRepository deckCardRepository;
     private final CardShopRepository cardShopRepository;
     private final CryptFactory cryptFactory;
@@ -87,11 +92,14 @@ public class CryptCache {
             List<CardShopEntity> cardShopList = cardShopRepository.findAll();
             List<CryptI18nEntity> cryptI18nList = cryptI18nRepository.findAll();
             List<LimitedFormatEntity> limitedFormats = limitedFormatRepository.findAll();
+            Map<Integer, List<CardI18nImageEntity>> imagesByCard = cardI18nImageRepository.findAll().stream()
+                    .collect(Collectors.groupingBy(image -> image.getId().getCardId()));
             for (CryptEntity crypt : cryptRepository.findAll()) {
                 refreshIndex(crypt,
                         cryptI18nList.stream().filter(cryptI18n -> cryptI18n.getId().getCardId().equals(crypt.getId())).toList(),
                         cardShopList.stream().filter(cardShop -> cardShop.getCardId().equals(crypt.getId())).toList(),
                         limitedFormats,
+                        imagesByCard.getOrDefault(crypt.getId(), List.of()),
                         deckCountByCard.stream().filter(count -> count.getId().equals(crypt.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum(),
                         countByCard.stream().filter(count -> count.getId().equals(crypt.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum());
                 currentKeys.remove(crypt.getId());
@@ -106,10 +114,11 @@ public class CryptCache {
         }
     }
 
-    private void refreshIndex(CryptEntity crypt, List<CryptI18nEntity> cryptI18nList, List<CardShopEntity> cardShopList, List<LimitedFormatEntity> limitedFormats, long deckCount, long count) {
+    private void refreshIndex(CryptEntity crypt, List<CryptI18nEntity> cryptI18nList, List<CardShopEntity> cardShopList, List<LimitedFormatEntity> limitedFormats, List<CardI18nImageEntity> images, long deckCount, long count) {
         try {
             Crypt oldCrypt = get(crypt.getId());
             Crypt newCrypt = cryptFactory.getCrypt(crypt, cryptI18nList, cardShopList, limitedFormats);
+            CardI18nImageFactory.merge(newCrypt, crypt.getText(), images);
             newCrypt.setDeckPopularity(deckCount);
             newCrypt.setCardPopularity(count);
             if (deckCount > 0) {

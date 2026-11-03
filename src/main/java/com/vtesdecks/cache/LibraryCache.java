@@ -10,13 +10,16 @@ import com.googlecode.cqengine.query.QueryFactory;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.query.option.Thresholds;
 import com.googlecode.cqengine.resultset.ResultSet;
+import com.vtesdecks.cache.factory.CardI18nImageFactory;
 import com.vtesdecks.cache.factory.LibraryFactory;
 import com.vtesdecks.cache.indexable.Library;
+import com.vtesdecks.jpa.entity.CardI18nImageEntity;
 import com.vtesdecks.jpa.entity.CardShopEntity;
 import com.vtesdecks.jpa.entity.LibraryEntity;
 import com.vtesdecks.jpa.entity.LibraryI18nEntity;
 import com.vtesdecks.jpa.entity.LimitedFormatEntity;
 import com.vtesdecks.jpa.entity.extra.DeckCardCount;
+import com.vtesdecks.jpa.repositories.CardI18nImageRepository;
 import com.vtesdecks.jpa.repositories.CardShopRepository;
 import com.vtesdecks.jpa.repositories.DeckCardRepository;
 import com.vtesdecks.jpa.repositories.LibraryI18nRepository;
@@ -35,6 +38,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -57,6 +61,7 @@ import static com.googlecode.cqengine.query.option.EngineThresholds.INDEX_ORDERI
 public class LibraryCache {
     private final LibraryRepository libraryRepository;
     private final LibraryI18nRepository libraryI18nRepository;
+    private final CardI18nImageRepository cardI18nImageRepository;
     private final DeckCardRepository deckCardRepository;
     private final CardShopRepository cardShopRepository;
     private final LibraryFactory libraryFactory;
@@ -89,11 +94,14 @@ public class LibraryCache {
             List<CardShopEntity> cardShopList = cardShopRepository.findAll();
             List<LibraryI18nEntity> libraryI18nList = libraryI18nRepository.findAll();
             List<LimitedFormatEntity> limitedFormats = limitedFormatRepository.findAll();
+            Map<Integer, List<CardI18nImageEntity>> imagesByCard = cardI18nImageRepository.findAll().stream()
+                    .collect(Collectors.groupingBy(image -> image.getId().getCardId()));
             for (LibraryEntity library : libraryRepository.findAll()) {
                 refreshIndex(library,
                         libraryI18nList.stream().filter(libraryI18n -> libraryI18n.getId().getCardId().equals(library.getId())).toList(),
                         cardShopList.stream().filter(cardShop -> cardShop.getCardId().equals(library.getId())).toList(),
                         limitedFormats,
+                        imagesByCard.getOrDefault(library.getId(), List.of()),
                         deckCountByCard.stream().filter(count -> count.getId().equals(library.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum(),
                         countByCard.stream().filter(count -> count.getId().equals(library.getId())).mapToLong(DeckCardCount::getNumberAsLong).sum());
                 currentKeys.remove(library.getId());
@@ -108,10 +116,11 @@ public class LibraryCache {
         }
     }
 
-    private void refreshIndex(LibraryEntity library, List<LibraryI18nEntity> libraryI18nList, List<CardShopEntity> cardShopList, List<LimitedFormatEntity> limitedFormats, Long deckCount, Long count) {
+    private void refreshIndex(LibraryEntity library, List<LibraryI18nEntity> libraryI18nList, List<CardShopEntity> cardShopList, List<LimitedFormatEntity> limitedFormats, List<CardI18nImageEntity> images, Long deckCount, Long count) {
         try {
             Library oldLibrary = get(library.getId());
             Library newLibrary = libraryFactory.getLibrary(library, libraryI18nList, cardShopList, limitedFormats);
+            CardI18nImageFactory.merge(newLibrary, library.getText(), images);
             newLibrary.setDeckPopularity(deckCount);
             newLibrary.setCardPopularity(count);
             if (deckCount > 0) {

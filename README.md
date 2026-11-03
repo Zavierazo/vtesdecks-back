@@ -212,6 +212,31 @@ the lowest archetype ID. This identifies an archetype, not deck legality; challe
 validation must also retain the existing deck-building checks and require the
 returned archetype ID to equal the challenge's target.
 
+### Translated card images
+
+The translation CSVs contain only `id`, `locale`, `name`, and `text`. Image
+availability is stored separately in `card_i18n_image`; migration 1.0.108 copies
+the existing image paths before removing them from the translation tables.
+Changing or removing a CSV translation does not remove its discovered image.
+
+The `i18n-images` job checks every catalog card at
+`https://cdn.vtesdecks.com/img/cards/{locale}/{id}.jpg` using HEAD requests, with
+eight workers, a three-second connection timeout, and a five-second read timeout.
+It runs daily at 03:30 in the application's scheduler time zone. Override
+`jobs.i18nImagesCron` (or set it to `-` to disable scheduling) and configure
+`jobs.i18nImagesLocales` independently of the CSVs (default: `es,fr,pt`). It does
+not run on startup, and overlapping invocations are skipped within the instance.
+
+Run it manually from the admin scheduler list, or with the existing authenticated
+`POST /api/1.0/admin/schedulers/i18n-images` endpoint. After deployment, run it once
+and check the `I18n image scan completed` log for checked, found, added, updated,
+removed, and failed counts. A 404 removes a known image; network errors, rate
+limits, and other unsuccessful responses preserve its previous availability.
+Successful writes commit before affected card caches are refreshed. Image
+changes also advance the card's modification date so client synchronization
+detects removals as well as additions. Cards with only a translated image use
+the original name and text in the existing `i18n` response.
+
 ### Anonymous proxy PDFs
 
 `POST /api/1.0/proxy` caps PDF output at 20 MiB while writing (HTTP 413).

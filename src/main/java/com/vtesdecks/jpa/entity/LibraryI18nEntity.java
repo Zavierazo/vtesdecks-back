@@ -25,9 +25,6 @@ public class LibraryI18nEntity {
     @Column(name = "text")
     private String text;
 
-    @Column(name = "image")
-    private String image;
-
     @CreationTimestamp
     @Column(name = "creation_date", nullable = false, insertable = false, updatable = false)
     private LocalDateTime creationDate;
