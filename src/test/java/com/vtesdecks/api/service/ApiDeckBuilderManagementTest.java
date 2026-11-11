@@ -1,5 +1,6 @@
 package com.vtesdecks.api.service;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.vtesdecks.api.util.ApiUtils;
 import com.vtesdecks.cache.indexable.deck.DeckType;
 import com.vtesdecks.jpa.entity.DeckEntity;
@@ -58,6 +59,25 @@ class ApiDeckBuilderManagementTest {
             assertThrows(ResponseStatusException.class, () -> service.visibility("foreign", true));
             verifyNoInteractions(messages, notifications);
         }
+    }
+
+    @Test void publishingAndRestoringAnAdventDeckEvaluateTheOwnerAfterPersistence() {
+        DeckEntity deck = owned("advent");
+        var extra = JsonNodeFactory.instance.objectNode();
+        extra.putObject("advent").put("year", 2026).put("day", 1);
+        deck.setExtra(extra);
+        when(validator.isValid(eq(deck.getName()), eq(extra), anyList())).thenReturn(true);
+        try (var auth = mockStatic(ApiUtils.class)) {
+            auth.when(ApiUtils::extractUserId).thenReturn(7);
+            assertTrue(service.visibility("advent", true));
+            deck.setDeleted(true);
+            assertTrue(service.restoreDeck("advent"));
+        }
+        var order = inOrder(decks, achievements);
+        order.verify(decks).saveAndFlush(deck);
+        order.verify(achievements).awardAdventChallenges(7);
+        order.verify(decks).save(deck);
+        order.verify(achievements).awardAdventChallenges(7);
     }
 
     @Test void deletionAndTrackerPublishDeckSync() {

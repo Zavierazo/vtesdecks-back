@@ -51,6 +51,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -243,6 +245,7 @@ public class ApiDeckBuilderService {
             deckCardHistoryService.tagLastEntry(deck.getId(), apiDeckBuilder.getTagLabel());
             log.info("Deck builder user {} saved tag '{}' for deck {}", userId, apiDeckBuilder.getTagLabel(), deck.getId());
         }
+        evaluateAchievementsAfterCommit(deck, deck.getType() == DeckType.COMMUNITY ? deck.getUser() : userId);
         //Enqueue indexation of new deck
         messageProducer.publishDeckSync(deck.getId());
         if (Boolean.TRUE.equals(deck.getPublished())) {
@@ -252,7 +255,6 @@ public class ApiDeckBuilderService {
         } else {
             apiUserNotificationService.deckDeleteNotifications(deck.getId());
         }
-        achievementService.activity(userId);
         return getDeck(deckId);
 
     }
@@ -343,7 +345,7 @@ public class ApiDeckBuilderService {
         } else {
             apiUserNotificationService.deckDeleteNotifications(id);
         }
-        achievementService.activity(ApiUtils.extractUserId());
+        evaluateAchievementsAfterCommit(deck, deck.getUser());
         return true;
     }
 
@@ -378,12 +380,45 @@ public class ApiDeckBuilderService {
         }
         deck.setDeleted(false);
         deckRepository.save(deck);
+        if (isPublishedCommunityDeck(deck)) {
+            evaluateAchievementsAfterCommit(deck, deck.getUser());
+        }
         //Enqueue indexation of new deck
         messageProducer.publishDeckSync(deck.getId());
         if (Boolean.TRUE.equals(deck.getPublished())) {
             apiUserNotificationService.deckUpdateNotifications(deck);
         }
         return true;
+    }
+
+    private boolean isPublishedCommunityDeck(DeckEntity deck) {
+        return deck.getType() == DeckType.COMMUNITY && deck.getUser() != null
+                && Boolean.TRUE.equals(deck.getPublished()) && Boolean.FALSE.equals(deck.getDeleted());
+    }
+
+    private void evaluateAchievementsAfterCommit(DeckEntity deck, Integer userId) {
+        boolean advent = isPublishedCommunityDeck(deck)
+                && deck.getExtra() != null && deck.getExtra().path("advent").isObject();
+        Runnable evaluate = () -> {
+            try {
+                achievementService.activity(userId);
+                if (advent) {
+                    achievementService.awardAdventChallenges(userId);
+                }
+            } catch (RuntimeException e) {
+                log.error("Could not evaluate deck achievements for user {}", userId, e);
+            }
+        };
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evaluate.run();
+                }
+            });
+        } else {
+            evaluate.run();
+        }
     }
 
     private ApiDeckBuilder importDeck(String url, Function<Map<String, ?>, com.vtesdecks.model.krcg.Deck> api) {

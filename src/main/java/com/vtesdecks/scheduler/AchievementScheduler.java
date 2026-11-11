@@ -27,6 +27,7 @@ public class AchievementScheduler {
             for (UserEntity user : page.getContent()) {
                 try {
                     achievementService.evaluateUser(user.getId(), true, true);
+                    achievementService.awardAdventChallenges(user.getId());
                     processed++;
                 } catch (RuntimeException e) {
                     log.error("Could not reconcile achievements for user {}", user.getId(), e);

@@ -4,6 +4,7 @@ import com.vtesdecks.jpa.entity.UserAchievementEntity;
 import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserAchievementRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
+import com.vtesdecks.model.DeckTag;
 import com.vtesdecks.model.api.ApiAchievementBadge;
 import com.vtesdecks.model.api.ApiAchievementFamily;
 import com.vtesdecks.model.api.ApiAchievementTier;
@@ -26,14 +27,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AchievementService {
+    private static final String CLAN_EXPLORER = "clan_explorer";
+    private static final String TOURNAMENT_CHAMPION = "tournament_champion";
+    private static final String ADVENT_CHALLENGER = "advent_challenger";
+    private static final String ADVENT_COMPLETIONIST = "advent_completionist";
+    private static final int ADVENT_DAY_COUNT = 24;
+    private static final Map<Integer, LocalDate> ADVENT_STARTS = Map.of(
+            2025, DeckTag.ADVENT_2025.getFromDate(),
+            2026, DeckTag.ADVENT_2026.getFromDate());
     private static final List<Definition> CATALOG = List.of(
             tiers("published_decks", "bi-stack", 50, 1, 5, 10, 25, 50, 100, 250, 500, 1000),
+            tiers(CLAN_EXPLORER, "bi-compass", 55, 3, 7, 12),
+            tiers(TOURNAMENT_CHAMPION, "bi-trophy", 5, 1, 3, 5),
             tiers("deck_comments", "bi-chat-left-text", 60, 1, 5, 10, 25, 50, 100),
             tiers("deck_appreciation", "bi-stars", 30, 1, 5, 10, 25, 50),
             tiers("community_favorite", "bi-bookmark-star", 20, 5, 10, 25, 50, 100),
@@ -44,6 +56,8 @@ public class AchievementService {
             tiers("collection_cards", "bi-collection", 80,
                     100, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000),
             tiers("anniversary", "bi-hourglass-split", 90, 1),
+            tiers(ADVENT_CHALLENGER, "bi-gift", 95, 1),
+            tiers(ADVENT_COMPLETIONIST, "bi-calendar2-check", 85, 1),
             tiers("monthly_gold", "bi-trophy-fill", 1, 1),
             tiers("monthly_silver", "bi-award-fill", 2, 1),
             tiers("monthly_bronze", "bi-award", 3, 1)
@@ -143,7 +157,11 @@ public class AchievementService {
 
     private static boolean isRepeatable(String family) {
         return family.startsWith("monthly_") || family.equals("consistent_contributor") ||
-                family.equals("anniversary");
+                family.equals("anniversary") || isAdventFamily(family);
+    }
+
+    private static boolean isAdventFamily(String family) {
+        return ADVENT_CHALLENGER.equals(family) || ADVENT_COMPLETIONIST.equals(family);
     }
 
     private List<ApiAchievementFamily> build(UserEntity user, boolean includeProgress) {
@@ -171,9 +189,10 @@ public class AchievementService {
                         .build();
             }).filter(tier -> includeProgress || tier.getEarned())
                     .toList();
-            Integer current = includeProgress ? progress.getOrDefault(d.family, 0) : null;
-            Integer next = includeProgress
-                    ? d.thresholds.stream().filter(t -> t > current).findFirst().orElse(null)
+            Integer current = includeProgress && !isAdventFamily(d.family) ? progress.getOrDefault(d.family, 0) : null;
+            Integer next = current != null
+                    ? tiers.stream().filter(tier -> !tier.getEarned() && tier.getThreshold() > current)
+                            .map(ApiAchievementTier::getThreshold).findFirst().orElse(null)
                     : null;
             result.add(ApiAchievementFamily.builder()
                     .id(d.family)
@@ -185,6 +204,7 @@ public class AchievementService {
                     .earnedDates(familyAwards.stream()
                             .map(this::apiEarnedDate)
                             .filter(Objects::nonNull)
+                            .sorted()
                             .toList())
                     .build());
         }
@@ -192,12 +212,20 @@ public class AchievementService {
     }
 
     private ZonedDateTime apiEarnedDate(UserAchievementEntity award) {
-        if (award.getEarnedDate() == null) {
+        LocalDateTime earnedDate = award.getEarnedDate();
+        if (isAdventFamily(award.getFamily())) {
+            int edition = Integer.parseInt(award.getOccurrenceKey());
+            if (earnedDate == null || earnedDate.getYear() != edition) {
+                // Anchor awards recorded in a later year to the Advent edition.
+                earnedDate = LocalDate.of(edition, 12, 1).atStartOfDay();
+            }
+        }
+        if (earnedDate == null) {
             return null;
         }
         // The profile formats award months in UTC. An offset-less midnight would
         // be interpreted in the browser's zone and can fall in the previous month.
-        return award.getEarnedDate().atZone(ZoneOffset.UTC);
+        return earnedDate.atZone(ZoneOffset.UTC);
     }
 
     private Map<String, Integer> progress(UserEntity user) {
@@ -209,6 +237,8 @@ public class AchievementService {
                 WHERE d.user=? AND d.type='COMMUNITY' AND d.published=TRUE AND d.deleted=FALSE
                   AND EXISTS (SELECT 1 FROM deck_card dc WHERE dc.deck_id=d.id AND dc.number>0)
                 """, id));
+        p.put(CLAN_EXPLORER, countPrimaryClans(id));
+        p.put(TOURNAMENT_CHAMPION, countTournamentWins(user.getVeknId()));
         p.put("deck_comments", scalar("""
                 SELECT COUNT(DISTINCT c.page_identifier)
                 FROM comment c
@@ -277,6 +307,36 @@ public class AchievementService {
         return p;
     }
 
+    private int countPrimaryClans(int userId) {
+        return scalar("""
+                WITH clan_counts AS (
+                    SELECT d.id AS deck_id, TRIM(c.clan) AS clan, SUM(dc.number) AS copies
+                    FROM deck d
+                    JOIN deck_card dc ON dc.deck_id=d.id
+                    JOIN crypt c ON c.id=dc.id
+                    WHERE d.user=? AND d.type='COMMUNITY' AND d.published=TRUE AND d.deleted=FALSE
+                      AND dc.number>0 AND NULLIF(TRIM(c.clan), '') IS NOT NULL
+                    GROUP BY d.id, TRIM(c.clan)
+                ), ranked_clans AS (
+                    SELECT clan, RANK() OVER (PARTITION BY deck_id ORDER BY copies DESC) AS clan_rank,
+                           COUNT(*) OVER (PARTITION BY deck_id, copies) AS tied_clans
+                    FROM clan_counts
+                )
+                SELECT COUNT(DISTINCT clan) FROM ranked_clans WHERE clan_rank=1 AND tied_clans=1
+                """, userId);
+    }
+
+    private int countTournamentWins(String verifiedVeknId) {
+        if (verifiedVeknId == null || verifiedVeknId.isBlank()) {
+            return 0;
+        }
+        return scalar("""
+                SELECT COUNT(DISTINCT NULLIF(TRIM(event_id), ''))
+                FROM deck
+                WHERE vekn_id=? AND type='TOURNAMENT' AND position=1 AND published=TRUE AND deleted=FALSE
+                """, verifiedVeknId);
+    }
+
     private int scalar(String sql, Object... args) {
         Integer value = jdbc.queryForObject(sql, Integer.class, args);
         return value == null ? 0 : value;
@@ -339,6 +399,45 @@ public class AchievementService {
                 notificationService.addAchievementNotification(userId, family, 1);
             }
         }, userId);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void awardAdventChallenges(Integer userId) {
+        awardAdventChallenges(userId, LocalDate.now(ZoneOffset.UTC));
+    }
+
+    void awardAdventChallenges(Integer userId, LocalDate today) {
+        Map<Integer, Integer> completedDays = new TreeMap<>();
+        jdbc.query("""
+                        SELECT DISTINCT CAST(JSON_EXTRACT(extra, '$.advent.year') AS SIGNED) AS edition_year,
+                               CAST(JSON_EXTRACT(extra, '$.advent.day') AS SIGNED) AS challenge_day
+                        FROM deck
+                        WHERE user=? AND type='COMMUNITY' AND published=TRUE AND deleted=FALSE
+                          AND JSON_TYPE(JSON_EXTRACT(extra, '$.advent.year')) = 'INTEGER'
+                          AND JSON_TYPE(JSON_EXTRACT(extra, '$.advent.day')) = 'INTEGER'
+                          AND CAST(JSON_EXTRACT(extra, '$.advent.year') AS SIGNED) BETWEEN 1000 AND 9999
+                          AND CAST(JSON_EXTRACT(extra, '$.advent.day') AS SIGNED) BETWEEN 1 AND ?
+                        """,
+                rs -> {
+                    LocalDate start = ADVENT_STARTS.get(rs.getInt("edition_year"));
+                    if (start != null && !today.isBefore(start.plusDays(rs.getInt("challenge_day") - 1L))) {
+                        completedDays.merge(start.getYear(), 1, Integer::sum);
+                    }
+                }, userId, ADVENT_DAY_COUNT);
+        for (var edition : completedDays.entrySet()) {
+            Integer year = edition.getKey();
+            boolean historical = year < today.getYear();
+            awardAdventEdition(userId, ADVENT_CHALLENGER, year, historical);
+            if (edition.getValue() == ADVENT_DAY_COUNT) {
+                awardAdventEdition(userId, ADVENT_COMPLETIONIST, year, historical);
+            }
+        }
+    }
+
+    private void awardAdventEdition(Integer userId, String family, Integer year, boolean historical) {
+        if (award(userId, family + "_1", family, 1, year.toString(), historical, null) && !historical) {
+            notificationService.addAchievementNotification(userId, family, 1);
+        }
     }
 
     private boolean award(Integer userId, String achievementId, String family, int tier, String key,

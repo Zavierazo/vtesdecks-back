@@ -6,6 +6,7 @@ import com.vtesdecks.jpa.entity.UserEntity;
 import com.vtesdecks.jpa.repositories.UserAchievementRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.model.api.ApiAchievementBadge;
+import com.vtesdecks.model.api.ApiAchievementFamily;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -19,8 +20,10 @@ import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -71,6 +74,60 @@ class AchievementServiceTest {
         assertEquals(3, badges.get(0).getCount());
         assertEquals(500, badges.get(1).getTier());
         assertEquals(2, badges.get(2).getCount());
+    }
+
+    @Test
+    void adventUsesEditionYearsInProfileAndAMultiplierOnDecks() {
+        UserEntity user = new UserEntity();
+        user.setId(7);
+        when(userRepository.findByUsername("alice")).thenReturn(user);
+        when(userRepository.findById(7)).thenReturn(Optional.of(user));
+        var current = award("advent_challenger", 1, "2026");
+        current.setEarnedDate(LocalDateTime.parse("2026-12-04T18:15:00"));
+        var backfill = award("advent_challenger", 1, "2025");
+        backfill.setEarnedDate(LocalDateTime.parse("2026-12-05T08:00:00"));
+        var completionist = award("advent_completionist", 1, "2025");
+        completionist.setEarnedDate(backfill.getEarnedDate());
+        var anniversary = award("anniversary", 1, "1");
+        anniversary.setEarnedDate(LocalDateTime.parse("2026-09-20T09:00:00"));
+        when(repository.findByUserIdOrderByEarnedDateAsc(7))
+                .thenReturn(List.of(anniversary, current, backfill, completionist));
+
+        for (List<ApiAchievementFamily> families : List.of(service.getPublic("alice"), service.getMine(7))) {
+            var advent = families.stream().filter(family -> family.getId().equals("advent_challenger"))
+                    .findFirst().orElseThrow();
+            assertEquals(2, advent.getRepeatCount());
+            assertEquals(List.of(ZonedDateTime.parse("2025-12-01T00:00:00Z"),
+                    ZonedDateTime.parse("2026-12-04T18:15:00Z")), advent.getEarnedDates());
+            assertNull(advent.getNextThreshold());
+            var complete = families.stream().filter(family -> family.getId().equals("advent_completionist"))
+                    .findFirst().orElseThrow();
+            assertEquals(1, complete.getRepeatCount());
+            assertEquals(List.of(ZonedDateTime.parse("2025-12-01T00:00:00Z")), complete.getEarnedDates());
+            assertNull(complete.getNextThreshold());
+            var anniversaryFamily = families.stream().filter(family -> family.getId().equals("anniversary"))
+                    .findFirst().orElseThrow();
+            assertEquals(List.of(ZonedDateTime.parse("2026-09-20T09:00:00Z")), anniversaryFamily.getEarnedDates());
+        }
+        assertEquals(2, service.getBadges(7).stream().filter(badge -> badge.getFamily().equals("advent_challenger"))
+                .findFirst().orElseThrow().getCount());
+    }
+
+    @Test
+    void tournamentChampionKeepsEarnedTiersAfterDisconnectingArchon() {
+        UserEntity user = new UserEntity();
+        user.setId(7);
+        when(userRepository.findById(7)).thenReturn(Optional.of(user));
+        when(repository.findByUserIdOrderByEarnedDateAsc(7)).thenReturn(List.of(
+                award("tournament_champion", 1, ""), award("tournament_champion", 3, "")
+        ));
+
+        var champion = service.getMine(7).stream().filter(family -> family.getId().equals("tournament_champion"))
+                .findFirst().orElseThrow();
+        assertEquals(0, champion.getProgress());
+        assertEquals(5, champion.getNextThreshold());
+        assertEquals(List.of(1, 3), champion.getTiers().stream().filter(tier -> tier.getEarned())
+                .map(tier -> tier.getThreshold()).toList());
     }
 
     private UserAchievementEntity award(String family, int tier, String occurrence) {
