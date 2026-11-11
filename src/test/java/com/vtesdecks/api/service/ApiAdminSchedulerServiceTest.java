@@ -14,7 +14,6 @@ import com.vtesdecks.scheduler.PatreonSupporterScheduler;
 import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.scheduler.UserMonthScheduler;
 import com.vtesdecks.scheduler.VtesdleTodayScheduler;
-import com.vtesdecks.scheduler.shops.CardGameGeekScheduler;
 import com.vtesdecks.scheduler.shops.MarketScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentDeckScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentArchonDeckScheduler;
@@ -45,8 +44,6 @@ class ApiAdminSchedulerServiceTest {
     @Mock
     private VtesdleTodayScheduler vtesdleTodayScheduler;
     @Mock
-    private CardGameGeekScheduler cardGameGeekScheduler;
-    @Mock
     private ProxyCardOptionScheduler proxyCardOptionScheduler;
     @Mock
     private I18nImageScheduler i18nImageScheduler;
@@ -75,9 +72,10 @@ class ApiAdminSchedulerServiceTest {
 
     @Test
     void exposesEveryMigratedManualScheduler() {
-        assertEquals(24, service.getAll().size());
+        assertEquals(23, service.getAll().size());
         assertFalse(service.getAll().stream().anyMatch(item -> item.key().equals("twda-eternal-vigilance")));
         assertFalse(service.getAll().stream().anyMatch(item -> item.key().equals("drive-thru-cards") || item.key().equals("game-pod")));
+        assertFalse(service.getAll().stream().anyMatch(item -> item.key().equals("card-game-geek")));
         assertTrue(service.getAll().stream().anyMatch(item -> item.key().equals("market")));
         assertTrue(service.getAll().stream().anyMatch(item ->
                 item.key().equals("collection-clean") && item.description().equals("Clean collections")));
@@ -167,12 +165,12 @@ class ApiAdminSchedulerServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"unknown", "twda-eternal-vigilance", "drive-thru-cards", "game-pod"})
+    @ValueSource(strings = {"unknown", "twda-eternal-vigilance", "drive-thru-cards", "game-pod", "card-game-geek"})
     void rejectsUnknownOrRetiredScheduler(String key) {
         assertFalse(service.run(key, 42));
         verifyNoInteractions(cleanUpScheduler, tournamentDeckScheduler,
                 tournamentArchonDeckScheduler,
-                vtesdleTodayScheduler, cardGameGeekScheduler,
+                vtesdleTodayScheduler,
                 proxyCardOptionScheduler, i18nImageScheduler, marketScheduler, deckArchetypeScheduler, deckArchetypeIndex,
                 deckIndex, cryptCache, libraryCache, userMonthScheduler, achievementScheduler, patreonReminderScheduler);
     }

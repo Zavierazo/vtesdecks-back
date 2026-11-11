@@ -38,7 +38,8 @@ public class MarketScheduler {
             "tcgmarket", ShopPlatform.TCG_MKT,
             "ebay", ShopPlatform.EBAY,
             "drivethrucards", ShopPlatform.DTC,
-            "gamepod", ShopPlatform.GP
+            "gamepod", ShopPlatform.GP,
+            "cardgamegeek", ShopPlatform.CGG
     );
 
     private final CardShopRepository cardShopRepository;

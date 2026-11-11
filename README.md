@@ -79,17 +79,18 @@ curl -X POST http://localhost:8080/admin/scheduler/scrap_decks
 
 ### Card shop synchronization
 
-VTES Market supplies DriveThruCards, GamePod, TCG Market and eBay offers through
-`/api/card_offers`. The market scheduler synchronizes them every six hours and
-is available as the `market` manual admin job. CardGameGeek retains its separate
-scheduler.
+VTES Market supplies DriveThruCards, GamePod, TCG Market, eBay and CardGameGeek
+offers through `/api/card_offers`. The market scheduler synchronizes them every
+six hours and is available as the `market` manual admin job. On the first
+successful sync, it reconciles the existing CardGameGeek rows with the feed.
 
 The import checks the complete paginated total and unique offer IDs before
 reconciling offers. Failed downloads or imports leave existing offers intact.
 Legacy DriveThruCards and GamePod rows without a locale are matched as English;
 the feed supplies the stored locale, including separate Spanish GamePod offers.
 
-Offers retain nullable `seller`, `country` and `continent` fields from Market.
+Offers retain nullable `seller`, `country`, `continent` and `stockQuantity`
+fields. The scheduler skips offers with a known quantity of zero or less.
 The cheapest offer is retained per card, platform, printing, language and seller;
 location changes update that offer without changing its identity. Missing sellers
 are stored as SQL NULL. The unique index treats missing printing, language and

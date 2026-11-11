@@ -15,7 +15,6 @@ import com.vtesdecks.scheduler.PatreonSupporterScheduler;
 import com.vtesdecks.scheduler.ProxyCardOptionScheduler;
 import com.vtesdecks.scheduler.UserMonthScheduler;
 import com.vtesdecks.scheduler.VtesdleTodayScheduler;
-import com.vtesdecks.scheduler.shops.CardGameGeekScheduler;
 import com.vtesdecks.scheduler.shops.MarketScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentDeckScheduler;
 import com.vtesdecks.scheduler.tournament.TournamentArchonDeckScheduler;
@@ -40,7 +39,6 @@ public class ApiAdminSchedulerService {
             new ApiAdminScheduler("twda-decks", "Import tournament decks"),
             new ApiAdminScheduler("twda-archon-decks", "Import Archon finalist decks"),
             new ApiAdminScheduler("archon-users", "Synchronize Archon members"),
-            new ApiAdminScheduler("card-game-geek", "Synchronize Card Game Geek"),
             new ApiAdminScheduler("market", "Synchronize market prices"),
             new ApiAdminScheduler("vtesdle-today", "Select today's Vtesdle card"),
             new ApiAdminScheduler("proxy-card-options", "Refresh proxy card options"),
@@ -61,7 +59,6 @@ public class ApiAdminSchedulerService {
     private final TournamentArchonDeckScheduler tournamentArchonDeckScheduler;
     private final ArchonUserScheduler archonUserScheduler;
     private final VtesdleTodayScheduler vtesdleTodayScheduler;
-    private final CardGameGeekScheduler cardGameGeekScheduler;
     private final ProxyCardOptionScheduler proxyCardOptionScheduler;
     private final I18nImageScheduler i18nImageScheduler;
     private final DeckIndex deckIndex;
@@ -92,7 +89,6 @@ public class ApiAdminSchedulerService {
             case "twda-decks" -> tournamentDeckScheduler.scrappingDecks();
             case "twda-archon-decks" -> tournamentArchonDeckScheduler.scrappingDecks();
             case "archon-users" -> archonUserScheduler.scrappingUsers();
-            case "card-game-geek" -> cardGameGeekScheduler.scrapCards();
             case "market" -> marketScheduler.scrapCards();
             case "vtesdle-today" -> vtesdleTodayScheduler.selectTodayVtesdle();
             case "proxy-card-options" -> proxyCardOptionScheduler.proxyCardOptionScheduler();

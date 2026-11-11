@@ -83,9 +83,43 @@ class MarketSchedulerTest {
             }
         }
         verify(repository).findByPlatformIn(argThat(platforms -> Set.copyOf(platforms)
-                .equals(Set.of(ShopPlatform.DTC, ShopPlatform.GP, ShopPlatform.TCG_MKT, ShopPlatform.EBAY))));
+                .equals(Set.of(ShopPlatform.DTC, ShopPlatform.GP, ShopPlatform.TCG_MKT, ShopPlatform.EBAY, ShopPlatform.CGG))));
         verify(repository, never()).deleteAll(any());
         verify(repository).flush();
+    }
+
+    @Test
+    void replacesLegacyCardGameGeekRowsWithTheMarketPrintings() {
+        CardShopEntity legacy = CardShopEntity.builder().id(10).cardId(101964).platform(ShopPlatform.CGG)
+                .set("Sabbat").link("https://shop.cardgamegeek.com/shop/product/thanks-for-the-donation")
+                .price(new BigDecimal("2.50")).currency("EUR").inStock(false).build();
+        CardOffer sabbat = CardOffer.builder().id(164584).cardId(101964).market("cardgamegeek")
+                .edition("Sabbat").seller("cardgamegeek").country("IT").continent("EU")
+                .link("https://shop.cardgamegeek.com/shop/product/thanks-for-the-donation-sabbat")
+                .price(new BigDecimal("2.50")).currency("EUR").build();
+        CardOffer sabbatWar = CardOffer.builder().id(164583).cardId(101964).market("cardgamegeek")
+                .edition("SW").seller("cardgamegeek").country("IT").continent("EU")
+                .link("https://shop.cardgamegeek.com/shop/product/thanks-for-the-donation-sabbat-war")
+                .price(new BigDecimal("1.50")).currency("EUR").build();
+        when(repository.findByPlatformIn(anyCollection())).thenReturn(List.of(legacy));
+        when(client.getCardOffers(0, 1000)).thenReturn(page(2, List.of(sabbat, sabbatWar)));
+
+        scheduler.scrapCards();
+
+        ArgumentCaptor<CardShopEntity> saved = ArgumentCaptor.forClass(CardShopEntity.class);
+        verify(repository, times(2)).save(saved.capture());
+        assertEquals(Set.of("Sabbat", "SW"), Set.copyOf(saved.getAllValues().stream().map(CardShopEntity::getSet).toList()));
+        for (CardShopEntity row : saved.getAllValues()) {
+            assertEquals(101964, row.getCardId());
+            assertEquals(ShopPlatform.CGG, row.getPlatform());
+            assertEquals("cardgamegeek", row.getSeller());
+            assertEquals("IT", row.getCountry());
+            assertEquals("EU", row.getContinent());
+            assertNull(row.getLocale());
+            assertNull(row.getStockQuantity());
+            assertTrue(row.isInStock());
+        }
+        verify(repository).deleteAll(List.of(legacy));
     }
 
     @Test

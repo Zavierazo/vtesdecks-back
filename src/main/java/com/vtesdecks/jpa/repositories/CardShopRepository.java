@@ -13,16 +13,10 @@ public interface CardShopRepository extends JpaRepository<CardShopEntity, Intege
 
     List<CardShopEntity> findByCardId(Integer cardId);
 
-    List<CardShopEntity> findByPlatform(ShopPlatform platform);
-
     List<CardShopEntity> findByPlatformIn(Collection<ShopPlatform> platform);
-
-    List<CardShopEntity> findByCardIdAndPlatform(Integer cardId, ShopPlatform platform);
 
     @Query("SELECT DISTINCT cardShop.cardId FROM CardShopEntity cardShop WHERE cardShop.platform = :platform AND cardShop.inStock = true")
     List<Integer> findDistinctInStockCardIdsByPlatform(@Param("platform") ShopPlatform platform);
-
-    CardShopEntity findByCardIdAndPlatformAndSet(Integer cardId, ShopPlatform platform, String set);
 
     CardShopEntity findByCardIdAndPlatformAndSetAndLocale(Integer cardId, ShopPlatform platform, String set, String locale);
 }
