@@ -10,11 +10,13 @@ import com.vtesdecks.jpa.repositories.UserMonthRepository;
 import com.vtesdecks.jpa.repositories.UserRepository;
 import com.vtesdecks.jpa.repositories.ArchonUserRepository;
 import com.vtesdecks.model.api.ApiPublicUser;
-import com.vtesdecks.model.api.ApiUserOfMonth;import lombok.RequiredArgsConstructor;
+import com.vtesdecks.model.api.ApiUserOfMonth;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -60,14 +62,10 @@ public class ApiPublicUserService {
     }
 
     public List<ApiUserOfMonth> getTopUsersOfMonth(Integer year, Integer month) {
-        List<UserMonthEntity> entries;
-
-        if (year != null && month != null) {
-            LocalDate monthDate = LocalDate.of(year, month, 1);
-            entries = userMonthRepository.findByMonthDateOrderByRankAsc(monthDate);
-        } else {
-            entries = userMonthRepository.findLatestMonthTop(TOP_MONTH_LIMIT);
-        }
+        LocalDate monthDate = year != null && month != null
+                ? LocalDate.of(year, month, 1)
+                : YearMonth.now().minusMonths(1).atDay(1);
+        List<UserMonthEntity> entries = userMonthRepository.findByMonthDateOrderByRankAsc(monthDate);
 
         if (entries.isEmpty()) {
             return Collections.emptyList();

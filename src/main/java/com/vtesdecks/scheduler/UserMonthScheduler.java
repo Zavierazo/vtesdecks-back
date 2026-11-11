@@ -29,6 +29,7 @@ import java.util.Map;
 public class UserMonthScheduler {
 
     private static final int TOP_SIZE = 5;
+    private static final int PODIUM_SIZE = 3;
 
     private final DeckIndex deckIndex;
     private final UserMonthRepository userMonthRepository;
@@ -70,8 +71,14 @@ public class UserMonthScheduler {
             }
         }
 
+        LocalDate priorMonthStart = monthStart.minusMonths(1);
+        userMonthRepository.findByMonthDateOrderByRankAsc(priorMonthStart).stream()
+                .filter(entry -> entry.getRank() <= PODIUM_SIZE)
+                .map(UserMonthEntity::getUserId)
+                .forEach(scoreByUser::remove);
+
         if (scoreByUser.isEmpty()) {
-            log.info("No community decks found for {}, no users of month saved.", monthStart);
+            log.info("No eligible users of month found for {}.", monthStart);
             return;
         }
 
