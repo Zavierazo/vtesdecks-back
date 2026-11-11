@@ -168,7 +168,8 @@ public class MarketScheduler {
                 offer.getPrice() == null || offer.getCurrency() == null || offer.getCurrency().isBlank()) {
             throw new IllegalArgumentException("Invalid VTES Market offer " + offer.getId());
         }
-        return offer.getPrice().compareTo(BigDecimal.ZERO) > 0;
+        Integer quantity = offer.getQuantity();
+        return offer.getPrice().compareTo(BigDecimal.ZERO) > 0 && (quantity == null || quantity > 0);
     }
 
     private String getSet(CardOffer cardOffer) {
@@ -202,6 +203,7 @@ public class MarketScheduler {
                 .currency(cardOffer.getCurrency())
                 .priceDefaultCurrency(currencyExchangeService.convert(cardOffer.getPrice(), cardOffer.getCurrency(), DEFAULT_CURRENCY))
                 .inStock(true)
+                .stockQuantity(cardOffer.getQuantity())
                 .data(data)
                 .build();
     }

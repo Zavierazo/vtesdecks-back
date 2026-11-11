@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
@@ -37,7 +38,7 @@ class MarketSchedulerTest {
 
     @Test
     void importsVerifiedLanguageVariantsAndReusesLegacyEnglishRows() throws IOException {
-        // Reduced snapshot of the live VTES Market response verified on 2026-10-31.
+        // Reduced live snapshot with sample stock quantities for the GamePod variants.
         CardOffersResponse response;
         try (var input = getClass().getResourceAsStream("/market/card-offers.json")) {
             response = mapper.readValue(input, CardOffersResponse.class);
@@ -68,13 +69,16 @@ class MarketSchedulerTest {
                 assertEquals(ShopPlatform.DTC, actual.getPlatform());
                 assertEquals(10, actual.getId());
                 assertEquals(new BigDecimal("0.35"), actual.getPriceDefaultCurrency());
+                assertNull(actual.getStockQuantity());
             } else {
                 assertEquals(ShopPlatform.GP, actual.getPlatform());
                 assertEquals(new BigDecimal("0.48"), actual.getPriceDefaultCurrency());
                 if ("en".equals(offer.getLanguage())) {
                     assertEquals(11, actual.getId());
+                    assertEquals(4, actual.getStockQuantity());
                 } else {
                     assertNull(actual.getId());
+                    assertEquals(6, actual.getStockQuantity());
                 }
             }
         }
@@ -114,8 +118,10 @@ class MarketSchedulerTest {
     void retainsCheapestOffersForExistingMarketsAndIgnoresUnknownMarkets() {
         CardOffer expensive = offer(1, "tcgmarket", "en");
         expensive.setPrice(new BigDecimal("2.00"));
+        expensive.setQuantity(10);
         CardOffer cheap = offer(2, "tcgmarket", "en");
         cheap.setPrice(new BigDecimal("1.00"));
+        cheap.setQuantity(3);
         cheap.setEdition("Jyhad");
         cheap.setEditionDetails(null);
         expensive.setEdition("Jyhad");
@@ -130,7 +136,8 @@ class MarketSchedulerTest {
 
         verify(repository, times(2)).save(any());
         verify(repository).save(argThat(row -> row.getPlatform() == ShopPlatform.TCG_MKT &&
-                row.getPrice().equals(new BigDecimal("1.00")) && row.getSet().equals("Jyhad")));
+                row.getPrice().equals(new BigDecimal("1.00")) && row.getSet().equals("Jyhad") &&
+                Integer.valueOf(3).equals(row.getStockQuantity())));
         verify(repository).save(argThat(row -> row.getPlatform() == ShopPlatform.EBAY &&
                 row.getSet() == null && row.getLocale() == null));
     }
@@ -148,6 +155,60 @@ class MarketSchedulerTest {
         verify(client).getCardOffers(1000, 1000);
         verify(repository).save(any());
         verify(repository).flush();
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(ints = 4)
+    void updatesAnExistingRowWhenOnlyItsStockQuantityChanges(Integer quantity) {
+        CardOffer offer = offer(1, "gamepod", "en");
+        offer.setQuantity(quantity);
+        CardShopEntity current = existing(10, ShopPlatform.GP, "en");
+        current.setLink(offer.getLink());
+        current.setPrice(offer.getPrice());
+        current.setStockQuantity(7);
+        when(client.getCardOffers(0, 1000)).thenReturn(page(1, List.of(offer)));
+        when(repository.findByPlatformIn(anyCollection())).thenReturn(List.of(current));
+
+        scheduler.scrapCards();
+
+        ArgumentCaptor<CardShopEntity> saved = ArgumentCaptor.forClass(CardShopEntity.class);
+        verify(repository).save(saved.capture());
+        assertEquals(10, saved.getValue().getId());
+        assertEquals(quantity, saved.getValue().getStockQuantity());
+        assertTrue(saved.getValue().isInStock());
+        verify(repository, never()).deleteAll(any());
+    }
+
+    @Test
+    void choosesAnAvailableOfferOverACheaperSoldOutOffer() {
+        CardOffer soldOut = offer(1, "gamepod", "en");
+        soldOut.setQuantity(0);
+        CardOffer available = offer(2, "gamepod", "en");
+        available.setPrice(new BigDecimal("0.60"));
+        available.setQuantity(5);
+        when(client.getCardOffers(0, 1000)).thenReturn(page(2, List.of(soldOut, available)));
+
+        scheduler.scrapCards();
+
+        ArgumentCaptor<CardShopEntity> saved = ArgumentCaptor.forClass(CardShopEntity.class);
+        verify(repository).save(saved.capture());
+        assertEquals(available.getLink(), saved.getValue().getLink());
+        assertEquals(5, saved.getValue().getStockQuantity());
+    }
+
+    @Test
+    void removesPreviouslyAvailableRowsWhenTheOnlyOfferSellsOut() {
+        CardOffer soldOut = offer(1, "gamepod", "en");
+        soldOut.setQuantity(0);
+        CardShopEntity current = existing(10, ShopPlatform.GP, "en");
+        when(client.getCardOffers(0, 1000)).thenReturn(page(1, List.of(soldOut)));
+        when(repository.findByPlatformIn(anyCollection())).thenReturn(List.of(current));
+
+        scheduler.scrapCards();
+
+        verify(repository, never()).save(any());
+        verify(repository).deleteAll(List.of(current));
     }
 
     @Test

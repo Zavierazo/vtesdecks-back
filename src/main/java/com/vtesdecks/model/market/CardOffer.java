@@ -24,6 +24,7 @@ public class CardOffer {
     private String link;
     private BigDecimal price;
     private String currency;
+    private Integer quantity;
     private String country;
     private String continent;
     private String seller;

@@ -31,6 +31,7 @@ class ApiCardShopServiceTest {
         CardShopEntity first = offer(1, ShopPlatform.EBAY, "Jyhad", "first");
         first.setCountry("FR");
         first.setContinent("EU");
+        first.setStockQuantity(4);
         CardShopEntity second = offer(2, ShopPlatform.EBAY, "Jyhad", "second");
         CardShopEntity otherPrinting = offer(3, ShopPlatform.EBAY, "VTES", "first");
         when(repository.findByCardId(100545)).thenReturn(List.of(first, second, otherPrinting));
@@ -47,6 +48,8 @@ class ApiCardShopServiceTest {
         assertEquals("FR", mapped.getCountry());
         assertEquals("EU", mapped.getContinent());
         assertEquals(first.getLink(), mapped.getLink());
+        assertEquals(4, mapped.getStockQuantity());
+        assertEquals(4, all.getShops().getFirst().getStockQuantity());
     }
 
     @Test
@@ -105,6 +108,7 @@ class ApiCardShopServiceTest {
         assertFalse(json.has("seller"));
         assertFalse(json.has("country"));
         assertFalse(json.has("continent"));
+        assertFalse(json.has("stockQuantity"));
     }
 
     @ParameterizedTest
