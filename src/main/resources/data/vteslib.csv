@@ -1336,8 +1336,8 @@ Put this card on a vampire with a capacity below 5. The vampire with this card b
 Put this card in play with 4 counters. Once each combat, you can burn 1 counter from this card to give a wraith or zombie ally you control 1 maneuver or press. If this card has no counters, burn it.","","SV5:PDeath2","","Carlos Díaz",""
 "102315","Dance with the Devil","","Combat","","Caine","Obfuscate/Thaumaturgy","","","","","[obf] or [tha] Maneuver, only usable to get to close range.
 [OBF] or [THA] As above, and once this round, this vampire can burn 1 blood to get 1 additional maneuver, only usable to get to close range.","The Devil pulls the strings which make us dance,
-We find delight in the most loathsome things,
-Some furtherance of Hell each new day brings,
+We find delight in the most loathsome things, 
+Some furtherance of Hell each new day brings, 
 And yet we feel no horror in that rank advance.
 Charles Baudelaire, ""To the Reader""","SV5:PCaine4","","Carlos Díaz",""
 "100491","Danse Macabre","","Master","","","","","","","","Master.
@@ -3428,7 +3428,7 @@ The employer gets +1 intercept.","","Jyhad:R2, VTES:R, SW:PB, CE:R2, HttB:PKia, 
 The Muddled Vampire Hunter strikes with first strike. He may enter combat with a ready vampire controlled by another Methuselah as a (D) action.","And catching sight of us, he bit himself,
 Like one whom fury devastates within.
 Dante, ""The Inferno"", canto XII","Jyhad:U, VTES:U, CE:U/PM, KoT:U","","Anson Maddocks; Mike Danza",""
-"102386","Mulher de Branco","","Ally","Hecata","","","","","","","Unique wraith with 1 life. 0 strength, 0 bleed.
+"102386","Mulher de Branco","","Ally","Hecata ","","","","","","","Unique wraith with 1 life. 0 strength, 0 bleed.
 Burn this ally unless you remove three cards in your ash heap from the game. After a minion successfully bleeds you (for 1 or more), you can shuffle this ally into your library to inflict 2 damage on the acting minion.","","V5:NBr1","","Anastasiia Horbunova",""
 "101251","Mummify","","Combat","","","Serpentis","","","","","[ser] Strike: combat ends. This vampire unlocks and goes into torpor; put this card on the vampire. This vampire cannot attempt a leave torpor action. Burn this card if the vampire leaves torpor.
 [SER] As above, but this vampire may attempt a leave torpor action.","","AH:U5","","Richard Thomas",""
@@ -3872,7 +3872,7 @@ When a Methuselah uses a discard phase action to discard a card, he or she doesn
 "101421","Port Hunting Ground","","Master","Ishtarri","","","2","","","","Master: unique location. Hunting ground.
 During your unlock phase, you may move 1 blood from the blood bank to a ready vampire you control. A vampire can gain blood from only one hunting ground card each turn.","","LoB:PI","","James Stowe",""
 "102366","Porto de Santos","","Master","","","","","","","","Each Methuselah can play only one Porto de Santos in a game.
-Gain 1 pool. Each Methuselah looks at up to 3 cards from the top of their crypt and moves one of those cards to their uncontrolled region and the others to the bottom of their crypt.","","V5:NBr1","","Felipe Headley",""
+Gain 1 pool. Each Methuselah looks at up to 3 cards from the top of their crypt and moves one of those cards to their uncontrolled region and the others to the bottom of their crypt.","","PROMO, V5:NBr1","","Felipe Headley",""
 "101422","Portrait, The","","Action","Toreador","","","","1","","","(D) Show the top card of your prey's crypt to all players. If it is a Nosferatu, this vampire burns 2 blood. If its cost is below 7, this vampire gains 2 blood (ignore excess blood); if it is from 7 to 10, this vampire unlocks and bleeds your prey with +1 bleed as a +1 stealth (D) action; if it is above 10, this vampire burns 1 blood.","","AH:R2, CE:R","","Pete Venters",""
 "101423","Possession","","Action","","","Necromancy","","2","","","[nec] Move a vampire from your ash heap to your uncontrolled region.
 [NEC] Move a vampire from your ash heap to your ready region with 1 blood.","My name is Legion; for we are many.

@@ -13,15 +13,16 @@ class AfterStartupSetMappingTest {
 
     @Test
     void splitsBothReleaseProductsAndRetainsQuantities() {
-        assertEquals(Set.of("V5SN:SoNY2"), sets("V5:SoNY2"));
-        assertEquals(Set.of("V5SN:NBr4"), sets("V5:NBr4"));
-        assertEquals(Set.of("V5SN:SoNY2", "V5SN:NBr1", "V5:PM3/PV1", "Jyhad:C"),
+        assertEquals(Set.of("SoNY:2"), sets("V5:SoNY2"));
+        assertEquals(Set.of("NBr:4"), sets("V5:NBr4"));
+        assertEquals(Set.of("SoNY:2", "NBr:1", "V5:PM3/PV1", "Jyhad:C"),
                 sets("Jyhad:C, V5:PM3/SoNY2/NBr1/PV1"));
+        assertEquals(Set.of("Promo", "NBr:1"), sets("PROMO, V5:NBr1"));
     }
 
     @Test
     void preservesOtherFifthEditionSplitsWithoutLeakingConvertedSubsets() {
-        assertEquals(Set.of("V5SN:SoNY2", "V5SN:NBr1", "V5H:3", "V5L:4", "V5:PM2"),
+        assertEquals(Set.of("SoNY:2", "NBr:1", "V5H:3", "V5L:4", "V5:PM2"),
                 sets("V5:SoNY2/PH3/NBr1/PL4/PM2"));
         assertEquals(Set.of("V5:PM2/PV1"), sets("V5:PM2/PV1"));
     }

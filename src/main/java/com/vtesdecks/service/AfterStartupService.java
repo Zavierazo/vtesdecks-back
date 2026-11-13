@@ -293,6 +293,9 @@ public class AfterStartupService {
                 .omitEmptyStrings()
                 .splitToStream(rawSet)
                 .map(set -> {
+                    if (PROMO.equalsIgnoreCase(set)) {
+                        return PROMO;
+                    }
                     if (set.startsWith(PROMO + "-")) {
                         if (set.length() < 7) {
                             return PROMO;
@@ -353,8 +356,10 @@ public class AfterStartupService {
     private static void splitFifthEdition(Set<String> sets, String printing) {
         List<String> original = new ArrayList<>();
         for (String subset : printing.split("/")) {
-            if (subset.startsWith("SoNY") || subset.startsWith("NBr")) {
-                sets.add("V5SN:" + subset);
+            if (subset.startsWith("SoNY")) {
+                sets.add("SoNY:" + subset.substring(4));
+            } else if (subset.startsWith("NBr")) {
+                sets.add("NBr:" + subset.substring(3));
             } else if (subset.startsWith("PH")) {
                 sets.add("V5H:" + subset.substring(2));
             } else if (subset.startsWith("PL")) {
