@@ -1,4 +1,6 @@
 -- Split the released printings using the official card IDs from V1.0.104.
+START TRANSACTION;
+
 CREATE TEMPORARY TABLE release_printings (
     card_id INT PRIMARY KEY,
     abbrev VARCHAR(4) CHARACTER SET ascii NOT NULL,
@@ -227,5 +229,7 @@ DELETE FROM load_history WHERE script IN ('data/vtescrypt.csv', 'data/vteslib.cs
 
 DROP TEMPORARY TABLE release_market_ranked, release_market_rows, release_wishlist_totals, release_wishlist_rows,
     release_collection_totals, release_collection_rows, release_printings;
+COMMIT;
+
 SET SESSION group_concat_max_len = @release_group_concat_limit;
 SET @release_history_start = NULL, @release_group_concat_limit = NULL, @release_set_filter = NULL;
