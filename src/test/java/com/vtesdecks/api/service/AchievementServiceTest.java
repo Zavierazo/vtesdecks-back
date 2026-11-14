@@ -46,8 +46,8 @@ class AchievementServiceTest {
                 .thenReturn(List.of(), List.of(firstDeck, fifthDeck, historical, current, unknown));
 
         assertEquals(0, service.getPoints(7));
-        assertEquals(25, service.getPoints(7));
-        assertEquals(25, service.getAuthorAchievements(7).points());
+        assertEquals(20, service.getPoints(7));
+        assertEquals(20, service.getAuthorAchievements(7).points());
     }
 
     @Test
@@ -121,6 +121,7 @@ class AchievementServiceTest {
             var complete = families.stream().filter(family -> family.getId().equals("advent_completionist"))
                     .findFirst().orElseThrow();
             assertEquals(1, complete.getRepeatCount());
+            assertEquals(65, complete.getEarnedPoints());
             assertEquals(List.of(ZonedDateTime.parse("2025-12-01T00:00:00Z")), complete.getEarnedDates());
             assertNull(complete.getNextThreshold());
             var anniversaryFamily = families.stream().filter(family -> family.getId().equals("anniversary"))
@@ -144,9 +145,9 @@ class AchievementServiceTest {
                 .findFirst().orElseThrow();
         assertEquals(0, champion.getProgress());
         assertEquals(5, champion.getNextThreshold());
-        assertEquals(100, champion.getEarnedPoints());
+        assertEquals(140, champion.getEarnedPoints());
         assertNull(champion.getPointsPerOccurrence());
-        assertEquals(List.of(40, 60, 100), champion.getTiers().stream()
+        assertEquals(List.of(60, 80, 110), champion.getTiers().stream()
                 .map(tier -> tier.getPoints()).toList());
         assertEquals(List.of(1, 3), champion.getTiers().stream().filter(tier -> tier.getEarned())
                 .map(tier -> tier.getThreshold()).toList());
