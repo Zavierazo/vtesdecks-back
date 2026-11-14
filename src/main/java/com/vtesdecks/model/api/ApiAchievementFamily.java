@@ -18,6 +18,8 @@ public class ApiAchievementFamily {
     private Integer progress;
     private Integer nextThreshold;
     private Integer repeatCount;
+    private int earnedPoints;
+    private Integer pointsPerOccurrence;
     private List<ApiAchievementTier> tiers;
     private List<ZonedDateTime> earnedDates;
 }

@@ -35,6 +35,22 @@ class AchievementServiceTest {
     @InjectMocks AchievementService service;
 
     @Test
+    void pointsSumEveryEarnedTierAndHistoricalOccurrenceOnEachRead() {
+        var historical = award("advent_challenger", 1, "2025");
+        historical.setHistorical(true);
+        var firstDeck = award("published_decks", 1, "");
+        var fifthDeck = award("published_decks", 5, "");
+        var current = award("advent_challenger", 1, "2026");
+        var unknown = award("retired_achievement", 1, "");
+        when(repository.findByUserIdOrderByEarnedDateAsc(7))
+                .thenReturn(List.of(), List.of(firstDeck, fifthDeck, historical, current, unknown));
+
+        assertEquals(0, service.getPoints(7));
+        assertEquals(25, service.getPoints(7));
+        assertEquals(25, service.getAuthorAchievements(7).points());
+    }
+
+    @Test
     void authorBadgesUsePriorityHighestTierAndRepeatCount() {
         when(repository.findByUserIdOrderByEarnedDateAsc(7)).thenReturn(List.of(
                 award("monthly_gold", 1, "2026-06"),
@@ -46,7 +62,7 @@ class AchievementServiceTest {
                 award("published_decks", 100, "")
         ));
 
-        List<ApiAchievementBadge> badges = service.getBadges(7);
+        List<ApiAchievementBadge> badges = service.getAuthorAchievements(7).badges();
 
         assertEquals(3, badges.size());
         assertEquals("monthly_gold", badges.get(0).getFamily());
@@ -67,7 +83,7 @@ class AchievementServiceTest {
                 award("anniversary", 1, "2")
         ));
 
-        List<ApiAchievementBadge> badges = service.getBadges(8);
+        List<ApiAchievementBadge> badges = service.getAuthorAchievements(8).badges();
 
         assertEquals(List.of("consistent_contributor", "collection_cards", "anniversary"),
                 badges.stream().map(ApiAchievementBadge::getFamily).toList());
@@ -97,6 +113,8 @@ class AchievementServiceTest {
             var advent = families.stream().filter(family -> family.getId().equals("advent_challenger"))
                     .findFirst().orElseThrow();
             assertEquals(2, advent.getRepeatCount());
+            assertEquals(10, advent.getEarnedPoints());
+            assertEquals(5, advent.getPointsPerOccurrence());
             assertEquals(List.of(ZonedDateTime.parse("2025-12-01T00:00:00Z"),
                     ZonedDateTime.parse("2026-12-04T18:15:00Z")), advent.getEarnedDates());
             assertNull(advent.getNextThreshold());
@@ -109,7 +127,7 @@ class AchievementServiceTest {
                     .findFirst().orElseThrow();
             assertEquals(List.of(ZonedDateTime.parse("2026-09-20T09:00:00Z")), anniversaryFamily.getEarnedDates());
         }
-        assertEquals(2, service.getBadges(7).stream().filter(badge -> badge.getFamily().equals("advent_challenger"))
+        assertEquals(2, service.getAuthorAchievements(7).badges().stream().filter(badge -> badge.getFamily().equals("advent_challenger"))
                 .findFirst().orElseThrow().getCount());
     }
 
@@ -126,6 +144,10 @@ class AchievementServiceTest {
                 .findFirst().orElseThrow();
         assertEquals(0, champion.getProgress());
         assertEquals(5, champion.getNextThreshold());
+        assertEquals(100, champion.getEarnedPoints());
+        assertNull(champion.getPointsPerOccurrence());
+        assertEquals(List.of(40, 60, 100), champion.getTiers().stream()
+                .map(tier -> tier.getPoints()).toList());
         assertEquals(List.of(1, 3), champion.getTiers().stream().filter(tier -> tier.getEarned())
                 .map(tier -> tier.getThreshold()).toList());
     }

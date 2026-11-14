@@ -32,6 +32,7 @@ public class ApiPublicUserService {
     private final UserMonthRepository userMonthRepository;
     private final ApiPublicUserMapper apiPublicUserMapper;
     private final ArchonUserRepository archonUserRepository;
+    private final AchievementService achievementService;
 
     public ApiPublicUser getPublicUser(String username) {
         UserEntity user = userRepository.findByUsername(username);
@@ -41,6 +42,7 @@ public class ApiPublicUserService {
         List<String> roles = userRepository.selectRolesByUserId(user.getId());
 
         ApiPublicUser publicUser = apiPublicUserMapper.mapPublicUser(user, roles);
+        publicUser.setAchievementPoints(achievementService.getPoints(user.getId()));
         String veknId = user.getVeknId();
         if (veknId != null) {
             publicUser.setVeknId(veknId);

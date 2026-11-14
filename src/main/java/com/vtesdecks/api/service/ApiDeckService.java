@@ -79,7 +79,7 @@ public class ApiDeckService {
         } else {
             apiDeck = mapper.mapSummary(deck, userId, null, currencyCode);
         }
-        applyAchievementBadges(apiDeck);
+        applyAuthorAchievements(apiDeck);
         applyVisitStatus(List.of(apiDeck), userId);
         return apiDeck;
     }
@@ -200,13 +200,15 @@ public class ApiDeckService {
                 .order(DeckSort.NEWEST).build(), null, null, currencyCode, offset, limit);
     }
 
-    private void applyAchievementBadges(ApiDeck deck) {
+    private void applyAuthorAchievements(ApiDeck deck) {
         if (deck.getUser() == null) {
             return;
         }
         UserEntity user = userRepository.findByUsername(deck.getUser().getUser());
         if (user != null) {
-            deck.getUser().setAchievementBadges(achievementService.getBadges(user.getId()));
+            var achievements = achievementService.getAuthorAchievements(user.getId());
+            deck.getUser().setAchievementPoints(achievements.points());
+            deck.getUser().setAchievementBadges(achievements.badges());
         }
     }
 

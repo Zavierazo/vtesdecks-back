@@ -21,7 +21,6 @@ import java.time.Period;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -43,25 +42,36 @@ public class AchievementService {
             2025, DeckTag.ADVENT_2025.getFromDate(),
             2026, DeckTag.ADVENT_2026.getFromDate());
     private static final List<Definition> CATALOG = List.of(
-            tiers("published_decks", "bi-stack", 50, 1, 5, 10, 25, 50, 100, 250, 500, 1000),
-            tiers(CLAN_EXPLORER, "bi-compass", 55, 3, 7, 12),
-            tiers(TOURNAMENT_CHAMPION, "bi-trophy", 5, 1, 3, 5),
-            tiers("deck_comments", "bi-chat-left-text", 60, 1, 5, 10, 25, 50, 100),
-            tiers("deck_appreciation", "bi-stars", 30, 1, 5, 10, 25, 50),
-            tiers("community_favorite", "bi-bookmark-star", 20, 5, 10, 25, 50, 100),
-            tiers("followers", "bi-people", 70, 5, 10, 25, 50, 100),
-            tiers("conversation_starter", "bi-chat-heart", 40, 5, 10, 25),
-            tiers("standout_deck", "bi-gem", 10, 5, 10, 25),
-            tiers("consistent_contributor", "bi-calendar-check", 45, 1),
+            tiers("published_decks", "bi-stack", 50,
+                    tier(1, 5), tier(5, 10), tier(10, 15), tier(25, 20), tier(50, 25),
+                    tier(100, 30), tier(250, 40), tier(500, 50), tier(1000, 60)),
+            tiers(CLAN_EXPLORER, "bi-compass", 55, tier(3, 10), tier(7, 20), tier(12, 35)),
+            tiers(TOURNAMENT_CHAMPION, "bi-trophy", 5, tier(1, 40), tier(3, 60), tier(5, 100)),
+            tiers("deck_comments", "bi-chat-left-text", 60,
+                    tier(1, 2), tier(5, 3), tier(10, 5), tier(25, 10), tier(50, 15), tier(100, 20)),
+            tiers("deck_appreciation", "bi-stars", 30,
+                    tier(1, 3), tier(5, 5), tier(10, 10), tier(25, 15), tier(50, 20)),
+            tiers("community_favorite", "bi-bookmark-star", 20,
+                    tier(5, 5), tier(10, 10), tier(25, 15), tier(50, 20), tier(100, 30)),
+            tiers("followers", "bi-people", 70,
+                    tier(5, 5), tier(10, 10), tier(25, 15), tier(50, 20), tier(100, 30)),
+            tiers("conversation_starter", "bi-chat-heart", 40, tier(5, 5), tier(10, 10), tier(25, 20)),
+            tiers("standout_deck", "bi-gem", 10, tier(5, 10), tier(10, 20), tier(25, 35)),
+            tiers("consistent_contributor", "bi-calendar-check", 45, tier(1, 2)),
             tiers("collection_cards", "bi-collection", 80,
-                    100, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000),
-            tiers("anniversary", "bi-hourglass-split", 90, 1),
-            tiers(ADVENT_CHALLENGER, "bi-gift", 95, 1),
-            tiers(ADVENT_COMPLETIONIST, "bi-calendar2-check", 85, 1),
-            tiers("monthly_gold", "bi-trophy-fill", 1, 1),
-            tiers("monthly_silver", "bi-award-fill", 2, 1),
-            tiers("monthly_bronze", "bi-award", 3, 1)
+                    tier(100, 2), tier(500, 3), tier(1000, 5), tier(2500, 8), tier(5000, 10),
+                    tier(10000, 15), tier(25000, 20), tier(50000, 25), tier(100000, 35)),
+            tiers("anniversary", "bi-hourglass-split", 90, tier(1, 5)),
+            tiers(ADVENT_CHALLENGER, "bi-gift", 95, tier(1, 5)),
+            tiers(ADVENT_COMPLETIONIST, "bi-calendar2-check", 85, tier(1, 35)),
+            tiers("monthly_gold", "bi-trophy-fill", 1, tier(1, 15)),
+            tiers("monthly_silver", "bi-award-fill", 2, tier(1, 10)),
+            tiers("monthly_bronze", "bi-award", 3, tier(1, 5))
     );
+    private static final Map<String, Integer> POINTS_BY_ACHIEVEMENT = CATALOG.stream()
+            .flatMap(definition -> definition.tiers.stream()
+                    .map(tier -> Map.entry(definition.achievementId(tier.threshold), tier.points)))
+            .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 
     private final JdbcTemplate jdbc;
     private final UserAchievementRepository repository;
@@ -82,8 +92,12 @@ public class AchievementService {
         }
     }
 
-    private static Definition tiers(String family, String icon, int priority, int... thresholds) {
-        return new Definition(family, icon, priority, Arrays.stream(thresholds).boxed().toList());
+    private static Definition tiers(String family, String icon, int priority, Tier... tiers) {
+        return new Definition(family, icon, priority, List.of(tiers));
+    }
+
+    private static Tier tier(int threshold, int points) {
+        return new Tier(threshold, points);
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -99,8 +113,9 @@ public class AchievementService {
             }
             int value = progress.getOrDefault(definition.family, 0);
             List<Integer> newlyEarned = new ArrayList<>();
-            for (Integer threshold : definition.thresholds) {
-                if (value >= threshold && award(userId, definition.family + "_" + threshold,
+            for (Tier tier : definition.tiers) {
+                int threshold = tier.threshold;
+                if (value >= threshold && award(userId, definition.achievementId(threshold),
                         definition.family, threshold, "", historical, null)) {
                     newlyEarned.add(threshold);
                 }
@@ -133,8 +148,19 @@ public class AchievementService {
         return build(user, true);
     }
 
-    public List<ApiAchievementBadge> getBadges(Integer userId) {
-        return badgesFromAwards(repository.findByUserIdOrderByEarnedDateAsc(userId));
+    public int getPoints(Integer userId) {
+        return pointsFromAwards(repository.findByUserIdOrderByEarnedDateAsc(userId));
+    }
+
+    public AuthorAchievements getAuthorAchievements(Integer userId) {
+        var awards = repository.findByUserIdOrderByEarnedDateAsc(userId);
+        return new AuthorAchievements(pointsFromAwards(awards), badgesFromAwards(awards));
+    }
+
+    private int pointsFromAwards(List<UserAchievementEntity> awards) {
+        return awards.stream()
+                .mapToInt(award -> POINTS_BY_ACHIEVEMENT.getOrDefault(award.getAchievementId(), 0))
+                .sum();
     }
 
     private List<ApiAchievementBadge> badgesFromAwards(List<UserAchievementEntity> awards) {
@@ -174,15 +200,18 @@ public class AchievementService {
         List<ApiAchievementFamily> result = new ArrayList<>();
         for (Definition d : CATALOG) {
             List<UserAchievementEntity> familyAwards = earned.getOrDefault(d.family, List.of());
-            int repeatCount = isRepeatable(d.family) ? familyAwards.size() : 0;
-            List<ApiAchievementTier> tiers = d.thresholds.stream().map(threshold -> {
+            boolean repeatable = isRepeatable(d.family);
+            int repeatCount = repeatable ? familyAwards.size() : 0;
+            List<ApiAchievementTier> tiers = d.tiers.stream().map(tier -> {
+                int threshold = tier.threshold;
                 UserAchievementEntity award = familyAwards.stream()
                         .filter(a -> a.getTierValue().equals(threshold))
                         .findFirst()
                         .orElse(null);
                 return ApiAchievementTier.builder()
-                        .id(d.family + "_" + threshold)
+                        .id(d.achievementId(threshold))
                         .threshold(threshold)
+                        .points(tier.points)
                         .earned(award != null)
                         .earnedDate(award == null ? null : apiEarnedDate(award))
                         .historical(award == null ? null : award.getHistorical())
@@ -200,6 +229,8 @@ public class AchievementService {
                     .progress(current)
                     .nextThreshold(next)
                     .repeatCount(repeatCount == 0 ? null : repeatCount)
+                    .earnedPoints(pointsFromAwards(familyAwards))
+                    .pointsPerOccurrence(repeatable ? d.tiers.getFirst().points : null)
                     .tiers(tiers)
                     .earnedDates(familyAwards.stream()
                             .map(this::apiEarnedDate)
@@ -451,6 +482,15 @@ public class AchievementService {
                 userId, achievementId, family, tier, key, historical, earnedDate) == 1;
     }
 
-    private record Definition(String family, String icon, int priority, List<Integer> thresholds) {
+    public record AuthorAchievements(int points, List<ApiAchievementBadge> badges) {
+    }
+
+    private record Definition(String family, String icon, int priority, List<Tier> tiers) {
+        private String achievementId(int threshold) {
+            return family + "_" + threshold;
+        }
+    }
+
+    private record Tier(int threshold, int points) {
     }
 }

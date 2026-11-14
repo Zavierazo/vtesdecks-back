@@ -14,6 +14,7 @@ import java.time.ZonedDateTime;
 public class ApiAchievementTier {
     private String id;
     private Integer threshold;
+    private int points;
     private Boolean earned;
     private ZonedDateTime earnedDate;
     private Boolean historical;

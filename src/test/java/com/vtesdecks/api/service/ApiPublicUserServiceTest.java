@@ -14,7 +14,7 @@ class ApiPublicUserServiceTest {
     @Test
     void returnsAnEmptyPodiumWhenTheLastCompletedMonthHasNoRanking() {
         UserMonthRepository userMonthRepository = mock(UserMonthRepository.class);
-        ApiPublicUserService service = new ApiPublicUserService(null, null, userMonthRepository, null, null);
+        ApiPublicUserService service = new ApiPublicUserService(null, null, userMonthRepository, null, null, null);
         var monthStart = YearMonth.now().minusMonths(1).atDay(1);
 
         assertThat(service.getTopUsersOfMonth(null, null)).isEmpty();

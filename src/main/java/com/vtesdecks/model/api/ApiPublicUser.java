@@ -23,4 +23,5 @@ public class ApiPublicUser {
     private List<ApiPublicUser> followers;
     private List<ApiPublicUser> following;
     private List<ApiAchievementBadge> achievementBadges;
+    private Integer achievementPoints;
 }
